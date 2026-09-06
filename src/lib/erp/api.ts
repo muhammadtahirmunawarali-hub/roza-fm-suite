@@ -89,6 +89,26 @@ export const recordsApi = {
         newValue: any;
       }[];
     }>(`${BASE}/registers/${registerId}/records/${recordId}/history`),
+  // Related records (records in other registers that reference the same entity)
+  getRelated: (registerId: string, recordId: string) =>
+    request<{
+      ok: boolean;
+      related: {
+        registerId: string;
+        registerName: string;
+        registerCode: string;
+        registerIcon: string;
+        registerColor: string;
+        records: {
+          id: string;
+          sequence: number;
+          data: Record<string, any>;
+          matchedOn: string;
+          matchedColumn: string;
+          createdAt: string;
+        }[];
+      }[];
+    }>(`${BASE}/registers/${registerId}/records/${recordId}/related`),
 };
 
 // ---------- Dashboard ----------
@@ -166,6 +186,26 @@ export const backupApi = {
     request<ApiResponse>(`${BASE}/seed`, { method: 'POST' }),
   reset: () =>
     request<ApiResponse>(`${BASE}/reset`, { method: 'POST' }),
+};
+
+// ---------- System Stats ----------
+export interface SystemStats {
+  registers: number;
+  records: number;
+  users: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  auditLogs: number;
+  notifications: number;
+  unreadNotifs: number;
+  settings: number;
+  savedViews: number;
+  activeSessions: number;
+  dashboardPrefs: number;
+}
+
+export const statsApi = {
+  get: () => request<SystemStats>(`${BASE}/stats`),
 };
 
 // ---------- Master data (for dropdowns) ----------

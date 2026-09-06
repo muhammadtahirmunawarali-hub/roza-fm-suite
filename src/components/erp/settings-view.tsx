@@ -2,7 +2,7 @@
 
 // FMCore ERP — Settings view (with Saved Views management tab)
 import { useEffect, useState } from 'react';
-import { settingsApi, backupApi, savedViewsApi, type SavedViewMeta } from '@/lib/erp/api';
+import { settingsApi, backupApi, savedViewsApi, statsApi, type SavedViewMeta, type SystemStats } from '@/lib/erp/api';
 import type { Setting } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
@@ -32,6 +32,7 @@ export function SettingsView() {
   const [editName, setEditName] = useState('');
   const [editShared, setEditShared] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
 
   useEffect(() => {
     settingsApi.list().then((list: Setting[]) => {
@@ -50,6 +51,9 @@ export function SettingsView() {
 
   useEffect(() => {
     if (activeTab === 'saved-views') loadSavedViews();
+    if (activeTab === 'about') {
+      statsApi.get().then(setSystemStats).catch(() => {});
+    }
   }, [activeTab]);
 
   const handleDeleteView = async (id: string, name: string) => {
@@ -524,6 +528,29 @@ export function SettingsView() {
                   ready for future multi-tenant migration.
                 </div>
               </div>
+
+              {/* System Stats Grid */}
+              {systemStats && (
+                <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4">
+                  <h3 className="text-[12px] font-semibold text-[var(--erp-text)] flex items-center gap-2 mb-3">
+                    <Database className="w-3.5 h-3.5 text-[var(--erp-accent)]" /> System Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <StatCard label="Registers" value={systemStats.registers} icon="fa-table-list" color="#64748B" />
+                    <StatCard label="Records" value={systemStats.records} icon="fa-database" color="#06B6D4" />
+                    <StatCard label="Users" value={systemStats.users} icon="fa-users" color="#3B82F6" />
+                    <StatCard label="Active Users" value={systemStats.activeUsers} icon="fa-user-check" color="#10B981" />
+                    <StatCard label="Audit Logs" value={systemStats.auditLogs} icon="fa-list-ul" color="#8B5CF6" />
+                    <StatCard label="Notifications" value={systemStats.notifications} icon="fa-bell" color="#F59E0B" />
+                    <StatCard label="Unread Notifs" value={systemStats.unreadNotifs} icon="fa-bell" color="#EF4444" />
+                    <StatCard label="Saved Views" value={systemStats.savedViews} icon="fa-bookmark" color="#EC4899" />
+                    <StatCard label="Active Sessions" value={systemStats.activeSessions} icon="fa-key" color="#06B6D4" />
+                    <StatCard label="Settings" value={systemStats.settings} icon="fa-cog" color="#94A3B8" />
+                    <StatCard label="Dashboard Prefs" value={systemStats.dashboardPrefs} icon="fa-gauge-high" color="#10B981" />
+                    <StatCard label="Inactive Users" value={systemStats.inactiveUsers} icon="fa-user-slash" color="#EF4444" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -594,6 +621,25 @@ function Field({ label, value, onChange, fullWidth, type = 'text' }: { label: st
         onChange={(e) => onChange(e.target.value)}
         className="h-9 text-[12px] bg-[var(--erp-bg-input)]"
       />
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
+  return (
+    <div className="flex items-center gap-2.5 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] transition-colors">
+      <div
+        className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+        style={{ background: color + '20', color }}
+      >
+        <FAIcon name={icon} className="text-[12px]" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-[16px] font-bold text-[var(--erp-text)] leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          {value.toLocaleString()}
+        </div>
+        <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] truncate">{label}</div>
+      </div>
     </div>
   );
 }

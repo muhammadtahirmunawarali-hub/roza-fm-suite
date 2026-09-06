@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   X, Printer, Pencil, Workflow as WorkflowIcon, History as HistoryIcon,
   FileText, Activity, Clock, CheckCircle2, ArrowRight, Loader2,
-  Check, XCircle, AlertCircle, Star, Download,
+  Check, XCircle, AlertCircle, Star, Download, Link2,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -45,7 +45,7 @@ interface Props {
   onRefresh: () => void;
 }
 
-type Tab = 'details' | 'history' | 'activity';
+type Tab = 'details' | 'history' | 'related' | 'activity';
 
 export function RecordDetailDrawer({ open, register, record, company, onClose, onEdit, onRefresh }: Props) {
   const { hasPermission, user } = useErpStore();
@@ -53,6 +53,8 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   // Initialize as true since data loads on mount (component is keyed by record id)
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [related, setRelated] = useState<any[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -132,6 +134,24 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     });
     return () => { cancelled = true; };
   }, [open, record, register.id]);
+
+  // Load related records when the Related tab is clicked
+  useEffect(() => {
+    if (tab !== 'related' || !record) return;
+    let cancelled = false;
+    setRelatedLoading(true);
+    recordsApi.getRelated(register.id, record.id).then((res) => {
+      if (cancelled) return;
+      setRelated(res.related || []);
+    }).catch((e) => {
+      if (cancelled) return;
+      console.error('Failed to load related records', e);
+    }).finally(() => {
+      if (cancelled) return;
+      setRelatedLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tab, record, register.id]);
 
   // Close on Escape
   useEffect(() => {
@@ -281,6 +301,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
           <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0">
             <TabButton active={tab === 'details'} onClick={() => setTab('details')} icon={<FileText className="w-3.5 h-3.5" />} label="Details" />
             <TabButton active={tab === 'history'} onClick={() => setTab('history')} icon={<HistoryIcon className="w-3.5 h-3.5" />} label="History" count={history.length} />
+            <TabButton active={tab === 'related'} onClick={() => setTab('related')} icon={<Link2 className="w-3.5 h-3.5" />} label="Related" />
             <TabButton active={tab === 'activity'} onClick={() => setTab('activity')} icon={<Activity className="w-3.5 h-3.5" />} label="Activity" />
           </div>
         )}
@@ -302,6 +323,9 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
               )}
               {tab === 'history' && (
                 <HistoryTab history={history} loading={historyLoading} hasStatusCol={!!hasStatusCol} />
+              )}
+              {tab === 'related' && (
+                <RelatedTab related={related} loading={relatedLoading} />
               )}
               {tab === 'activity' && (
                 <ActivityTab record={record} register={register} />
@@ -874,6 +898,82 @@ function HistoryTab({ history, loading, hasStatusCol }: { history: HistoryEntry[
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Related Tab ----------
+function RelatedTab({ related, loading }: { related: any[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 text-[var(--erp-accent)] animate-spin" />
+      </div>
+    );
+  }
+
+  if (related.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <EmptyStateIllustration type="generic" size={120} className="mb-3" />
+        <h3 className="text-[13px] font-semibold text-[var(--erp-text)] mb-1">No related records</h3>
+        <p className="text-[11px] text-[var(--erp-text-muted)] max-w-[260px]">
+          No records in other registers share the same employee, building, asset, or vendor references.
+        </p>
+      </div>
+    );
+  }
+
+  const totalRecords = related.reduce((sum, g) => sum + g.records.length, 0);
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--erp-text-muted)]">
+          <Link2 className="w-3 h-3" />
+          <span>Linked Records</span>
+          <span className="text-[var(--erp-text-muted)] font-normal">({totalRecords} in {related.length} registers)</span>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {related.map((group) => (
+          <div key={group.registerId} className="border border-[var(--erp-border)] rounded-md overflow-hidden bg-[var(--erp-bg-card)]">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)]">
+              <div
+                className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                style={{ background: group.registerColor + '20', color: group.registerColor }}
+              >
+                <FAIcon name={group.registerIcon} className="text-[11px]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-medium text-[var(--erp-text)] truncate">{group.registerName}</div>
+                <div className="text-[9px] text-[var(--erp-text-muted)]">{group.records.length} matching record{group.records.length === 1 ? '' : 's'}</div>
+              </div>
+            </div>
+            <div className="divide-y divide-[var(--erp-border)]">
+              {group.records.map((rec: any) => {
+                const firstField = Object.values(rec.data).find((v: any) => v !== null && v !== undefined && v !== '' && !Array.isArray(v) && typeof v !== 'object');
+                return (
+                  <div key={rec.id} className="px-3 py-2 flex items-center gap-2 hover:bg-[var(--erp-bg-hover)] transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-[var(--erp-text)] truncate">
+                        #{rec.sequence} · {String(firstField || 'Record')}
+                      </div>
+                      <div className="text-[9px] text-[var(--erp-text-muted)] flex items-center gap-1 mt-0.5">
+                        <span className="px-1 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium">
+                          Matched: {rec.matchedColumn} = {rec.matchedOn}
+                        </span>
+                      </div>
+                    </div>
+                    <Clock className="w-3 h-3 text-[var(--erp-text-muted)] shrink-0" />
+                    <span className="text-[9px] text-[var(--erp-text-muted)] shrink-0">{formatTimeAgo(rec.createdAt)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
