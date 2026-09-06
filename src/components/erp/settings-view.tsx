@@ -9,8 +9,8 @@ import { FAIcon } from './icon';
 import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
-  Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock,
-  Search, Filter as FilterIcon, ArrowUpDown,
+  Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock, Pencil,
+  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,10 @@ export function SettingsView() {
   const [savedViews, setSavedViews] = useState<SavedViewMeta[]>([]);
   const [viewsLoading, setViewsLoading] = useState(false);
   const [viewSearch, setViewSearch] = useState('');
+  const [editTarget, setEditTarget] = useState<SavedViewMeta | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editShared, setEditShared] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     settingsApi.list().then((list: Setting[]) => {
@@ -55,6 +59,37 @@ export function SettingsView() {
       setSavedViews((v) => v.filter((x) => x.id !== id));
     } catch (e: any) {
       toast.error('Failed to delete view', { description: e.message });
+    }
+  };
+
+  const handleEditView = (view: SavedViewMeta) => {
+    setEditTarget(view);
+    setEditName(view.name);
+    setEditShared(view.isShared);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    if (!editName.trim()) {
+      toast.error('View name cannot be empty');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await savedViewsApi.update({
+        id: editTarget.id,
+        name: editName.trim(),
+        isShared: editShared,
+      });
+      toast.success(`Updated view "${editName}"`);
+      setEditTarget(null);
+      setEditName('');
+      setEditShared(false);
+      loadSavedViews();
+    } catch (e: any) {
+      toast.error('Failed to update view', { description: e.message });
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -445,15 +480,25 @@ export function SettingsView() {
                           </div>
                         </div>
 
-                        {/* Delete button */}
-                        <button
-                          onClick={() => handleDeleteView(view.id, view.name)}
-                          className="opacity-0 group-hover:opacity-100 p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:bg-[rgba(239,68,68,0.1)] transition-all shrink-0"
-                          title="Delete view"
-                          aria-label={`Delete view ${view.name}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Edit + Delete buttons */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <button
+                            onClick={() => handleEditView(view)}
+                            className="p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-accent)] hover:bg-[var(--erp-bg-hover)] transition-all"
+                            title="Rename view"
+                            aria-label={`Edit view ${view.name}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteView(view.id, view.name)}
+                            className="p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:bg-[rgba(239,68,68,0.1)] transition-all"
+                            title="Delete view"
+                            aria-label={`Delete view ${view.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -483,6 +528,58 @@ export function SettingsView() {
           )}
         </div>
       </div>
+
+      {/* Edit Saved View Dialog */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !editSaving && setEditTarget(null)}>
+          <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg max-w-md w-full p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-4">
+              <Pencil className="w-4 h-4 text-[var(--erp-accent)]" />
+              <h3 className="text-[14px] font-semibold text-[var(--erp-text)]">Rename Saved View</h3>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[11px] mb-1 block">View Name</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="text-[12px] h-9 bg-[var(--erp-bg-input)]"
+                  placeholder="Enter view name..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+                <button
+                  type="button"
+                  onClick={() => setEditShared(!editShared)}
+                  className={cn(
+                    'flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded transition-colors',
+                    editShared
+                      ? 'text-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
+                      : 'text-[var(--erp-text-muted)] hover:bg-[var(--erp-bg-hover)]',
+                  )}
+                >
+                  {editShared ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {editShared ? 'Shared with all users' : 'Private (only you)'}
+                </button>
+              </div>
+              <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+                <Bookmark className="w-3 h-3" />
+                Register: {editTarget.registerName}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setEditTarget(null)} disabled={editSaving} className="h-8 text-[11px]">
+                <X className="w-3.5 h-3.5 mr-1" /> Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveEdit} disabled={editSaving || !editName.trim()} className="h-8 text-[11px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]">
+                {editSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

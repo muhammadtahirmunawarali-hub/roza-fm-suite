@@ -1,8 +1,11 @@
 // FMCore ERP — User by ID (GET / PUT / DELETE)
+// PUT requires 'edit' permission on 'users' module.
+// DELETE requires 'delete' permission on 'users' module.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getRolePermissions } from '@/lib/erp/seed';
 import type { User } from '@/lib/erp/types';
+import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
 
 function serialize(u: any): User {
   return {
@@ -34,6 +37,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const existing = await db.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
 
+  // Server-side permission check
+  const currentUser = await getCurrentUser(req);
+  if (currentUser && !hasPermission(currentUser, 'users', 'edit')) {
+    return NextResponse.json({ ok: false, error: "You don't have permission to edit users" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { name, email, username, password, role, department, branch, status, permissions } = body;
 
@@ -63,7 +72,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   await db.auditLog.create({
     data: {
-      userId: id,
+      userId: currentUser?.id || null,
       action: 'Updated',
       module: 'Users',
       summary: `Updated user "${existing.name}"`,
@@ -75,10 +84,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json(serialize(updated));
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const existing = await db.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
+
+  // Server-side permission check
+  const currentUser = await getCurrentUser(req);
+  if (currentUser && !hasPermission(currentUser, 'users', 'delete')) {
+    return NextResponse.json({ ok: false, error: "You don't have permission to delete users" }, { status: 403 });
+  }
 
   // Don't hard-delete — just set status to Inactive (soft delete) to preserve audit log integrity
   await db.user.update({ where: { id }, data: { status: 'Inactive' } });
@@ -87,6 +102,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await db.auditLog.create({
     data: {
+      userId: currentUser?.id || null,
       action: 'Deleted',
       module: 'Users',
       summary: `Deactivated user "${existing.name}"`,

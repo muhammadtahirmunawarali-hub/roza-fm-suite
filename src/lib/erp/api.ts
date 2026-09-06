@@ -211,6 +211,8 @@ export const savedViewsApi = {
   listAll: () => request<SavedViewMeta[]>(`${BASE}/saved-views/all`),
   create: (data: { name: string; registerId: string; filters: any; isShared?: boolean }) =>
     request<SavedView>(`${BASE}/saved-views`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (data: { id: string; name?: string; filters?: any; isShared?: boolean }) =>
+    request<SavedView>(`${BASE}/saved-views`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id: string) =>
     request<ApiResponse>(`${BASE}/saved-views/${id}`, { method: 'DELETE' }),
 };

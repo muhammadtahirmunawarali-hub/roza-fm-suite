@@ -1,10 +1,11 @@
 // FMCore ERP — Users API (admin management)
 // GET  /api/erp/users           → list all users
-// POST /api/erp/users           → create a new user
+// POST /api/erp/users           → create a new user (requires 'create' permission on 'users' module)
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getRolePermissions } from '@/lib/erp/seed';
 import type { User } from '@/lib/erp/types';
+import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
 
 export async function GET() {
   const rows = await db.user.findMany({
@@ -31,6 +32,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Server-side permission check
+  const currentUser = await getCurrentUser(req);
+  if (currentUser && !hasPermission(currentUser, 'users', 'create')) {
+    return NextResponse.json({ ok: false, error: "You don't have permission to create users" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { name, email, username, password, role, department, branch, status } = body;
 
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
 
   await db.auditLog.create({
     data: {
+      userId: currentUser?.id || null,
       action: 'Created',
       module: 'Users',
       summary: `Created user "${name}" with role ${finalRole}`,

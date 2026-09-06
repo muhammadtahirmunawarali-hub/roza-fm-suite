@@ -1,8 +1,10 @@
 // FMCore ERP — Saved Views API (per-user saved filters)
 // GET  /api/erp/saved-views?registerId=...   → list views for a register
 // POST /api/erp/saved-views                  → save a new view
+// PUT  /api/erp/saved-views                  → update an existing view { id, name, filters, isShared }
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/erp/auth';
 
 export async function GET(req: NextRequest) {
   const registerId = req.nextUrl.searchParams.get('registerId');
@@ -26,6 +28,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const currentUser = await getCurrentUser(req);
+
   const body = await req.json();
   const { name, registerId, filters, isShared } = body;
   if (!name || !registerId) {
@@ -38,11 +42,13 @@ export async function POST(req: NextRequest) {
       registerId,
       filters: JSON.stringify(filters || {}),
       isShared: !!isShared,
+      userId: currentUser?.id || null,
     },
   });
 
   await db.auditLog.create({
     data: {
+      userId: currentUser?.id || null,
       action: 'Created',
       module: 'Saved Views',
       summary: `Saved view "${name}" for register`,
@@ -59,5 +65,51 @@ export async function POST(req: NextRequest) {
     filters: JSON.parse(view.filters),
     createdAt: view.createdAt.toISOString(),
     updatedAt: view.updatedAt.toISOString(),
+  });
+}
+
+export async function PUT(req: NextRequest) {
+  const currentUser = await getCurrentUser(req);
+
+  const body = await req.json();
+  const { id, name, filters, isShared } = body;
+  if (!id) {
+    return NextResponse.json({ ok: false, error: 'View ID required' }, { status: 400 });
+  }
+
+  const existing = await db.savedView.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ ok: false, error: 'View not found' }, { status: 404 });
+  }
+
+  const updated = await db.savedView.update({
+    where: { id },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(filters !== undefined && { filters: JSON.stringify(filters) }),
+      ...(isShared !== undefined && { isShared }),
+    },
+  });
+
+  await db.auditLog.create({
+    data: {
+      userId: currentUser?.id || null,
+      action: 'Updated',
+      module: 'Saved Views',
+      summary: `Updated view "${existing.name}"`,
+      oldValue: JSON.stringify({ name: existing.name, isShared: existing.isShared }),
+      newValue: JSON.stringify({ name: updated.name, isShared: updated.isShared }),
+    },
+  });
+
+  return NextResponse.json({
+    id: updated.id,
+    name: updated.name,
+    registerId: updated.registerId,
+    userId: updated.userId,
+    isShared: updated.isShared,
+    filters: JSON.parse(updated.filters),
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
   });
 }
