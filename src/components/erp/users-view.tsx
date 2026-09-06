@@ -18,6 +18,7 @@ import {
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Search, Plus, Pencil, Trash2, Users as UsersIcon, ShieldCheck, Loader2, X, Mail, User as UserIcon, Lock } from 'lucide-react';
+import { EmptyStateIllustration } from './empty-state-illustration';
 
 const ROLE_COLORS: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.id, r.color]));
 
@@ -187,9 +188,7 @@ export function UsersView() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-6 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center mb-3">
-              <UsersIcon className="w-8 h-8 text-[var(--erp-text-muted)]" />
-            </div>
+            <EmptyStateIllustration type="no-users" size={120} className="mb-3" />
             <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">No users found</h3>
             <p className="text-[12px] text-[var(--erp-text-muted)] max-w-sm">
               {search || roleFilter !== 'all'

@@ -72,6 +72,23 @@ export const recordsApi = {
       `${BASE}/registers/${registerId}/records/${recordId}/transition`,
       { method: 'POST', body: JSON.stringify({ action, comment }) },
     ),
+  // Record history (audit log for a specific record)
+  getHistory: (registerId: string, recordId: string) =>
+    request<{
+      ok: boolean;
+      history: {
+        id: string;
+        action: string;
+        summary: string;
+        userName: string;
+        userAvatar: string;
+        userRole: string | null;
+        statusChange: { from: string; to: string } | null;
+        createdAt: string;
+        oldValue: any;
+        newValue: any;
+      }[];
+    }>(`${BASE}/registers/${registerId}/records/${recordId}/history`),
 };
 
 // ---------- Dashboard ----------

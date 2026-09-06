@@ -15,6 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { FAIcon } from './icon';
+import { EmptyStateIllustration } from './empty-state-illustration';
 
 const ACTION_META: Record<string, { color: string; icon: string; variant: BadgeVariant }> = {
   Created:   { color: 'var(--erp-success)', icon: 'fa-plus',           variant: 'success' },
@@ -153,9 +154,7 @@ export function AuditLogsView() {
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center mb-3">
-              <History className="w-8 h-8 text-[var(--erp-text-muted)]" />
-            </div>
+            <EmptyStateIllustration type="no-audit" size={120} className="mb-3" />
             <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">No audit logs found</h3>
             <p className="text-[12px] text-[var(--erp-text-muted)] max-w-xs">
               {moduleFilter || actionFilter !== 'all'

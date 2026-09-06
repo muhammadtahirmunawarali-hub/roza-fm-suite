@@ -17,6 +17,8 @@ import { BulkActions } from './bulk-actions';
 import { printRecord } from './print-record';
 import { ApprovalWorkflow } from './approval-workflow';
 import { SavedViews } from './saved-views';
+import { RecordDetailDrawer } from './record-detail-drawer';
+import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
   ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow,
@@ -544,60 +546,17 @@ export function RegisterView({ registerId }: Props) {
         onImported={() => { loadRecords(); }}
       />
 
-      {/* View record modal */}
-      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FAIcon name={register.icon} style={{ color: register.color }} />
-              {register.name} — Record #{viewing?.sequence}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
-            {register.columns.map((col) => (
-              <div
-                key={col.name}
-                className={cn(
-                  'border border-[var(--erp-border)] rounded-md p-2.5',
-                  col.type === 'long_text' && 'sm:col-span-2',
-                )}
-              >
-                <div className="text-[10px] font-semibold text-[var(--erp-text-muted)] uppercase tracking-wide mb-1 flex items-center gap-1">
-                  <FAIcon name={colIconFor(col.type)} className="text-[9px]" />
-                  {col.name}
-                </div>
-                <CellContent value={viewing?.data[col.name]} col={col} sequence={viewing?.sequence || 0} registerCode={register.code} expanded />
-              </div>
-            ))}
-          </div>
-          <div className="text-[10px] text-[var(--erp-text-muted)] mt-2 flex items-center justify-between border-t border-[var(--erp-border)] pt-2">
-            <span>Created: {formatDate(viewing?.createdAt)}</span>
-            <span>Updated: {formatTimeAgo(viewing?.updatedAt || '')}</span>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => viewing && handlePrint([viewing])} className="text-[12px] h-9">
-              <Printer className="w-4 h-4 mr-1" /> Print
-            </Button>
-            {hasStatusCol && (canApprove || canEdit) && (
-              <Button
-                variant="outline"
-                onClick={() => { if (viewing) { setWorkflowTarget(viewing); setViewing(null); } }}
-                className="text-[12px] h-9 border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]"
-              >
-                <Workflow className="w-4 h-4 mr-1" /> Workflow
-              </Button>
-            )}
-            {canEdit && (
-              <Button
-                onClick={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
-                className="text-[12px] h-9 bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
-              >
-                <Pencil className="w-4 h-4 mr-1" /> Edit Record
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Record detail drawer (replaces View modal) */}
+      <RecordDetailDrawer
+        key={viewing?.id || 'none'}
+        open={!!viewing}
+        register={register}
+        record={viewing}
+        company={company}
+        onClose={() => setViewing(null)}
+        onEdit={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
+        onRefresh={loadRecords}
+      />
 
       {/* Approval workflow modal */}
       <ApprovalWorkflow
@@ -832,9 +791,7 @@ function TableSkeleton({ cols }: { cols: number }) {
 function EmptyState({ onAdd, onImport, registerName, hasSearch }: { onAdd: () => void; onImport: () => void; registerName: string; hasSearch?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-16 h-16 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center mb-4">
-        <Inbox className="w-8 h-8 text-[var(--erp-text-muted)]" />
-      </div>
+      <EmptyStateIllustration type={hasSearch ? 'no-results' : 'no-records'} size={120} className="mb-4" />
       <h3 className="text-[15px] font-semibold text-[var(--erp-text)] mb-1">
         {hasSearch ? 'No records match your search' : 'No records yet'}
       </h3>

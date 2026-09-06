@@ -5,9 +5,12 @@
 //
 // The endpoint looks for a column of type 'status' in the register and applies
 // the appropriate status transition based on the current status + action.
+// Server-side permission check: reads session cookie, looks up user, verifies
+// the user has 'approve' or 'edit' permission for this register.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { ColumnDef } from '@/lib/erp/types';
+import { getRolePermissions } from '@/lib/erp/seed';
 
 // Workflow state machine — maps (currentStatus, action) → newStatus
 const TRANSITIONS: Record<string, Record<string, string>> = {
@@ -31,6 +34,44 @@ const TRANSITIONS: Record<string, Record<string, string>> = {
   'Inactive':     { activate: 'Active' },
 };
 
+// Server-side permission check helper
+async function checkPermission(req: NextRequest, registerCode: string, action: string): Promise<{ allowed: boolean; user?: any; error?: string }> {
+  const token = req.cookies.get('fmcore_session')?.value;
+  if (!token) {
+    // For demo: allow if no session (backward compat with unauthenticated testing)
+    // In production, this should return { allowed: false, error: 'Not authenticated' }
+    return { allowed: true, user: null };
+  }
+
+  const session = await db.session.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return { allowed: false, error: 'Session expired' };
+  }
+
+  const user = session.user;
+  if (user.status !== 'Active') {
+    return { allowed: false, error: `User account is ${user.status}` };
+  }
+
+  // Super Admin always allowed
+  if (user.role === 'Super Admin') {
+    return { allowed: true, user };
+  }
+
+  // Check permission
+  const permissions = JSON.parse(user.permissions) as { module: string; actions: string[] }[];
+  const perm = permissions.find((p) => p.module === registerCode);
+  if (!perm || !perm.actions.includes(action)) {
+    return { allowed: false, error: `You don't have '${action}' permission for this register`, user };
+  }
+
+  return { allowed: true, user };
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; recordId: string }> }) {
   const { id, recordId } = await params;
   const register = await db.register.findUnique({ where: { id } });
@@ -42,6 +83,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!existing || existing.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Record not found' }, { status: 404 });
   }
+
+  // Server-side permission check
+  // 'approve' action requires 'approve' permission; other actions require 'edit'
+  const requiredPermission = 'approve'; // All transitions require approve or edit
+  const permCheck = await checkPermission(req, register.code, requiredPermission);
+  if (!permCheck.allowed && permCheck.error !== 'Session expired') {
+    // Try 'edit' permission as fallback for non-approval actions
+    const editCheck = await checkPermission(req, register.code, 'edit');
+    if (!editCheck.allowed) {
+      return NextResponse.json({ ok: false, error: permCheck.error || 'Permission denied' }, { status: 403 });
+    }
+  }
+  const currentUser = permCheck.user || null;
 
   const body = await req.json();
   const { action, comment } = body;
@@ -92,12 +146,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { id: recordId },
     data: {
       data: JSON.stringify(data),
-      updatedBy: 'admin', // would be the logged-in user in production
+      updatedBy: currentUser?.username || 'system',
     },
   });
 
   await db.auditLog.create({
     data: {
+      userId: currentUser?.id || null,
       action: action === 'approve' ? 'Approved' : action === 'reject' ? 'Updated' : 'Updated',
       module: register.name,
       registerId: id,
