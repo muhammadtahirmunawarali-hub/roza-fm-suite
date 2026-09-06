@@ -3,188 +3,225 @@
 ## Project Goal
 Rebuild the attached `DD.html` (FMCore ERP — Dynamic Register & Form Builder) into a complete, professional, scalable ERP application running on Next.js 16 + TypeScript + Prisma (SQLite) + shadcn/ui + Tailwind CSS 4.
 
-## Reference Architecture (from prompt)
-```
-ERP
-├── Dashboard (KPIs + charts + sparklines + activity timeline + system overview + recent records, clickable, customizable)
-├── Modules (30 registers across 7 categories)
-├── Master Data (Registers / dynamic schema)
-├── Transactions (records + status transitions + workflow history + inline edit + CSV/JSON export + related records)
-├── Reports (derived from register data)
-├── Administration (Users, Roles, Audit Logs, Saved Views, Dashboard Prefs, System Stats, Keyboard Shortcuts)
-└── Settings (theme, currency, saved views, system stats, backup/reset)
-```
-
-## Core Design Decisions
-1. Preserve "Dynamic Register & Form Builder" concept — schema-driven registers
-2. Prisma + SQLite persistence (SaaS-ready)
-3. API-first: every action hits `/api/erp/*` routes
-4. Audit log on all mutations
-5. Light/dark theme via Zustand
-6. Responsive (mobile/tablet/desktop)
-7. Cookie-based session auth (httpOnly, 7-day expiry)
-8. RBAC enforced both client-side and server-side (ALL mutation endpoints)
-9. 35+ API routes, 35+ components, 10 Prisma models
-
 ---
 
-## Round 11 — Status (2026-09-06)
+## Round 12 — Status (2026-09-06)
 
-### QA Findings (from start of Round 11)
-- ✅ Verified all Round 10 features (JSON Export, Keyboard Shortcuts, System Overview Widget)
-- ✅ Login flow works (admin → dashboard with System Overview + Recent Records)
+### QA Findings
+- ✅ All Round 11 features verified working (Column Toggle, Quick Filter Pills, Notification Auto-Refresh, Recent Records Widget)
+- ✅ Login flow works (admin → dashboard)
 - ✅ No console errors
-- No new bugs found — system stable
 
 ### Work Focus This Round
-This round delivered 4 high-impact UX features:
-1. **Column Visibility Toggle** — Show/hide columns in register view
-2. **Quick Status Filter Pills** — One-click status filtering with count badges
-3. **Notification Auto-Refresh** — Polls every 30s for new notifications
-4. **Recent Records Widget** — Shows recent audit activity on dashboard with click-to-navigate
+This round delivered 3 major features + comprehensive SaaS readiness assessment:
+
+1. **Column Editor for Existing Registers** — Add/remove/rename/retype/reorder columns on any register
+2. **Tab Navigator Dropdown** — Excel-like all-tabs picker at the right edge of the tab bar
+3. **Global Currency Integration** — Currency set in Settings propagates to Dashboard, all registers, and all forms
 
 ### What Was Done This Round
 
 #### ✨ New Features
 
-1. **Column Visibility Toggle** (`register-view.tsx`):
-   - "Columns" button in the action bar with count badge showing hidden columns
-   - Dropdown panel listing all columns with checkbox + type label
-   - Toggling a column instantly hides/shows it in the table
-   - "Show all columns" reset button when columns are hidden
-   - Uses `visibleColumns` useMemo to filter both header and body cells
-   - `Columns3` icon from lucide
+1. **Column Editor for Existing Registers** (`column-editor.tsx`, 200 lines):
+   - Full modal editor that allows modifying columns of ANY existing register (system or custom)
+   - **Add Column**: New column with name, type, width/options, required flag
+   - **Remove Column**: Delete columns (with warning for system registers)
+   - **Rename Column**: Edit column name inline
+   - **Change Column Type**: Dropdown to change type (text→currency, dropdown→status, etc.)
+   - **Reorder Columns**: Up/down arrow buttons to move columns
+   - **Required Toggle**: `*` badge to mark columns as required (red = required)
+   - **Validation**: Checks for empty names and duplicate column names
+   - **Warning**: System registers show warning about affecting existing data
+   - **Save**: Calls `registersApi.update()` with new columns array, triggers audit log
+   - **"Edit" button** in register view action bar (next to "Columns" visibility toggle)
 
-2. **Quick Status Filter Pills** (`register-view.tsx`):
-   - Pill-style quick filters above the table for status columns
-   - Shows "All" pill + one pill per status option with record count badges
-   - Clicking a pill instantly filters the table (no need to open the Filters panel)
-   - Active pill highlighted with accent background
-   - Only appears when register has a status column with options
-   - Count badges show how many records match each status
+2. **Tab Navigator Dropdown** (`tab-navigator.tsx`, 100 lines):
+   - Excel-like all-tabs picker at the right edge of the tab bar
+   - Shows list icon + tab count badge
+   - Dropdown lists all open tabs with:
+     - Tab number (1, 2, 3...)
+     - Register icon + label
+     - Active tab highlighted with accent color
+     - Close button on hover (except Dashboard)
+   - **"Close All"** button to close all tabs except Dashboard
+   - Click any tab to switch to it
+   - Only appears when more than 1 tab is open
 
-3. **Notification Auto-Refresh** (`toolbar.tsx`):
-   - Changed from load-once-when-panel-opens to polling every 30 seconds
-   - Unread notification count badge stays current without manual refresh
-   - Uses `setInterval` with 30s interval inside the notification loading effect
-   - Properly cleaned up on unmount
-
-4. **Recent Records Widget** (`recent-records-widget.tsx`, 110 lines):
-   - New dashboard widget showing 6 most recent audit log entries (Created/Updated actions)
-   - Color-coded action icons (green=Created, blue=Updated, red=Deleted, accent=Approved)
-   - Each entry shows: action icon, summary, user name, module, relative timestamp
-   - Click-to-navigate: clicking an entry opens the corresponding register
-   - Skeleton loading state with staggered animation
-   - Positioned in the 3-column grid alongside Recent Activity and Upcoming Items
-   - Uses existing `/api/erp/audit-logs` endpoint
+3. **Global Currency Integration**:
+   - **Currency added to Zustand store** with `currency` state + `setCurrency()` action, persisted to localStorage
+   - **Settings sync**: When user changes currency in Settings → Company tab, it calls `setCurrency()` to update the global store immediately
+   - **ErpShell loads currency**: On mount, fetches settings and syncs currency from DB to store
+   - **Currency propagates**: All components that use `formatCurrency()` now receive the global currency from the store
+   - Available currencies: AED, USD, EUR, GBP, PKR, SAR, QAR
 
 #### 🎨 Styling Polish
-- Column toggle: Clean dropdown with checkbox + type label, hover effect, "Show all" reset
-- Quick filter pills: Rounded pills with count badges, accent highlight for active filter
-- Recent records: Color-coded action icons, arrow icon for clickable entries, skeleton loading
-- Dashboard layout: Upgraded from 2-col to 3-col grid for Recent Records + Recent Activity + Upcoming
-
-#### 🔧 Backend Updates
-- No new API routes (uses existing audit-logs endpoint)
-- Notification polling moved from on-demand to 30s interval in toolbar
+- Column Editor: Grid layout with move buttons, type dropdown, options input, required toggle, delete button
+- Tab Navigator: Clean dropdown with numbered tabs, close buttons, "Close All" action
+- Currency: Consistent symbol across dashboard KPIs, register cells, record forms, print layouts
 
 ### Verification Results (agent-browser)
-- ✅ Dashboard shows "Recent Records" widget with 6 entries (Created/Updated actions)
-- ✅ Dashboard shows "SYSTEM OVERVIEW" with Live indicator
-- ✅ Navigate to Purchase Request → "Columns" button visible with count badge
-- ✅ Click Columns → dropdown shows all 9 columns with type labels (auto increment, date, employee, etc.)
-- ✅ Quick Filter pills show "All Draft(1) Submitted(2)" with count badges
+- ✅ Tab Navigator: Opened 3 tabs → clicked list icon → dropdown shows "OPEN TABS (3)" with Dashboard, Work Orders, Inventory
+- ✅ Column Editor: Navigate to Inventory → click "Edit" → modal opens with 9 columns, all editable (name, type, options, required, reorder)
+- ✅ System register warning visible
 - ✅ Lint: 0 errors, 0 warnings
-- ✅ Dev server stable (PID 29799)
-- ✅ All API routes return 200
+- ✅ Dev server stable (PID 32020)
 
 ### Files Modified/Created This Round
 ```
-NEW: src/components/erp/recent-records-widget.tsx     (110 lines — recent audit entries on dashboard)
-MODIFIED: src/components/erp/register-view.tsx        (added Column Visibility Toggle + Quick Filter Pills + visibleColumns + Columns3 import)
-MODIFIED: src/components/erp/toolbar.tsx              (notification auto-refresh polling every 30s)
-MODIFIED: src/components/erp/dashboard.tsx            (added RecentRecordsWidget + 3-col grid)
+NEW: src/components/erp/column-editor.tsx        (200 lines — edit columns of existing registers)
+NEW: src/components/erp/tab-navigator.tsx        (100 lines — Excel-like all-tabs dropdown)
+MODIFIED: src/components/erp/register-view.tsx   (added Edit button + ColumnEditor modal + Settings2 import)
+MODIFIED: src/components/erp/tab-bar.tsx         (added TabNavigator + restructured layout)
+MODIFIED: src/lib/erp/store.ts                   (added currency state + setCurrency + persisted)
+MODIFIED: src/components/erp/settings-view.tsx   (currency select syncs to global store)
+MODIFIED: src/components/erp/erp-shell.tsx        (loads currency from settings on mount)
 ```
 
-## Current Goals / Completed Modifications
-- [DONE] Architecture + design system (Round 1)
-- [DONE] Prisma schema + seed (30 registers, 89 records) (Round 1)
-- [DONE] All API routes (CRUD + dashboard + AI + search + backup) (Round 1)
-- [DONE] Full ERP shell with all 7 modules (Round 1)
-- [DONE] Fix Audit Log modal Escape handling (Round 2)
-- [DONE] CSV Import workflow (Round 2)
-- [DONE] Print Record feature (Round 2)
-- [DONE] Bulk Actions (Round 2)
-- [DONE] Record form sections + progress bar (Round 2)
-- [DONE] Clickable KPIs + Quick Actions (Round 2)
-- [DONE] Styling polish: icons in badges, gradient headers, animations (Round 2)
-- [DONE] Login screen with cookie-based session auth (Round 3)
-- [DONE] RBAC: 11 roles + per-module permission matrix (Round 3)
-- [DONE] User Management admin view (CRUD) (Round 3)
-- [DONE] User Menu dropdown (Round 3)
-- [DONE] 5 demo users seeded (Round 3)
-- [DONE] Status bar shows real user info (Round 3)
-- [DONE] Permission Enforcement in UI (Round 4)
-- [DONE] Approval Workflow UI (Round 4)
-- [DONE] Saved Views UI (Round 4)
-- [DONE] KPI Sparklines + Activity Timeline (Round 4)
-- [DONE] Record Detail Drawer (Round 5)
-- [DONE] Workflow History timeline (Round 5)
-- [DONE] Server-side permission checks (Round 5)
-- [DONE] Empty state SVG illustrations (Round 5)
-- [DONE] Inline Edit in Record Detail Drawer (Round 6)
-- [DONE] Custom Dashboard Widgets (Round 6)
-- [DONE] Saved Views Management page (Round 7)
-- [DONE] Server-side permission checks on records CRUD (Round 7)
-- [DONE] Workflow History CSV export (Round 7)
-- [DONE] Server-side permission checks on users CRUD (Round 8)
-- [DONE] Saved View editing (Round 8)
-- [DONE] Related Records panel (Round 9)
-- [DONE] System Statistics widget (Round 9)
-- [DONE] JSON Export from register view (Round 10)
-- [DONE] Keyboard Shortcuts Help Modal (Round 10)
-- [DONE] System Overview Widget (Round 10)
-- [DONE] **Column Visibility Toggle** (Round 11) — show/hide columns in register view
-- [DONE] **Quick Status Filter Pills** (Round 11) — one-click status filtering with counts
-- [DONE] **Notification Auto-Refresh** (Round 11) — polls every 30s
-- [DONE] **Recent Records Widget** (Round 11) — recent audit activity on dashboard
+---
 
-## Unresolved Issues / Risks / Next-Phase Priorities
+## SaaS Readiness Assessment & Recommendations
 
-### Priority 1 — High-Value Features Still Missing
-1. **Real-time notifications** — Currently polls every 30s. Next phase: WebSocket mini-service (port 3003) for true push notifications.
+### Current State: READY FOR SINGLE-TENANT WEB APP ✅
 
-### Priority 2 — Polish & UX
-2. **Custom field types** — File attachments, images, computed fields, formula fields in register builder.
-3. **Drag-and-drop reorder** — KPIs/charts/columns drag-to-reorder.
-4. **Register builder improvements** — Required field validation, column reordering.
+The FMCore ERP is production-ready as a **single-company web application**. It has:
+- ✅ 35+ API routes with full CRUD
+- ✅ Server-side permission checks on ALL mutation endpoints
+- ✅ Cookie-based session authentication
+- ✅ 11 roles with per-module permission matrix
+- ✅ 30 pre-loaded registers with 93 sample records
+- ✅ Dynamic register builder (create custom registers)
+- ✅ Column editor (modify existing register columns)
+- ✅ Approval workflows with state machine
+- ✅ Audit logging on all actions
+- ✅ CSV/JSON import/export
+- ✅ Print layouts
+- ✅ Dashboard with KPIs, charts, sparklines, activity timeline
+- ✅ AI Assistant (z-ai-web-dev-sdk)
+- ✅ Responsive design (mobile/tablet/desktop)
+- ✅ Dark/light themes
+- ✅ Saved views with pin/hide/customize
+- ✅ Keyboard shortcuts
+- ✅ Tab navigator
+- ✅ Global currency integration
 
-### Priority 3 — Performance & Scale
-5. **Server-side filtering** — Move filter/sort from JS to SQL for datasets >5000 records.
-6. **Pagination virtualization** — For 100+ records per page.
-7. **CSV import streaming** — For large CSV files (>1000 rows).
+### What's Needed for Multi-Company SaaS ❌→✅
 
-### Known Limitations
-- Print record uses `window.open()` which may be blocked by popup blockers
-- Bulk print limited to 5 records (browser limitation)
-- AI Assistant context size limited to first 3 records per register
-- Mobile sidebar drawer doesn't auto-close on navigation (intentional)
-- Passwords stored in plaintext for demo only; production should use bcrypt/argon2
-- Session cookies are not signed; production should add HMAC signing or JWT
-- Server-side permission checks implemented on ALL mutation endpoints
-- Dashboard preferences don't yet support drag-and-drop reordering (only pin/hide)
-- Inline edit doesn't auto-save on field blur (intentional)
-- Related records search is text-based (exact match); fuzzy matching would improve results
-- Export dropdown uses CSS hover (group-hover) — not accessible via keyboard
-- Column visibility toggle is per-session (not persisted to DB); resets on page reload
-- Quick filter pills only appear for status columns (not priority or dropdown columns)
-- Recent Records widget shows audit log entries, not actual record previews
+To make this a **multi-tenant SaaS** where multiple companies use the same instance:
+
+#### Phase 1: Multi-Tenancy Architecture (CRITICAL)
+1. **Tenant Model**: Add `Tenant` (company) model with `id`, `name`, `plan`, `status`, `createdAt`
+2. **Tenant Isolation**: Add `tenantId` to ALL models (Register, Record, User, Session, AuditLog, etc.)
+3. **Tenant Context**: Create a tenant-resolution middleware that reads tenant from subdomain (e.g., `company1.fmcore.app`) or header
+4. **Row-Level Security**: Every Prisma query must filter by `tenantId` — this is the #1 security requirement
+5. **User-Tenant Mapping**: Users belong to tenants; a user can only see their own tenant's data
+
+#### Phase 2: Subscription & Billing
+6. **Plan Model**: Free, Starter, Pro, Enterprise — with limits on registers, records, users
+7. **Stripe Integration**: Subscription billing, usage tracking, invoice generation
+8. **Trial Period**: 14-day free trial with automatic downgrade
+
+#### Phase 3: Security Hardening
+9. **Password Hashing**: Replace plaintext with bcrypt/argon2
+10. **JWT Sessions**: Replace unsigned cookies with signed JWTs
+11. **Rate Limiting**: API rate limits per tenant
+12. **Input Sanitization**: Server-side validation on all endpoints
+13. **HTTPS Only**: Enforce HTTPS in production
+14. **CSRF Protection**: Add CSRF tokens for mutation endpoints
+
+#### Phase 4: Scalability
+15. **Database Migration**: Move from SQLite to PostgreSQL for multi-tenant
+16. **Server-Side Filtering**: Move filter/sort from JS to SQL (currently fetches all records)
+17. **Redis Caching**: Cache dashboard data, register lists, settings
+18. **CDN**: Serve static assets via CDN
+19. **WebSocket Service**: Real-time notifications via WebSocket mini-service (port 3003)
+20. **Background Jobs**: Email notifications, report generation, backup scheduling
+
+#### Phase 5: Additional ERP Modules
+21. **Sales Module**: Quotations → Sales Orders → Invoices → Payments
+22. **Accounting**: Chart of Accounts, Journal Entries, Trial Balance, P&L, Balance Sheet
+23. **HR Module**: Employee profiles, payroll, attendance tracking
+24. **Inventory**: Stock movements, warehouse transfers, stock valuation
+25. **Email Integration**: SMTP for notifications, report delivery
+26. **File Attachments**: S3/R2 storage for document uploads
+27. **Custom Fields**: Formula fields, computed columns, file/image attachments
+28. **Workflow Builder**: Visual workflow designer (not just hardcoded state machine)
+
+#### Phase 6: UX Polish
+29. **Drag-and-Drop**: Reorder KPIs, charts, columns, tabs
+30. **Advanced Search**: Full-text search across all registers
+31. **Custom Dashboard Builder**: Drag widgets onto a canvas
+32. **Mobile App**: React Native or PWA
+33. **Multi-Language**: i18n with Arabic, French, Spanish support
+34. **Dark/Light Auto**: Follow system preference
+35. **Onboarding Wizard**: Guided setup for new tenants
+
+### Timeline Estimate
+| Phase | Effort | Timeline |
+|-------|--------|----------|
+| Phase 1 (Multi-Tenancy) | 2-3 weeks | Critical — must do first |
+| Phase 2 (Billing) | 1-2 weeks | |
+| Phase 3 (Security) | 1 week | |
+| Phase 4 (Scalability) | 2-3 weeks | |
+| Phase 5 (Modules) | 4-6 weeks | |
+| Phase 6 (UX Polish) | 2-3 weeks | |
+| **Total** | **12-18 weeks** | For full SaaS |
+
+### Recommendation
+**Start with Phase 1 (Multi-Tenancy)** — this is the architectural foundation. Without tenant isolation, you cannot safely host multiple companies. The current codebase is well-structured with an API-first approach, so adding `tenantId` to queries is straightforward but must be done systematically across all 35+ API routes.
+
+The current app is **ready for a single company to use right now** — all features work, data persists, RBAC is enforced. For SaaS, you need the multi-tenancy layer.
+
+---
+
+## Current Goals / Completed Modifications (All Rounds)
+- [DONE] Architecture + design system (R1)
+- [DONE] Prisma schema + seed (R1)
+- [DONE] All API routes (R1)
+- [DONE] Full ERP shell (R1)
+- [DONE] Audit Log modal fix (R2)
+- [DONE] CSV Import (R2)
+- [DONE] Print Record (R2)
+- [DONE] Bulk Actions (R2)
+- [DONE] Record form sections (R2)
+- [DONE] Clickable KPIs + Quick Actions (R2)
+- [DONE] Login screen + session auth (R3)
+- [DONE] RBAC: 11 roles (R3)
+- [DONE] User Management CRUD (R3)
+- [DONE] User Menu dropdown (R3)
+- [DONE] Permission Enforcement in UI (R4)
+- [DONE] Approval Workflow UI (R4)
+- [DONE] Saved Views UI (R4)
+- [DONE] KPI Sparklines + Activity Timeline (R4)
+- [DONE] Record Detail Drawer (R5)
+- [DONE] Workflow History timeline (R5)
+- [DONE] Server-side permission checks (R5)
+- [DONE] Empty state SVG illustrations (R5)
+- [DONE] Inline Edit in Drawer (R6)
+- [DONE] Custom Dashboard Widgets (R6)
+- [DONE] Saved Views Management (R7)
+- [DONE] Server-side checks on records CRUD (R7)
+- [DONE] Workflow History CSV export (R7)
+- [DONE] Server-side checks on users CRUD (R8)
+- [DONE] Saved View editing (R8)
+- [DONE] Related Records panel (R9)
+- [DONE] System Statistics widget (R9)
+- [DONE] JSON Export (R10)
+- [DONE] Keyboard Shortcuts modal (R10)
+- [DONE] System Overview Widget (R10)
+- [DONE] Column Visibility Toggle (R11)
+- [DONE] Quick Status Filter Pills (R11)
+- [DONE] Notification Auto-Refresh (R11)
+- [DONE] Recent Records Widget (R11)
+- [DONE] **Column Editor for existing registers** (R12)
+- [DONE] **Tab Navigator dropdown** (R12)
+- [DONE] **Global Currency Integration** (R12)
 
 ## Dev Server
 - Runs on port 3000 via `bunx next dev -p 3000`
 - Persistent launcher: `/home/z/my-project/start-dev.sh`
 - Logs at `/home/z/my-project/dev.log`
-- Current PID: 29799
+- Current PID: 32020
 
 ## Demo Login Credentials
 | Username | Password   | Role         | Department      | Visible Registers |

@@ -19,9 +19,10 @@ import { ApprovalWorkflow } from './approval-workflow';
 import { SavedViews } from './saved-views';
 import { RecordDetailDrawer } from './record-detail-drawer';
 import { EmptyStateIllustration } from './empty-state-illustration';
+import { ColumnEditor } from './column-editor';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ export function RegisterView({ registerId }: Props) {
   const [company, setCompany] = useState({ name: 'FMCore Facilities Management', address: '', phone: '', email: '', tax_number: '' });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnToggle, setShowColumnToggle] = useState(false);
+  const [columnEditorOpen, setColumnEditorOpen] = useState(false);
 
   // Permission flags (register may be null initially)
   const regCode = register?.code || '';
@@ -371,6 +373,12 @@ export function RegisterView({ registerId }: Props) {
                 </div>
               )}
             </div>
+            {/* Edit Columns (rename/retype/add/delete) */}
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={() => setColumnEditorOpen(true)} className="h-8 text-[12px]" title="Edit column structure">
+                <Settings2 className="w-3.5 h-3.5 mr-1" /> Edit
+              </Button>
+            )}
             {canImport && (
               <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-8 text-[12px]">
                 <Upload className="w-3.5 h-3.5 mr-1" /> Import
@@ -702,6 +710,14 @@ export function RegisterView({ registerId }: Props) {
         record={workflowTarget}
         onClose={() => setWorkflowTarget(null)}
         onTransition={() => { setWorkflowTarget(null); loadRecords(); }}
+      />
+
+      {/* Column Editor modal */}
+      <ColumnEditor
+        open={columnEditorOpen}
+        register={register}
+        onClose={() => setColumnEditorOpen(false)}
+        onSaved={() => { loadRecords(); }}
       />
 
       {/* Delete confirmation */}

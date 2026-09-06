@@ -40,6 +40,10 @@ interface ErpState {
   builderOpen: boolean;
   setBuilderOpen: (open: boolean) => void;
 
+  // global currency (synced from Settings)
+  currency: string;
+  setCurrency: (c: string) => void;
+
   // user menu (top-right dropdown)
   userMenuOpen: boolean;
   setUserMenu: (open: boolean) => void;
@@ -112,6 +116,10 @@ export const useErpStore = create<ErpState>()(
       builderOpen: false,
       setBuilderOpen: (open) => set({ builderOpen: open }),
 
+      // ---------- currency ----------
+      currency: 'AED',
+      setCurrency: (c) => set({ currency: c }),
+
       // ---------- user menu ----------
       userMenuOpen: false,
       setUserMenu: (open) => set({ userMenuOpen: open }),
@@ -142,6 +150,7 @@ export const useErpStore = create<ErpState>()(
         tabs: s.tabs,
         activeTabId: s.activeTabId,
         user: s.user,
+        currency: s.currency,
       }),
     },
   ),

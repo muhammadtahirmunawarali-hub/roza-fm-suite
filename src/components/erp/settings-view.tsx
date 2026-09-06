@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 
 export function SettingsView() {
-  const { theme, setTheme } = useErpStore();
+  const { theme, setTheme, currency, setCurrency } = useErpStore();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
@@ -249,7 +249,7 @@ export function SettingsView() {
                 <Field label="Fiscal Year" value={settings['company.fiscal_year'] || ''} onChange={(v) => update('company.fiscal_year', v)} />
                 <div>
                   <Label className="text-[11px] mb-1">Currency</Label>
-                  <Select value={settings['company.currency'] || 'AED'} onValueChange={(v) => { update('company.currency', v); update('currency', v); }}>
+                  <Select value={settings['company.currency'] || currency} onValueChange={(v) => { update('company.currency', v); update('currency', v); setCurrency(v); }}>
                     <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR'].map((c) => (

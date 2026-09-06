@@ -1,8 +1,9 @@
 'use client';
 
-// FMCore ERP — Tab Bar
+// FMCore ERP — Tab Bar (with Excel-like Tab Navigator dropdown)
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { TabNavigator } from './tab-navigator';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
@@ -12,14 +13,14 @@ export function TabBar() {
   if (tabs.length === 0) return null;
 
   return (
-    <div className="flex items-center h-[40px] border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)] overflow-x-auto no-scrollbar shrink-0">
-      <div className="flex items-center h-full">
+    <div className="flex items-center h-[40px] border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)] shrink-0">
+      <div className="flex items-center h-full overflow-x-auto no-scrollbar flex-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'group flex items-center gap-2 h-full px-3 text-[12px] border-r border-[var(--erp-border)] min-w-[120px] max-w-[220px] transition-colors',
+              'group flex items-center gap-2 h-full px-3 text-[12px] border-r border-[var(--erp-border)] min-w-[120px] max-w-[220px] transition-colors shrink-0',
               activeTabId === tab.id
                 ? 'bg-[var(--erp-bg)] text-[var(--erp-text)] font-medium'
                 : 'text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
@@ -43,6 +44,8 @@ export function TabBar() {
           </button>
         ))}
       </div>
+      {/* Excel-like Tab Navigator dropdown */}
+      <TabNavigator />
     </div>
   );
 }

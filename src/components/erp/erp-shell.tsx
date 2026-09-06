@@ -28,6 +28,7 @@ export function ErpShell() {
   const {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
+    currency, setCurrency,
   } = useErpStore();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -62,6 +63,18 @@ export function ErpShell() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Load currency from settings on mount (sync global store)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch('/api/erp/settings').then(r => r.json()).then((list: any[]) => {
+      if (cancelled || !Array.isArray(list)) return;
+      const cur = list.find((s: any) => s.key === 'company.currency');
+      if (cur?.value) setCurrency(cur.value);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   // Open register by code via custom event (from notification links)
   useEffect(() => {
