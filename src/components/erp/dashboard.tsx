@@ -9,6 +9,7 @@ import { FAIcon } from './icon';
 import { Sparkline } from './sparkline';
 import { DashboardCustomize } from './dashboard-customize';
 import { SystemOverviewWidget } from './system-overview-widget';
+import { RecentRecordsWidget } from './recent-records-widget';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import {
@@ -297,8 +298,9 @@ export function Dashboard() {
         </ChartCard>
       )}
 
-      {/* Recent activity + Upcoming items */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Recent Records + Recent activity + Upcoming items */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <RecentRecordsWidget />
         <Panel
           title="Recent Activity"
           icon={<Activity className="w-4 h-4 text-[var(--erp-accent)]" />}

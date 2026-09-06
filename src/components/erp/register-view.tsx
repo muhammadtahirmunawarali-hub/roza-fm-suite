@@ -21,7 +21,7 @@ import { RecordDetailDrawer } from './record-detail-drawer';
 import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,8 @@ export function RegisterView({ registerId }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<RecordData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [company, setCompany] = useState({ name: 'FMCore Facilities Management', address: '', phone: '', email: '', tax_number: '' });
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [showColumnToggle, setShowColumnToggle] = useState(false);
 
   // Permission flags (register may be null initially)
   const regCode = register?.code || '';
@@ -70,6 +72,21 @@ export function RegisterView({ registerId }: Props) {
   const canImport = hasPermission(regCode, 'import');
   const canApprove = hasPermission(regCode, 'approve');
   const hasStatusCol = register?.columns.some((c) => c.type === 'status');
+
+  // Visible columns (filtered by user's column visibility preferences)
+  const visibleColumns = useMemo(() => {
+    if (!register) return [];
+    return register.columns.filter((c) => !hiddenColumns.has(c.name));
+  }, [register, hiddenColumns]);
+
+  const toggleColumn = (colName: string) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(colName)) next.delete(colName);
+      else next.add(colName);
+      return next;
+    });
+  };
 
   // Load register meta + company settings
   useEffect(() => {
@@ -320,6 +337,40 @@ export function RegisterView({ registerId }: Props) {
                 </span>
               )}
             </Button>
+            {/* Column Visibility Toggle */}
+            <div className="relative">
+              <Button variant="outline" size="sm" onClick={() => setShowColumnToggle((v) => !v)} className="h-8 text-[12px]">
+                <Columns3 className="w-3.5 h-3.5 mr-1" /> Columns
+                {hiddenColumns.size > 0 && (
+                  <span className="ml-1 px-1.5 rounded-full bg-[var(--erp-accent)] text-white text-[9px]">
+                    {hiddenColumns.size}
+                  </span>
+                )}
+              </Button>
+              {showColumnToggle && (
+                <div className="absolute top-full left-0 mt-1 w-56 max-h-[300px] overflow-y-auto bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md shadow-xl z-30 p-1.5">
+                  <div className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] px-2 py-1 mb-1 border-b border-[var(--erp-border)]">Toggle Columns</div>
+                  {register.columns.map((col) => (
+                    <label key={col.name} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--erp-bg-hover)] cursor-pointer text-[11px]">
+                      <Checkbox
+                        checked={!hiddenColumns.has(col.name)}
+                        onCheckedChange={() => toggleColumn(col.name)}
+                      />
+                      <span className="text-[var(--erp-text-secondary)] flex-1 truncate">{col.name}</span>
+                      <span className="text-[9px] text-[var(--erp-text-muted)]">{col.type.replace('_', ' ')}</span>
+                    </label>
+                  ))}
+                  {hiddenColumns.size > 0 && (
+                    <button
+                      onClick={() => setHiddenColumns(new Set())}
+                      className="w-full text-[10px] text-[var(--erp-accent)] hover:underline py-1.5 mt-1 border-t border-[var(--erp-border)]"
+                    >
+                      Show all columns
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             {canImport && (
               <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-8 text-[12px]">
                 <Upload className="w-3.5 h-3.5 mr-1" /> Import
@@ -373,6 +424,50 @@ export function RegisterView({ registerId }: Props) {
             ))}
           </div>
         )}
+
+        {/* Quick Status Filter Pills */}
+        {hasStatusCol && filterableCols.length > 0 && (() => {
+          const statusCol = register.columns.find((c) => c.type === 'status');
+          if (!statusCol?.options) return null;
+          const activeFilter = filters[statusCol.name];
+          return (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] mr-1">Quick Filter:</span>
+              <button
+                onClick={() => { setFilters((f) => { const n = { ...f }; delete n[statusCol.name]; return n; }); setPage(1); }}
+                className={cn(
+                  'px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors',
+                  !activeFilter
+                    ? 'bg-[var(--erp-accent)] text-white'
+                    : 'bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
+                )}
+              >
+                All
+              </button>
+              {statusCol.options.map((opt) => {
+                const count = records.filter((r) => r.data[statusCol.name] === opt).length;
+                if (count === 0) return null;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => { setFilters((f) => ({ ...f, [statusCol.name]: activeFilter === opt ? '' : opt })); setPage(1); }}
+                    className={cn(
+                      'px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors flex items-center gap-1',
+                      activeFilter === opt
+                        ? 'bg-[var(--erp-accent)] text-white'
+                        : 'bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
+                    )}
+                  >
+                    {opt}
+                    <span className={cn('text-[8px] px-1 rounded-full', activeFilter === opt ? 'bg-white/20' : 'bg-[var(--erp-bg-hover)]')}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Search + Filters row */}
         <div className="mt-3 flex items-center gap-2 flex-wrap">
@@ -458,7 +553,7 @@ export function RegisterView({ registerId }: Props) {
                     aria-label="Select all rows"
                   />
                 </th>
-                {register.columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <th
                     key={col.name}
                     onClick={() => toggleSort(col.name)}
@@ -499,7 +594,7 @@ export function RegisterView({ registerId }: Props) {
                         aria-label={`Select record ${rec.sequence}`}
                       />
                     </td>
-                    {register.columns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <td key={col.name} className="px-3 py-2 text-[var(--erp-text)] align-top">
                         <CellContent value={rec.data[col.name]} col={col} sequence={rec.sequence} registerCode={register.code} />
                       </td>

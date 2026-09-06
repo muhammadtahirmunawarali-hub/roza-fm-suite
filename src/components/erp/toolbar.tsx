@@ -29,15 +29,19 @@ export function Toolbar() {
     return () => clearInterval(i);
   }, []);
 
+  // Load unread notification count — on mount, after panel closes, AND every 30s for auto-refresh
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const loadCount = async () => {
       try {
         const notifs = await notificationsApi.list();
         if (!cancelled) setUnreadCount(notifs.filter((n) => !n.isRead).length);
       } catch {}
-    })();
-    return () => { cancelled = true; };
+    };
+    loadCount();
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(loadCount, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [notifPanelOpen]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
