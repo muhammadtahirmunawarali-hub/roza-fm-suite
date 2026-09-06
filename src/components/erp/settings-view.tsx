@@ -1,26 +1,62 @@
 'use client';
 
-// FMCore ERP — Settings view
+// FMCore ERP — Settings view (with Saved Views management tab)
 import { useEffect, useState } from 'react';
-import { settingsApi, backupApi } from '@/lib/erp/api';
+import { settingsApi, backupApi, savedViewsApi, type SavedViewMeta } from '@/lib/erp/api';
 import type { Setting } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
-  Hash, Bell, Database, Shield, Info,
+  Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock,
+  Search, Filter as FilterIcon, ArrowUpDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { formatTimeAgo } from '@/lib/erp/utils';
 
 export function SettingsView() {
   const { theme, setTheme } = useErpStore();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
+  const [savedViews, setSavedViews] = useState<SavedViewMeta[]>([]);
+  const [viewsLoading, setViewsLoading] = useState(false);
+  const [viewSearch, setViewSearch] = useState('');
+
+  useEffect(() => {
+    settingsApi.list().then((list: Setting[]) => {
+      const map: Record<string, string> = {};
+      list.forEach((s) => (map[s.key] = s.value));
+      setSettings(map);
+    }).catch(() => {});
+  }, []);
+
+  const loadSavedViews = () => {
+    setViewsLoading(true);
+    savedViewsApi.listAll().then((views) => {
+      setSavedViews(views);
+    }).catch(() => {}).finally(() => setViewsLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'saved-views') loadSavedViews();
+  }, [activeTab]);
+
+  const handleDeleteView = async (id: string, name: string) => {
+    try {
+      await savedViewsApi.remove(id);
+      toast.success(`Deleted view "${name}"`);
+      setSavedViews((v) => v.filter((x) => x.id !== id));
+    } catch (e: any) {
+      toast.error('Failed to delete view', { description: e.message });
+    }
+  };
 
   useEffect(() => {
     settingsApi.list().then((list: Setting[]) => {
@@ -100,6 +136,7 @@ export function SettingsView() {
     { id: 'company',     label: 'Company',        icon: <Building2 className="w-4 h-4" /> },
     { id: 'appearance',  label: 'Appearance',    icon: <Palette className="w-4 h-4" /> },
     { id: 'numbering',   label: 'Document #',    icon: <Hash className="w-4 h-4" /> },
+    { id: 'saved-views', label: 'Saved Views',   icon: <Bookmark className="w-4 h-4" /> },
     { id: 'backup',      label: 'Backup & Reset', icon: <Database className="w-4 h-4" /> },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
   ];
@@ -298,6 +335,129 @@ export function SettingsView() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'saved-views' && (
+            <div className="space-y-4 max-w-3xl">
+              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+                <Bookmark className="w-4 h-4 text-[var(--erp-accent)]" /> Saved Views Management
+              </h2>
+              <p className="text-[11px] text-[var(--erp-text-muted)] -mt-2">
+                Manage all saved filter views across registers. Delete views you no longer need.
+              </p>
+
+              {/* Search bar */}
+              {savedViews.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)]" />
+                  <input
+                    value={viewSearch}
+                    onChange={(e) => setViewSearch(e.target.value)}
+                    placeholder="Search saved views..."
+                    className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] focus:ring-1 focus:ring-[var(--erp-accent-border)]"
+                  />
+                </div>
+              )}
+
+              {/* Stats */}
+              {savedViews.length > 0 && (
+                <div className="flex items-center gap-4 text-[11px]">
+                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+                    <Bookmark className="w-3 h-3" />
+                    {savedViews.length} total views
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+                    <Globe className="w-3 h-3 text-[var(--erp-accent)]" />
+                    {savedViews.filter((v) => v.isShared).length} shared
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+                    <Lock className="w-3 h-3" />
+                    {savedViews.filter((v) => !v.isShared).length} private
+                  </span>
+                </div>
+              )}
+
+              {/* Views list */}
+              {viewsLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 bg-[var(--erp-bg-hover)] rounded-md animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+                  ))}
+                </div>
+              ) : savedViews.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <EmptyStateIllustration type="no-views" size={120} className="mb-3" />
+                  <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">No saved views yet</h3>
+                  <p className="text-[12px] text-[var(--erp-text-muted)] max-w-sm">
+                    Save filter combinations from any register view to quickly access them later.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedViews
+                    .filter((v) => !viewSearch.trim() || v.name.toLowerCase().includes(viewSearch.toLowerCase()) || v.registerName.toLowerCase().includes(viewSearch.toLowerCase()))
+                    .map((view) => (
+                      <div
+                        key={view.id}
+                        className="group flex items-center gap-3 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)] hover:border-[var(--erp-accent-border)] transition-colors"
+                      >
+                        {/* Register icon */}
+                        <div
+                          className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                          style={{ background: view.registerColor + '20', color: view.registerColor }}
+                        >
+                          <FAIcon name={view.registerIcon} className="text-[12px]" />
+                        </div>
+
+                        {/* View info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-medium text-[var(--erp-text)] truncate">{view.name}</span>
+                            {view.isShared ? (
+                              <Globe className="w-3 h-3 text-[var(--erp-accent)] shrink-0" />
+                            ) : (
+                              <Lock className="w-3 h-3 text-[var(--erp-text-muted)] shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
+                            <span>{view.registerName}</span>
+                            <span>·</span>
+                            <span>Updated {formatTimeAgo(view.updatedAt)}</span>
+                          </div>
+                          {/* Filter badges */}
+                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                            {view.hasSearch && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+                                <Search className="w-2 h-2" /> Search
+                              </span>
+                            )}
+                            {view.filterCount > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+                                <FilterIcon className="w-2 h-2" /> {view.filterCount} filter{view.filterCount === 1 ? '' : 's'}
+                              </span>
+                            )}
+                            {view.hasSort && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+                                <ArrowUpDown className="w-2 h-2" /> Sorted
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleDeleteView(view.id, view.name)}
+                          className="opacity-0 group-hover:opacity-100 p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:bg-[rgba(239,68,68,0.1)] transition-all shrink-0"
+                          title="Delete view"
+                          aria-label={`Delete view ${view.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 

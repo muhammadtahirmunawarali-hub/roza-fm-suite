@@ -208,11 +208,23 @@ export interface SavedView {
 
 export const savedViewsApi = {
   list: (registerId: string) => request<SavedView[]>(`${BASE}/saved-views?registerId=${registerId}`),
+  listAll: () => request<SavedViewMeta[]>(`${BASE}/saved-views/all`),
   create: (data: { name: string; registerId: string; filters: any; isShared?: boolean }) =>
     request<SavedView>(`${BASE}/saved-views`, { method: 'POST', body: JSON.stringify(data) }),
   remove: (id: string) =>
     request<ApiResponse>(`${BASE}/saved-views/${id}`, { method: 'DELETE' }),
 };
+
+// Extended SavedView with metadata for management page
+export interface SavedViewMeta extends SavedView {
+  registerName: string;
+  registerCode: string;
+  registerIcon: string;
+  registerColor: string;
+  filterCount: number;
+  hasSearch: boolean;
+  hasSort: boolean;
+}
 
 // ---------- Column helpers (shared between client & server) ----------
 export const COLUMN_TYPE_META: Record<ColumnDef['type'], { label: string; icon: string; needsOptions: boolean }> = {

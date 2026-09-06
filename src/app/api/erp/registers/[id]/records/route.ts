@@ -1,9 +1,11 @@
 // FMCore ERP — Records API (paginated, searchable, sortable, filterable)
 // GET  /api/erp/registers/[id]/records?page=1&pageSize=25&search=&sortField=&sortDir=asc&f_Status=
 // POST /api/erp/registers/[id]/records   { data: {...} }
+// Server-side permission checks: POST requires 'create' permission.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { RecordData, ColumnDef } from '@/lib/erp/types';
+import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
 
 function serialize(r: any): RecordData {
   return {
@@ -112,6 +114,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!register || register.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
   }
+
+  // Server-side permission check
+  const user = await getCurrentUser(req);
+  if (user && !hasPermission(user, register.code, 'create')) {
+    return NextResponse.json({ ok: false, error: "You don't have 'create' permission for this register" }, { status: 403 });
+  }
+
   const body = await req.json();
   const data: Record<string, any> = body.data || {};
 
@@ -135,12 +144,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       registerId: id,
       sequence,
       data: JSON.stringify(data),
-      createdBy: 'admin',
+      createdBy: user?.username || 'system',
     },
   });
 
   await db.auditLog.create({
     data: {
+      userId: user?.id || null,
       action: 'Created',
       module: register.name,
       registerId: id,

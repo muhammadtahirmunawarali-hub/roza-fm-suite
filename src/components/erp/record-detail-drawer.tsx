@@ -8,6 +8,7 @@ import { recordsApi, masterDataApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
 import { FAIcon } from './icon';
+import { EmptyStateIllustration } from './empty-state-illustration';
 import { ApprovalWorkflow } from './approval-workflow';
 import { printRecord } from './print-record';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   X, Printer, Pencil, Workflow as WorkflowIcon, History as HistoryIcon,
   FileText, Activity, Clock, CheckCircle2, ArrowRight, Loader2,
-  Check, XCircle, AlertCircle, Star,
+  Check, XCircle, AlertCircle, Star, Download,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -760,6 +761,28 @@ function FieldCard({ col, value, fullWidth }: { col: ColumnDef; value: any; full
 
 // ---------- History Tab ----------
 function HistoryTab({ history, loading, hasStatusCol }: { history: HistoryEntry[]; loading: boolean; hasStatusCol: boolean }) {
+  const exportHistoryCsv = () => {
+    if (history.length === 0) return;
+    const headers = ['Date', 'User', 'Action', 'From Status', 'To Status', 'Summary'];
+    const rows = history.map((entry) => [
+      new Date(entry.createdAt).toLocaleString(),
+      entry.userName,
+      entry.action,
+      entry.statusChange?.from || '',
+      entry.statusChange?.to || '',
+      entry.summary.replace(/"/g, '""'),
+    ].map((v) => `"${v}"`));
+    const csv = [headers.map((h) => `"${h}"`).join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `history_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${history.length} history entries`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -771,9 +794,7 @@ function HistoryTab({ history, loading, hasStatusCol }: { history: HistoryEntry[
   if (history.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-14 h-14 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center mb-3">
-          <HistoryIcon className="w-7 h-7 text-[var(--erp-text-muted)]" />
-        </div>
+        <EmptyStateIllustration type="no-history" size={120} className="mb-3" />
         <h3 className="text-[13px] font-semibold text-[var(--erp-text)] mb-1">No history yet</h3>
         <p className="text-[11px] text-[var(--erp-text-muted)] max-w-[260px]">
           Status transitions and edits for this record will appear here as a timeline.
@@ -784,7 +805,20 @@ function HistoryTab({ history, loading, hasStatusCol }: { history: HistoryEntry[
 
   return (
     <div className="p-4">
-      <SectionLabel icon="fa-clock-rotate-left" label="Status Transitions & Edits" count={history.length} />
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--erp-text-muted)]">
+          <FAIcon name="fa-clock-rotate-left" className="text-[10px]" />
+          <span>Status Transitions & Edits</span>
+          <span className="text-[var(--erp-text-muted)] font-normal">({history.length})</span>
+        </div>
+        <button
+          onClick={exportHistoryCsv}
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-[var(--erp-bg-input)] border border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors"
+          title="Export history as CSV"
+        >
+          <Download className="w-3 h-3" /> CSV
+        </button>
+      </div>
       <div className="relative">
         {/* Timeline line */}
         <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-[var(--erp-border)]" />
