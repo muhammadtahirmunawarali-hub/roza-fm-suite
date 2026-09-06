@@ -1,8 +1,8 @@
 'use client';
 
-// FMCore ERP — Column Editor Modal
-// Allows editing columns of an existing register (rename, retype, add, delete, reorder)
-import { useState, useCallback } from 'react';
+// FMCore ERP — Column Editor Modal (with drag-and-drop reordering)
+// Allows editing columns of an existing register (rename, retype, add, delete, drag-reorder)
+import { useState, useCallback, useRef } from 'react';
 import { registersApi, COLUMN_TYPE_META } from '@/lib/erp/api';
 import type { Register, ColumnDef, ColumnType } from '@/lib/erp/types';
 import {
@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Plus, Trash2, GripVertical, Save, X, Loader2, AlertTriangle, Settings2, ArrowUp, ArrowDown } from 'lucide-react';
-import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -27,6 +26,8 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
   const [columns, setColumns] = useState<ColumnDef[]>([]);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   // Initialize columns when modal opens
   useCallback(() => {
@@ -68,6 +69,39 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
       [next[idx], next[target]] = [next[target], next[idx]];
       return next;
     });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (idx: number) => {
+    setDraggedIdx(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx !== null && draggedIdx !== idx) {
+      setDragOverIdx(idx);
+    }
+  };
+
+  const handleDrop = (idx: number) => {
+    if (draggedIdx === null || draggedIdx === idx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    setColumns((cols) => {
+      const next = [...cols];
+      const [moved] = next.splice(draggedIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
   };
 
   const handleSave = async () => {
@@ -138,9 +172,21 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
             {columns.map((col, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-12 gap-2 items-start p-2 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)]"
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={() => handleDrop(idx)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  'grid grid-cols-12 gap-2 items-start p-2 rounded-md border transition-all cursor-move',
+                  draggedIdx === idx
+                    ? 'opacity-50 border-[var(--erp-accent)]'
+                    : dragOverIdx === idx
+                    ? 'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
+                    : 'border-[var(--erp-border)] bg-[var(--erp-bg-card)]',
+                )}
               >
-                {/* Move buttons */}
+                {/* Drag handle + Move buttons */}
                 <div className="col-span-1 flex flex-col items-center gap-0.5 pt-2">
                   <button
                     type="button"

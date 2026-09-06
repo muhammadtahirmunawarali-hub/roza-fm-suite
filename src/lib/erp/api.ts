@@ -188,6 +188,44 @@ export const backupApi = {
     request<ApiResponse>(`${BASE}/reset`, { method: 'POST' }),
 };
 
+// ---------- Stock Movements ----------
+export interface StockMovement {
+  id: string;
+  itemDescription: string;
+  movementType: string;
+  quantity: number;
+  woRegisterId?: string | null;
+  woRecordId?: string | null;
+  woSequence?: number | null;
+  invRegisterId?: string | null;
+  invRecordId?: string | null;
+  movedBy?: string | null;
+  note?: string | null;
+  createdAt: string;
+}
+
+export const stockMovementApi = {
+  list: (params: { woRecordId?: string; movementType?: string; page?: number; pageSize?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (params.woRecordId) p.set('woRecordId', params.woRecordId);
+    if (params.movementType) p.set('movementType', params.movementType);
+    if (params.page) p.set('page', String(params.page));
+    if (params.pageSize) p.set('pageSize', String(params.pageSize));
+    return request<{ data: StockMovement[]; total: number; page: number; pageSize: number; totalPages: number }>(`${BASE}/stock-movements?${p}`);
+  },
+  create: (data: {
+    itemDescription: string;
+    movementType: string;
+    quantity: number;
+    woRegisterId?: string;
+    woRecordId?: string;
+    woSequence?: number;
+    invRegisterId?: string;
+    invRecordId?: string;
+    note?: string;
+  }) => request<{ ok: boolean; id: string; summary: string } & StockMovement>(`${BASE}/stock-movements`, { method: 'POST', body: JSON.stringify(data) }),
+};
+
 // ---------- System Stats ----------
 export interface SystemStats {
   registers: number;

@@ -199,3 +199,33 @@ model OpenTab {
   isActive    Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
+
+// ============================================================
+// STOCK MOVEMENTS (inventory consumption linked to work orders)
+// When a technician consumes material on a WO, stock reduces
+// and a movement record is created linking WO → Item → Qty.
+// ============================================================
+
+model StockMovement {
+  id            String   @id @default(cuid())
+  // What moved
+  itemDescription String // description of the inventory item
+  // Movement details
+  movementType  String   // issue_to_wo | return_to_stock | adjustment_in | adjustment_out | transfer
+  quantity      Float    @default(0)
+  // Link to work order (if issue_to_wo)
+  woRegisterId  String?  // register id of the work order
+  woRecordId    String?  // record id of the work order
+  woSequence    Int?     // WO number for display
+  // Link to inventory register (if applicable)
+  invRegisterId String?
+  invRecordId   String?
+  // Who and when
+  movedBy       String?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  @@index([woRecordId])
+  @@index([movementType])
+  @@index([createdAt])
+}

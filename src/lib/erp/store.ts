@@ -44,6 +44,10 @@ interface ErpState {
   currency: string;
   setCurrency: (c: string) => void;
 
+  // RTL (right-to-left) layout
+  rtl: boolean;
+  setRtl: (r: boolean) => void;
+
   // user menu (top-right dropdown)
   userMenuOpen: boolean;
   setUserMenu: (open: boolean) => void;
@@ -120,6 +124,10 @@ export const useErpStore = create<ErpState>()(
       currency: 'AED',
       setCurrency: (c) => set({ currency: c }),
 
+      // ---------- RTL ----------
+      rtl: false,
+      setRtl: (r) => set({ rtl: r }),
+
       // ---------- user menu ----------
       userMenuOpen: false,
       setUserMenu: (open) => set({ userMenuOpen: open }),
@@ -151,6 +159,7 @@ export const useErpStore = create<ErpState>()(
         activeTabId: s.activeTabId,
         user: s.user,
         currency: s.currency,
+        rtl: s.rtl,
       }),
     },
   ),

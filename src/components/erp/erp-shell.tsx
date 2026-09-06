@@ -28,19 +28,20 @@ export function ErpShell() {
   const {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
-    currency, setCurrency,
+    currency, setCurrency, rtl, setRtl,
   } = useErpStore();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
-  // Apply theme to <html> element
+  // Apply theme + RTL direction to <html> element
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.classList.remove('dark', 'light');
       document.documentElement.classList.add(theme);
       document.documentElement.style.colorScheme = theme;
+      document.documentElement.dir = rtl ? 'rtl' : 'ltr';
     }
-  }, [theme]);
+  }, [theme, rtl]);
 
   // Check auth on mount
   useEffect(() => {
@@ -64,7 +65,7 @@ export function ErpShell() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load currency from settings on mount (sync global store)
+  // Load currency + RTL from settings on mount (sync global store)
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -77,6 +78,8 @@ export function ErpShell() {
       } else if (cur?.value && cur.value !== 'Custom') {
         setCurrency(cur.value);
       }
+      const rtlSetting = list.find((s: any) => s.key === 'rtl');
+      if (rtlSetting?.value === 'true') setRtl(true);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [user]);

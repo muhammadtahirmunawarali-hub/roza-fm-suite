@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 
 export function SettingsView() {
-  const { theme, setTheme, currency, setCurrency } = useErpStore();
+  const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
@@ -312,6 +312,29 @@ export function SettingsView() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              {/* RTL Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+                <div className="flex-1">
+                  <div className="text-[12px] font-medium text-[var(--erp-text)]">Right-to-Left (RTL) Layout</div>
+                  <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">Switch the entire interface to RTL for Arabic/Hebrew languages</div>
+                </div>
+                <button
+                  onClick={() => { setRtl(!rtl); update('rtl', String(!rtl)); }}
+                  className={cn(
+                    'relative w-11 h-6 rounded-full transition-colors shrink-0',
+                    rtl ? 'bg-[var(--erp-accent)]' : 'bg-[var(--erp-bg-hover)]',
+                  )}
+                  aria-label="Toggle RTL"
+                >
+                  <span className={cn(
+                    'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform',
+                    rtl ? 'translate-x-5' : 'translate-x-0.5',
+                  )} />
+                </button>
+                <span className={cn('text-[11px] font-medium', rtl ? 'text-[var(--erp-accent)]' : 'text-[var(--erp-text-muted)]')}>
+                  {rtl ? 'RTL' : 'LTR'}
+                </span>
               </div>
             </div>
           )}
