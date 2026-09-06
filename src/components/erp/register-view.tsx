@@ -39,7 +39,7 @@ interface Props {
 const PAGE_SIZES = [10, 25, 50, 100];
 
 export function RegisterView({ registerId }: Props) {
-  const { hasPermission, user } = useErpStore();
+  const { hasPermission, user, currency } = useErpStore();
   const [register, setRegister] = useState<Register | null>(null);
   const [records, setRecords] = useState<RecordData[]>([]);
   const [total, setTotal] = useState(0);
@@ -276,7 +276,7 @@ export function RegisterView({ registerId }: Props) {
     }
     if (currencyCol) {
       const sum = records.reduce((s, r) => s + (Number(r.data[currencyCol.name]) || 0), 0);
-      out.push({ label: currencyCol.name + ' (Σ)', value: formatCurrencyCompact(sum), color: 'var(--erp-accent)' });
+      out.push({ label: currencyCol.name + ' (Σ)', value: formatCurrencyCompact(sum, currency), color: 'var(--erp-accent)' });
     }
     return out.slice(0, 6);
   }, [register, records, total]);
@@ -604,7 +604,7 @@ export function RegisterView({ registerId }: Props) {
                     </td>
                     {visibleColumns.map((col) => (
                       <td key={col.name} className="px-3 py-2 text-[var(--erp-text)] align-top">
-                        <CellContent value={rec.data[col.name]} col={col} sequence={rec.sequence} registerCode={register.code} />
+                        <CellContent value={rec.data[col.name]} col={col} sequence={rec.sequence} registerCode={register.code} currency={currency} />
                       </td>
                     ))}
                     <td className="px-3 py-2 text-right sticky right-0 bg-inherit border-l border-[var(--erp-border)] z-10">
@@ -781,13 +781,13 @@ function statusColorFor(status: string): string {
   return 'var(--erp-info)';
 }
 
-function formatCurrencyCompact(n: number): string {
-  if (n >= 1_000_000) return `AED ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `AED ${(n / 1_000).toFixed(1)}K`;
-  return `AED ${n.toLocaleString()}`;
+function formatCurrencyCompact(n: number, currency = 'AED'): string {
+  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
+  return `${currency} ${n.toLocaleString()}`;
 }
 
-function CellContent({ value, col, sequence, registerCode, expanded }: { value: any; col: ColumnDef; sequence: number; registerCode: string; expanded?: boolean }) {
+function CellContent({ value, col, sequence, registerCode, expanded, currency = 'AED' }: { value: any; col: ColumnDef; sequence: number; registerCode: string; expanded?: boolean; currency?: string }) {
   if (col.type === 'auto_increment') {
     const prefix = guessPrefix(col.name, registerCode);
     return <span className="font-mono text-[11px] text-[var(--erp-accent)] font-medium">{formatDocNumber(prefix, Number(value) || sequence)}</span>;
@@ -823,7 +823,7 @@ function CellContent({ value, col, sequence, registerCode, expanded }: { value: 
   }
   if (col.type === 'currency') {
     const n = Number(value) || 0;
-    return <span className="font-mono text-[var(--erp-text)]">{formatCurrencyCompact(n)}</span>;
+    return <span className="font-mono text-[var(--erp-text)]">{formatCurrencyCompact(n, currency)}</span>;
   }
   if (col.type === 'percentage') {
     const n = Number(value) || 0;

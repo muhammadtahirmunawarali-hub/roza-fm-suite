@@ -71,7 +71,12 @@ export function ErpShell() {
     fetch('/api/erp/settings').then(r => r.json()).then((list: any[]) => {
       if (cancelled || !Array.isArray(list)) return;
       const cur = list.find((s: any) => s.key === 'company.currency');
-      if (cur?.value) setCurrency(cur.value);
+      const customCur = list.find((s: any) => s.key === 'company.currency_custom');
+      if (cur?.value === 'Custom' && customCur?.value) {
+        setCurrency(customCur.value);
+      } else if (cur?.value && cur.value !== 'Custom') {
+        setCurrency(cur.value);
+      }
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [user]);

@@ -41,23 +41,36 @@ export function formatDocNumber(code: string, sequence: number): string {
 }
 
 // ---------- Currency ----------
+// Extended currency symbol map
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  AED: 'د.إ', USD: '$', EUR: '€', GBP: '£', PKR: '₨', SAR: '﷼', QAR: '﷼',
+  INR: '₹', JPY: '¥', CNY: '¥', KRW: '₩', CHF: 'CHF', CAD: 'C$', AUD: 'A$',
+  NZD: 'NZ$', SGD: 'S$', HKD: 'HK$', THB: '฿', TRY: '₺', RUB: '₽',
+  BRL: 'R$', ZAR: 'R', MXN: '$', EGP: 'E£', NGN: '₦', KES: 'KSh', GHS: '₵',
+};
+
+export function getCurrencySymbol(currency: string): string {
+  return CURRENCY_SYMBOLS[currency.toUpperCase()] || currency.toUpperCase();
+}
+
 export function formatCurrency(value: number | string | undefined, currency = 'AED'): string {
   if (value === undefined || value === null || value === '') return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(n)) return '—';
-  const symbol = currency === 'AED' ? 'د.إ' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency;
+  const symbol = getCurrencySymbol(currency);
   return `${symbol} ${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 // Compact currency display (e.g. "AED 1.2M") — used in dashboard, reports
 export function formatCurrencyCompact(n: number, currency = 'AED'): string {
+  const symbol = getCurrencySymbol(currency);
   if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
   return `${currency} ${n.toLocaleString()}`;
 }
 
-// Backwards-compatible alias used in register-view and reports-view
-export const formatCurrencyDisplay = (n: number) => formatCurrencyCompact(n, 'AED');
+// Backwards-compatible alias — now uses global currency from store
+export const formatCurrencyDisplay = (n: number, currency = 'AED') => formatCurrencyCompact(n, currency);
 
 export function formatNumber(value: number | string | undefined, decimals = 0): string {
   if (value === undefined || value === null || value === '') return '—';

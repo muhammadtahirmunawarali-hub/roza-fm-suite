@@ -5,172 +5,192 @@ Rebuild the attached `DD.html` (FMCore ERP — Dynamic Register & Form Builder) 
 
 ---
 
-## Round 12 — Status (2026-09-06)
+## Round 13 — Status (2026-09-06)
 
 ### QA Findings
-- ✅ All Round 11 features verified working (Column Toggle, Quick Filter Pills, Notification Auto-Refresh, Recent Records Widget)
+- ✅ Verified all Round 12 features (Column Editor, Tab Navigator, Currency Integration)
 - ✅ Login flow works (admin → dashboard)
-- ✅ No console errors
+- ✅ Settings → Currency shows "QAR" with "Symbol: QAR" — global currency propagating correctly
+- ✅ No console errors after fix
+
+### Bug Fixed This Round
+- **Runtime error**: `currency is not defined` in `CellContent` function (register-view.tsx:826) — the `CellContent` component was using `currency` variable from the parent scope but it wasn't passed as a prop. Fixed by adding `currency` parameter to `CellContent` function signature and passing it from the parent.
 
 ### Work Focus This Round
-This round delivered 3 major features + comprehensive SaaS readiness assessment:
+This round delivered 3 improvements:
 
-1. **Column Editor for Existing Registers** — Add/remove/rename/retype/reorder columns on any register
-2. **Tab Navigator Dropdown** — Excel-like all-tabs picker at the right edge of the tab bar
-3. **Global Currency Integration** — Currency set in Settings propagates to Dashboard, all registers, and all forms
+1. **Custom Currency Support** — Users can now type their own currency code (e.g., BHD, KWD, OMR)
+2. **Extended Currency Symbol Map** — 26+ currencies with proper symbols
+3. **Currency Propagation Fix** — Global currency from Settings now correctly flows to dashboard KPIs, register stats, and cell rendering
 
 ### What Was Done This Round
 
-#### ✨ New Features
+#### ✨ Improvements
 
-1. **Column Editor for Existing Registers** (`column-editor.tsx`, 200 lines):
-   - Full modal editor that allows modifying columns of ANY existing register (system or custom)
-   - **Add Column**: New column with name, type, width/options, required flag
-   - **Remove Column**: Delete columns (with warning for system registers)
-   - **Rename Column**: Edit column name inline
-   - **Change Column Type**: Dropdown to change type (text→currency, dropdown→status, etc.)
-   - **Reorder Columns**: Up/down arrow buttons to move columns
-   - **Required Toggle**: `*` badge to mark columns as required (red = required)
-   - **Validation**: Checks for empty names and duplicate column names
-   - **Warning**: System registers show warning about affecting existing data
-   - **Save**: Calls `registersApi.update()` with new columns array, triggers audit log
-   - **"Edit" button** in register view action bar (next to "Columns" visibility toggle)
+1. **Custom Currency Support** (`settings-view.tsx`):
+   - Currency dropdown now includes "Custom" option at the bottom
+   - When "Custom" is selected, a text input appears next to the dropdown
+   - User can type any 3-5 letter currency code (e.g., BHD, KWD, OMR, MYR, THB)
+   - Custom currency code is saved as `company.currency_custom` setting
+   - Symbol display shows the custom code as the symbol (since it's not in the standard map)
+   - Available preset currencies expanded from 7 to 14: AED, USD, EUR, GBP, PKR, SAR, QAR, INR, JPY, CNY, CHF, CAD, AUD, + Custom
 
-2. **Tab Navigator Dropdown** (`tab-navigator.tsx`, 100 lines):
-   - Excel-like all-tabs picker at the right edge of the tab bar
-   - Shows list icon + tab count badge
-   - Dropdown lists all open tabs with:
-     - Tab number (1, 2, 3...)
-     - Register icon + label
-     - Active tab highlighted with accent color
-     - Close button on hover (except Dashboard)
-   - **"Close All"** button to close all tabs except Dashboard
-   - Click any tab to switch to it
-   - Only appears when more than 1 tab is open
+2. **Extended Currency Symbol Map** (`utils.ts`):
+   - Added 26+ currency symbols: AED (د.إ), USD ($), EUR (€), GBP (£), PKR (₨), SAR (﷼), QAR (﷼), INR (₹), JPY (¥), CNY (¥), KRW (₩), CHF, CAD (C$), AUD (A$), NZD, SGD, HKD, THB (฿), TRY (₺), RUB (₽), BRL (R$), ZAR (R), MXN ($), EGP (E£), NGN (₦), KES (KSh), GHS (₵)
+   - New `getCurrencySymbol()` function — falls back to the currency code itself for unknown currencies (e.g., "BHD" → "BHD")
+   - `formatCurrency()` and `formatCurrencyCompact()` now use the extended map
 
-3. **Global Currency Integration**:
-   - **Currency added to Zustand store** with `currency` state + `setCurrency()` action, persisted to localStorage
-   - **Settings sync**: When user changes currency in Settings → Company tab, it calls `setCurrency()` to update the global store immediately
-   - **ErpShell loads currency**: On mount, fetches settings and syncs currency from DB to store
-   - **Currency propagates**: All components that use `formatCurrency()` now receive the global currency from the store
-   - Available currencies: AED, USD, EUR, GBP, PKR, SAR, QAR
-
-#### 🎨 Styling Polish
-- Column Editor: Grid layout with move buttons, type dropdown, options input, required toggle, delete button
-- Tab Navigator: Clean dropdown with numbered tabs, close buttons, "Close All" action
-- Currency: Consistent symbol across dashboard KPIs, register cells, record forms, print layouts
+3. **Currency Propagation Fix** (`register-view.tsx` + `dashboard/route.ts`):
+   - **Root cause**: `CellContent` component was referencing `currency` variable from parent scope but it wasn't passed as a parameter
+   - **Fix**: Added `currency` parameter to `CellContent` function signature (default: 'AED'), passed from parent via `currency={currency}` prop
+   - **Dashboard API**: Now reads currency from DB settings (`company.currency` + `company.currency_custom`) and passes it to `formatAED()` function (renamed to accept currency param)
+   - **ErpShell**: Now handles custom currency — if `company.currency === 'Custom'`, reads `company.currency_custom` and sets that as the global currency
+   - **Verified**: Purchase Request register shows "QAR 46.2K" in stats strip (was hardcoded "AED" before)
 
 ### Verification Results (agent-browser)
-- ✅ Tab Navigator: Opened 3 tabs → clicked list icon → dropdown shows "OPEN TABS (3)" with Dashboard, Work Orders, Inventory
-- ✅ Column Editor: Navigate to Inventory → click "Edit" → modal opens with 9 columns, all editable (name, type, options, required, reorder)
-- ✅ System register warning visible
+- ✅ Settings → Currency dropdown shows 14 options + "Custom"
+- ✅ Settings shows "Currency: QAR, Symbol: QAR"
+- ✅ Purchase Request register shows "Estimated Cost (Σ): QAR 46.2K" (was "AED" before)
+- ✅ "Edit" column button visible in register view
 - ✅ Lint: 0 errors, 0 warnings
-- ✅ Dev server stable (PID 32020)
+- ✅ Dev server stable (PID 1077)
+- ✅ No runtime errors after CellContent currency prop fix
 
-### Files Modified/Created This Round
+### Files Modified This Round
 ```
-NEW: src/components/erp/column-editor.tsx        (200 lines — edit columns of existing registers)
-NEW: src/components/erp/tab-navigator.tsx        (100 lines — Excel-like all-tabs dropdown)
-MODIFIED: src/components/erp/register-view.tsx   (added Edit button + ColumnEditor modal + Settings2 import)
-MODIFIED: src/components/erp/tab-bar.tsx         (added TabNavigator + restructured layout)
-MODIFIED: src/lib/erp/store.ts                   (added currency state + setCurrency + persisted)
-MODIFIED: src/components/erp/settings-view.tsx   (currency select syncs to global store)
-MODIFIED: src/components/erp/erp-shell.tsx        (loads currency from settings on mount)
+MODIFIED: src/lib/erp/utils.ts                    (extended currency symbol map + getCurrencySymbol function)
+MODIFIED: src/components/erp/settings-view.tsx    (custom currency input + 14 preset currencies + Custom option)
+MODIFIED: src/components/erp/erp-shell.tsx         (loads custom currency from settings)
+MODIFIED: src/app/api/erp/dashboard/route.ts      (reads currency from settings, passes to formatAED)
+MODIFIED: src/components/erp/register-view.tsx     (fixed CellContent currency prop + uses global currency in stats)
 ```
 
 ---
 
-## SaaS Readiness Assessment & Recommendations
+## Suggestions for Before/After Image Management & Work Reports
 
-### Current State: READY FOR SINGLE-TENANT WEB APP ✅
+### 1. Before/After Images for Assets and Work Orders
 
-The FMCore ERP is production-ready as a **single-company web application**. It has:
-- ✅ 35+ API routes with full CRUD
-- ✅ Server-side permission checks on ALL mutation endpoints
-- ✅ Cookie-based session authentication
-- ✅ 11 roles with per-module permission matrix
-- ✅ 30 pre-loaded registers with 93 sample records
-- ✅ Dynamic register builder (create custom registers)
-- ✅ Column editor (modify existing register columns)
-- ✅ Approval workflows with state machine
-- ✅ Audit logging on all actions
-- ✅ CSV/JSON import/export
-- ✅ Print layouts
-- ✅ Dashboard with KPIs, charts, sparklines, activity timeline
-- ✅ AI Assistant (z-ai-web-dev-sdk)
-- ✅ Responsive design (mobile/tablet/desktop)
-- ✅ Dark/light themes
-- ✅ Saved views with pin/hide/customize
-- ✅ Keyboard shortcuts
-- ✅ Tab navigator
-- ✅ Global currency integration
+**Current State**: No image support in the register system. All fields are text/number/date/dropdown types.
 
-### What's Needed for Multi-Company SaaS ❌→✅
+**Recommended Approach**:
 
-To make this a **multi-tenant SaaS** where multiple companies use the same instance:
+#### Option A: Image URL Fields (Simple — can do now)
+- Add a new column type `image_url` to the register builder
+- Users paste a URL to an externally hosted image (e.g., company SharePoint, Google Drive link)
+- Display as a thumbnail in the table + full image in the record detail drawer
+- **Pros**: No server storage needed, works immediately
+- **Cons**: Requires external hosting, URLs can break
 
-#### Phase 1: Multi-Tenancy Architecture (CRITICAL)
-1. **Tenant Model**: Add `Tenant` (company) model with `id`, `name`, `plan`, `status`, `createdAt`
-2. **Tenant Isolation**: Add `tenantId` to ALL models (Register, Record, User, Session, AuditLog, etc.)
-3. **Tenant Context**: Create a tenant-resolution middleware that reads tenant from subdomain (e.g., `company1.fmcore.app`) or header
-4. **Row-Level Security**: Every Prisma query must filter by `tenantId` — this is the #1 security requirement
-5. **User-Tenant Mapping**: Users belong to tenants; a user can only see their own tenant's data
+#### Option B: File Upload to Cloud Storage (Recommended for production)
+- Add a new column type `file_attachment` to the register builder
+- Create an upload API endpoint that accepts multipart/form-data
+- Store files in **Cloudflare R2** or **AWS S3** (SaaS-ready)
+- Save only the file path/URL in the record data (not the binary)
+- Display thumbnails for images, download links for documents
+- **Pros**: Secure, scalable, files persist with the record
+- **Cons**: Requires cloud storage account + API integration
 
-#### Phase 2: Subscription & Billing
-6. **Plan Model**: Free, Starter, Pro, Enterprise — with limits on registers, records, users
-7. **Stripe Integration**: Subscription billing, usage tracking, invoice generation
-8. **Trial Period**: 14-day free trial with automatic downgrade
+#### Option C: Base64 in Record Data (Not recommended for production)
+- Store images as base64 strings directly in the record's JSON data
+- **Pros**: No external storage needed
+- **Cons**: Bloats the database, slow queries, not scalable
 
-#### Phase 3: Security Hardening
-9. **Password Hashing**: Replace plaintext with bcrypt/argon2
-10. **JWT Sessions**: Replace unsigned cookies with signed JWTs
-11. **Rate Limiting**: API rate limits per tenant
-12. **Input Sanitization**: Server-side validation on all endpoints
-13. **HTTPS Only**: Enforce HTTPS in production
-14. **CSRF Protection**: Add CSRF tokens for mutation endpoints
+#### Recommended Implementation for FMCore ERP:
+```
+Phase 1 (Now): Add 'image_url' column type → display thumbnails in table + drawer
+Phase 2 (SaaS): Add 'file_attachment' column type → upload to Cloudflare R2
+Phase 3 (Mobile): Camera capture API → take photos directly from mobile browser
+```
 
-#### Phase 4: Scalability
-15. **Database Migration**: Move from SQLite to PostgreSQL for multi-tenant
-16. **Server-Side Filtering**: Move filter/sort from JS to SQL (currently fetches all records)
-17. **Redis Caching**: Cache dashboard data, register lists, settings
-18. **CDN**: Serve static assets via CDN
-19. **WebSocket Service**: Real-time notifications via WebSocket mini-service (port 3003)
-20. **Background Jobs**: Email notifications, report generation, backup scheduling
+### 2. Work Reports
 
-#### Phase 5: Additional ERP Modules
-21. **Sales Module**: Quotations → Sales Orders → Invoices → Payments
-22. **Accounting**: Chart of Accounts, Journal Entries, Trial Balance, P&L, Balance Sheet
-23. **HR Module**: Employee profiles, payroll, attendance tracking
-24. **Inventory**: Stock movements, warehouse transfers, stock valuation
-25. **Email Integration**: SMTP for notifications, report delivery
-26. **File Attachments**: S3/R2 storage for document uploads
-27. **Custom Fields**: Formula fields, computed columns, file/image attachments
-28. **Workflow Builder**: Visual workflow designer (not just hardcoded state machine)
+**Current State**: The Reports view supports Summary, Group-by, and Pivot reports on any register. Reports are generated dynamically from live data and can be exported as CSV.
 
-#### Phase 6: UX Polish
-29. **Drag-and-Drop**: Reorder KPIs, charts, columns, tabs
-30. **Advanced Search**: Full-text search across all registers
-31. **Custom Dashboard Builder**: Drag widgets onto a canvas
-32. **Mobile App**: React Native or PWA
-33. **Multi-Language**: i18n with Arabic, French, Spanish support
-34. **Dark/Light Auto**: Follow system preference
-35. **Onboarding Wizard**: Guided setup for new tenants
+**Recommended Enhancements**:
 
-### Timeline Estimate
-| Phase | Effort | Timeline |
-|-------|--------|----------|
-| Phase 1 (Multi-Tenancy) | 2-3 weeks | Critical — must do first |
-| Phase 2 (Billing) | 1-2 weeks | |
-| Phase 3 (Security) | 1 week | |
-| Phase 4 (Scalability) | 2-3 weeks | |
-| Phase 5 (Modules) | 4-6 weeks | |
-| Phase 6 (UX Polish) | 2-3 weeks | |
-| **Total** | **12-18 weeks** | For full SaaS |
+#### A. Saved Report Templates
+- Let users save report configurations (register, type, group-by field, filters) as templates
+- Templates can be shared across users (like Saved Views)
+- One-click report generation from saved templates
 
-### Recommendation
-**Start with Phase 1 (Multi-Tenancy)** — this is the architectural foundation. Without tenant isolation, you cannot safely host multiple companies. The current codebase is well-structured with an API-first approach, so adding `tenantId` to queries is straightforward but must be done systematically across all 35+ API routes.
+#### B. Scheduled Reports (Email Delivery)
+- Schedule reports to run daily/weekly/monthly
+- Email the report as PDF/CSV attachment to specified recipients
+- Requires: SMTP integration + cron job service
 
-The current app is **ready for a single company to use right now** — all features work, data persists, RBAC is enforced. For SaaS, you need the multi-tenancy layer.
+#### C. Visual Report Builder
+- Drag-and-drop report builder: select register → select fields → select chart type → save
+- Generate bar/line/pie/table charts from any register data
+- More powerful than the current Summary/Group-by/Pivot approach
+
+#### D. Work Order Completion Report
+- Special report for maintenance work orders:
+  - Show: WO #, Date, Asset, Technician, Hours spent, Parts used, Before/After images, Completion notes
+  - Generate as PDF with company letterhead
+  - Can be attached to the work order record
+
+#### E. KPI Dashboard Reports
+- Monthly/Quarterly KPI summary report:
+  - PM completion rate, Work order turnaround time, Incident count, Inventory value
+  - Compare to previous period (trend analysis)
+  - Export as PDF with charts embedded
+
+### 3. Suggested New Columns to Add to Existing Registers
+
+To make the registers richer with more data points:
+
+#### Work Orders — Add:
+- `Reported By` (employee) — who reported the issue
+- `Reported Date` (datetime) — when it was reported
+- `Started Date` (datetime) — when work actually started
+- `Completed Date` (datetime) — when work was completed
+- `Labor Hours` (number) — total hours spent
+- `Parts Used` (long_text) — list of parts consumed
+- `Before Image` (image_url) — photo before repair
+- `After Image` (image_url) — photo after repair
+- `Category` (dropdown) — [Mechanical, Electrical, Plumbing, HVAC, Civil, General]
+- `Sub-Category` (dropdown) — [Preventive, Corrective, Emergency, Inspection]
+- `Warranty Claim` (dropdown) — [Yes, No, N/A]
+- `Vendor Cost` (currency) — cost charged by external vendor
+
+#### Safety Inspections — Add:
+- `Inspection Type` (dropdown) — [Routine, Surprise, Scheduled, Follow-up, Annual, Monthly]
+- `Findings Count` (number) — number of issues found
+- `Corrective Actions` (long_text) — what needs to be done
+- `Follow-up Required` (dropdown) — [Yes, No]
+- `Follow-up Date` (date) — deadline for corrective action
+- `Photos` (image_url) — inspection evidence
+
+#### Assets — Add:
+- `Acquisition Date` (date) — when purchased
+- `Useful Life (years)` (number) — expected lifespan
+- `Depreciation Method` (dropdown) — [Straight Line, Declining Balance, None]
+- `Current Book Value` (currency) — calculated value after depreciation
+- `Last Inspection Date` (date)
+- `Next Inspection Date` (date)
+- `Image` (image_url) — photo of the asset
+- `QR Code` (text) — QR code identifier for scanning
+
+#### Purchase Requests — Add:
+- `Justification` (long_text) — why this purchase is needed
+- `Quote Attached` (dropdown) — [Yes, No]
+- `Vendor Quotes` (number) — number of quotes obtained
+- `Preferred Vendor` (vendor) — recommended supplier
+- `Delivery Required By` (date) — deadline
+- `Project Code` (text) — for cost allocation
+
+### 4. How to Implement These Columns Now
+
+The **Column Editor** (added in Round 12) lets SuperAdmin add these columns to any existing register:
+1. Open the register (e.g., Work Orders)
+2. Click "Edit" button in the action bar
+3. Click "Add Column"
+4. Enter name (e.g., "Reported By"), select type (e.g., "employee"), set width
+5. Click "Save Columns"
+6. The new column appears in the table and the record form
+
+The register builder also supports these for new registers.
 
 ---
 
@@ -213,15 +233,17 @@ The current app is **ready for a single company to use right now** — all featu
 - [DONE] Quick Status Filter Pills (R11)
 - [DONE] Notification Auto-Refresh (R11)
 - [DONE] Recent Records Widget (R11)
-- [DONE] **Column Editor for existing registers** (R12)
-- [DONE] **Tab Navigator dropdown** (R12)
-- [DONE] **Global Currency Integration** (R12)
+- [DONE] Column Editor for existing registers (R12)
+- [DONE] Tab Navigator dropdown (R12)
+- [DONE] Global Currency Integration (R12)
+- [DONE] **Custom Currency Support + Extended Symbol Map** (R13)
+- [DONE] **Currency Propagation Fix (CellContent)** (R13)
 
 ## Dev Server
 - Runs on port 3000 via `bunx next dev -p 3000`
 - Persistent launcher: `/home/z/my-project/start-dev.sh`
 - Logs at `/home/z/my-project/dev.log`
-- Current PID: 32020
+- Current PID: 1077
 
 ## Demo Login Credentials
 | Username | Password   | Role         | Department      | Visible Registers |

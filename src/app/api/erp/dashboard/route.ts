@@ -5,10 +5,16 @@ import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
 import { REGISTER_CATEGORIES } from '@/lib/erp/types';
 import type { DashboardData, DashboardKPI, DashboardChart } from '@/lib/erp/types';
-import { formatDocNumber } from '@/lib/erp/utils';
 
 export async function GET() {
   await seedDatabase(false);
+
+  // Load currency from settings
+  const currencySetting = await db.setting.findUnique({ where: { key: 'company.currency' } });
+  const customCurrencySetting = await db.setting.findUnique({ where: { key: 'company.currency_custom' } });
+  const currency = currencySetting?.value === 'Custom' && customCurrencySetting?.value
+    ? customCurrencySetting.value
+    : (currencySetting?.value || 'AED');
 
   const registers = await db.register.findMany({
     where: { isDeleted: false },
@@ -107,9 +113,9 @@ export async function GET() {
     { id: 'pm-due',      label: 'PM Due / Overdue',   value: pmDue,           rawValue: pmDue, icon: 'fa-clock-rotate-left', color: '#F59E0B', link: '?tab=pm' },
     { id: 'low-stock',   label: 'Low Stock Items',    value: lowStock,        rawValue: lowStock, icon: 'fa-boxes-stacked',   color: '#10B981', link: '?tab=inventory' },
     { id: 'active-assets', label: 'Active Assets',    value: activeAssets,    rawValue: activeAssets, icon: 'fa-building', color: '#8B5CF6', link: '?tab=assets' },
-    { id: 'asset-value', label: 'Asset Value',        value: formatAED(assetValue), icon: 'fa-coins', color: '#8B5CF6', link: '?tab=assets' },
+    { id: 'asset-value', label: 'Asset Value',        value: formatAED(assetValue, currency), icon: 'fa-coins', color: '#8B5CF6', link: '?tab=assets' },
     { id: 'active-contracts', label: 'Active Contracts', value: activeContracts, rawValue: activeContracts, icon: 'fa-file-contract', color: '#10B981', link: '?tab=contracts' },
-    { id: 'contract-value', label: 'Contract Value',  value: formatAED(contractValue), icon: 'fa-file-invoice-dollar', color: '#10B981', link: '?tab=contracts' },
+    { id: 'contract-value', label: 'Contract Value',  value: formatAED(contractValue, currency), icon: 'fa-file-invoice-dollar', color: '#10B981', link: '?tab=contracts' },
     { id: 'open-incidents', label: 'Open Incidents',  value: openIncidents,   rawValue: openIncidents, icon: 'fa-burst', color: '#EF4444', link: '?tab=incidents' },
     { id: 'pending-ptw', label: 'Pending PTW',         value: pendingPTW,      rawValue: pendingPTW, icon: 'fa-file-signature', color: '#EF4444', link: '?tab=ptw' },
     { id: 'active-vendors', label: 'Active Vendors',  value: activeVendors,   rawValue: activeVendors, icon: 'fa-truck-field', color: '#10B981', link: '?tab=vendors' },
@@ -332,8 +338,8 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
-function formatAED(n: number): string {
-  if (n >= 1_000_000) return `AED ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `AED ${(n / 1_000).toFixed(1)}K`;
-  return `AED ${n}`;
+function formatAED(n: number, currency = 'AED'): string {
+  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
+  return `${currency} ${n}`;
 }

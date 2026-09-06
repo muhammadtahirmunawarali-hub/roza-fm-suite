@@ -249,14 +249,28 @@ export function SettingsView() {
                 <Field label="Fiscal Year" value={settings['company.fiscal_year'] || ''} onChange={(v) => update('company.fiscal_year', v)} />
                 <div>
                   <Label className="text-[11px] mb-1">Currency</Label>
-                  <Select value={settings['company.currency'] || currency} onValueChange={(v) => { update('company.currency', v); update('currency', v); setCurrency(v); }}>
-                    <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR'].map((c) => (
-                        <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select value={settings['company.currency'] || currency} onValueChange={(v) => { update('company.currency', v); update('currency', v); setCurrency(v); }}>
+                      <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[100px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR', 'INR', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'Custom'].map((c) => (
+                          <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(settings['company.currency'] === 'Custom' || currency === 'Custom') && (
+                      <Input
+                        value={settings['company.currency_custom'] || ''}
+                        onChange={(e) => { update('company.currency_custom', e.target.value.toUpperCase()); setCurrency(e.target.value.toUpperCase()); }}
+                        className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[80px]"
+                        placeholder="e.g. BHD"
+                        maxLength={5}
+                      />
+                    )}
+                    <span className="text-[10px] text-[var(--erp-text-muted)]">
+                      Symbol: {settings['company.currency'] === 'Custom' ? (settings['company.currency_custom'] || '—') : (settings['company.currency'] || currency)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
