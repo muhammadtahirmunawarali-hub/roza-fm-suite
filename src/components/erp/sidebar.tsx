@@ -1,17 +1,18 @@
 'use client';
 
-// FMCore ERP — Sidebar
+// FMCore ERP — Sidebar (with permission filtering)
 // Shows logo, search, navigation tree (categories → registers), and footer actions.
+// Registers the user can't view are hidden from the sidebar.
 import { useEffect, useMemo, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { REGISTER_CATEGORIES, type Register, type RegisterCategory } from '@/lib/erp/types';
 import { registersApi } from '@/lib/erp/api';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
-import { Plus, Search, ChevronRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Plus, Search, ChevronRight, PanelLeftClose, PanelLeftOpen, X, Lock } from 'lucide-react';
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar, openTab, activeTabId, setBuilderOpen } = useErpStore();
+  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar, openTab, activeTabId, setBuilderOpen, user, hasPermission } = useErpStore();
   const [registers, setRegisters] = useState<Register[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -33,14 +34,21 @@ export function Sidebar() {
     return () => { cancelled = true; };
   }, []);
 
+  // Filter registers by user's view permission
+  const visibleRegisters = useMemo(() => {
+    // Super Admin sees everything
+    if (user?.role === 'Super Admin') return registers;
+    return registers.filter((r) => hasPermission(r.code, 'view'));
+  }, [registers, user, hasPermission]);
+
   // Group registers by category
   const grouped = useMemo(() => {
     const g: Record<string, Register[]> = {};
-    registers.forEach((r) => {
+    visibleRegisters.forEach((r) => {
       (g[r.category] = g[r.category] || []).push(r);
     });
     return g;
-  }, [registers]);
+  }, [visibleRegisters]);
 
   // Filter by search
   const filteredGrouped = useMemo(() => {
@@ -200,28 +208,34 @@ export function Sidebar() {
           {/* Divider */}
           <div className="my-2 border-t border-[var(--erp-border)]" />
 
-          {/* Reports, Settings, Audit Logs */}
-          <SidebarItem
-            collapsed={collapsed}
-            icon="fa-chart-bar"
-            label="Reports"
-            active={activeTabId === 'reports'}
-            onClick={() => openTab({ id: 'reports', type: 'reports', label: 'Reports', icon: 'fa-chart-bar' })}
-          />
-          <SidebarItem
-            collapsed={collapsed}
-            icon="fa-list-ul"
-            label="Audit Logs"
-            active={activeTabId === 'audit'}
-            onClick={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
-          />
-          <SidebarItem
-            collapsed={collapsed}
-            icon="fa-cog"
-            label="Settings"
-            active={activeTabId === 'settings'}
-            onClick={() => openTab({ id: 'settings', type: 'settings', label: 'Settings', icon: 'fa-cog' })}
-          />
+          {/* Reports, Settings, Audit Logs — gated by permission */}
+          {hasPermission('reports', 'view') && (
+            <SidebarItem
+              collapsed={collapsed}
+              icon="fa-chart-bar"
+              label="Reports"
+              active={activeTabId === 'reports'}
+              onClick={() => openTab({ id: 'reports', type: 'reports', label: 'Reports', icon: 'fa-chart-bar' })}
+            />
+          )}
+          {hasPermission('audit', 'view') && (
+            <SidebarItem
+              collapsed={collapsed}
+              icon="fa-list-ul"
+              label="Audit Logs"
+              active={activeTabId === 'audit'}
+              onClick={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
+            />
+          )}
+          {hasPermission('settings', 'view') && (
+            <SidebarItem
+              collapsed={collapsed}
+              icon="fa-cog"
+              label="Settings"
+              active={activeTabId === 'settings'}
+              onClick={() => openTab({ id: 'settings', type: 'settings', label: 'Settings', icon: 'fa-cog' })}
+            />
+          )}
         </nav>
 
         {/* Footer */}

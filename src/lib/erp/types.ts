@@ -179,6 +179,7 @@ export interface DashboardKPI {
   icon: string;
   color: string;
   link?: string;
+  sparkline?: number[]; // 7-day trend data
 }
 
 export interface DashboardChart {
@@ -194,6 +195,7 @@ export interface DashboardData {
   charts: DashboardChart[];
   recentActivity: AuditLog[];
   upcomingItems: { label: string; date: string; register: string; severity: NotificationSeverity }[];
+  activityByDay?: { date: string; created: number; updated: number; deleted: number }[];
 }
 
 // ---------- API helpers ----------

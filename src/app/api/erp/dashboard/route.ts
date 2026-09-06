@@ -268,7 +268,67 @@ export async function GET() {
   }
   upcomingItems.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const data: DashboardData = { kpis, charts, recentActivity, upcomingItems: upcomingItems.slice(0, 10) };
+  // ---- Activity by day (last 7 days) — for sparklines + activity timeline ----
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const recentAuditLogs = await db.auditLog.findMany({
+    where: { createdAt: { gte: sevenDaysAgo } },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // Build 7-day bucket of activity
+  const dayBuckets: Record<string, { created: number; updated: number; deleted: number }> = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    dayBuckets[d.toISOString().slice(0, 10)] = { created: 0, updated: 0, deleted: 0 };
+  }
+  recentAuditLogs.forEach((l) => {
+    const day = l.createdAt.toISOString().slice(0, 10);
+    if (!dayBuckets[day]) return;
+    if (l.action === 'Created') dayBuckets[day].created++;
+    else if (l.action === 'Updated' || l.action === 'Approved') dayBuckets[day].updated++;
+    else if (l.action === 'Deleted') dayBuckets[day].deleted++;
+  });
+  const activityByDay = Object.entries(dayBuckets).map(([date, counts]) => ({ date, ...counts }));
+
+  // Sparkline per KPI = total activity (created+updated) per day for that register if linked
+  const totalActivityByDay = activityByDay.map((d) => d.created + d.updated);
+  const sparkForRegister = (registerCode?: string): number[] => {
+    if (!registerCode) return totalActivityByDay;
+    const reg = registers.find((r) => r.code === registerCode);
+    if (!reg) return totalActivityByDay;
+    const regId = reg.id;
+    const regLogs = recentAuditLogs.filter((l) => l.registerId === regId);
+    const buckets = Object.keys(dayBuckets).map((day) => {
+      return regLogs.filter((l) => l.createdAt.toISOString().slice(0, 10) === day).length;
+    });
+    // If all zero, return generic trend so sparkline renders
+    return buckets.every((b) => b === 0) ? totalActivityByDay : buckets;
+  };
+
+  // Attach sparklines to KPIs (compute trend from the linked register's audit activity)
+  kpis.forEach((kpi) => {
+    if (kpi.link) {
+      const code = kpi.link.match(/tab=([^&]+)/)?.[1];
+      kpi.sparkline = sparkForRegister(code);
+    } else {
+      kpi.sparkline = totalActivityByDay;
+    }
+    // Compute delta (last day vs previous)
+    if (kpi.sparkline && kpi.sparkline.length >= 2) {
+      const last = kpi.sparkline[kpi.sparkline.length - 1];
+      const prev = kpi.sparkline[kpi.sparkline.length - 2];
+      if (prev > 0) {
+        const pct = ((last - prev) / prev) * 100;
+        kpi.deltaType = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+        kpi.delta = `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`;
+      }
+    }
+  });
+
+  const data: DashboardData = { kpis, charts, recentActivity, upcomingItems: upcomingItems.slice(0, 10), activityByDay };
   return NextResponse.json(data);
 }
 

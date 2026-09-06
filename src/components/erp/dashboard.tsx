@@ -6,6 +6,7 @@ import { dashboardApi, registersApi } from '@/lib/erp/api';
 import type { DashboardData, Register } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { Sparkline } from './sparkline';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import {
@@ -207,6 +208,22 @@ export function Dashboard() {
         </ChartCard>
       </div>
 
+      {/* 7-day activity timeline */}
+      {data.activityByDay && data.activityByDay.length > 0 && (
+        <ChartCard title="Activity Timeline (7 days)" subtitle="Created vs Updated vs Deleted records per day">
+          <BarChart data={data.activityByDay.map((d) => ({ ...d, label: d.date.slice(5) }))}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
+            <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 10 }} />
+            <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
+            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="created" stackId="a" fill="var(--erp-success)" name="Created" radius={[0, 0, 0, 0]} animationDuration={600} />
+            <Bar dataKey="updated" stackId="a" fill="var(--erp-info)" name="Updated" animationDuration={600} />
+            <Bar dataKey="deleted" stackId="a" fill="var(--erp-danger)" name="Deleted" radius={[4, 4, 0, 0]} animationDuration={600} />
+          </BarChart>
+        </ChartCard>
+      )}
+
       {/* Recent activity + Upcoming items */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Panel
@@ -319,6 +336,28 @@ function KpiCard({ kpi, onClick }: { kpi: DashboardData['kpis'][number]; onClick
           <FAIcon name={kpi.icon} className="text-[14px]" />
         </div>
       </div>
+      {/* Sparkline + delta row */}
+      {(kpi.sparkline || kpi.delta) && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {kpi.sparkline && kpi.sparkline.length >= 2 && (
+            <Sparkline data={kpi.sparkline} color={kpi.color} width={70} height={20} />
+          )}
+          {kpi.delta && (
+            <span
+              className={cn(
+                'ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full',
+                kpi.deltaType === 'up' && 'bg-[rgba(16,185,129,0.15)] text-[var(--erp-success)]',
+                kpi.deltaType === 'down' && 'bg-[rgba(239,68,68,0.15)] text-[var(--erp-danger)]',
+                kpi.deltaType === 'flat' && 'bg-[var(--erp-bg-hover)] text-[var(--erp-text-muted)]',
+              )}
+            >
+              {kpi.deltaType === 'up' && <TrendingUp className="w-2.5 h-2.5 inline mr-0.5" />}
+              {kpi.deltaType === 'down' && <TrendingDown className="w-2.5 h-2.5 inline mr-0.5" />}
+              {kpi.delta}
+            </span>
+          )}
+        </div>
+      )}
       {clickable && (
         <div className="mt-1.5 text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           Open <ArrowRight className="w-3 h-3" />

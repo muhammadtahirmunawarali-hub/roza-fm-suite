@@ -1,9 +1,10 @@
 'use client';
 
-// FMCore ERP — Register View (grid mode with bulk actions, CSV import, print)
+// FMCore ERP — Register View (grid mode with bulk actions, CSV import, print, workflow, saved views)
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { recordsApi, registersApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef } from '@/lib/erp/types';
+import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import {
@@ -14,9 +15,11 @@ import { RecordForm } from './record-form';
 import { CsvImport } from './csv-import';
 import { BulkActions } from './bulk-actions';
 import { printRecord } from './print-record';
+import { ApprovalWorkflow } from './approval-workflow';
+import { SavedViews } from './saved-views';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -33,6 +36,7 @@ interface Props {
 const PAGE_SIZES = [10, 25, 50, 100];
 
 export function RegisterView({ registerId }: Props) {
+  const { hasPermission, user } = useErpStore();
   const [register, setRegister] = useState<Register | null>(null);
   const [records, setRecords] = useState<RecordData[]>([]);
   const [total, setTotal] = useState(0);
@@ -49,9 +53,21 @@ export function RegisterView({ registerId }: Props) {
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<RecordData | null>(null);
   const [viewing, setViewing] = useState<RecordData | null>(null);
+  const [workflowTarget, setWorkflowTarget] = useState<RecordData | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecordData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [company, setCompany] = useState({ name: 'FMCore Facilities Management', address: '', phone: '', email: '', tax_number: '' });
+
+  // Permission flags (register may be null initially)
+  const regCode = register?.code || '';
+  const canView = hasPermission(regCode || registerId, 'view');
+  const canCreate = hasPermission(regCode, 'create');
+  const canEdit = hasPermission(regCode, 'edit');
+  const canDelete = hasPermission(regCode, 'delete');
+  const canExport = hasPermission(regCode, 'export');
+  const canImport = hasPermission(regCode, 'import');
+  const canApprove = hasPermission(regCode, 'approve');
+  const hasStatusCol = register?.columns.some((c) => c.type === 'status');
 
   // Load register meta + company settings
   useEffect(() => {
@@ -251,6 +267,18 @@ export function RegisterView({ registerId }: Props) {
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
+            <SavedViews
+              registerId={register.id}
+              registerName={register.name}
+              currentFilters={{ search: debouncedSearch, filters, sortField, sortDir }}
+              onApply={(v) => {
+                setSearch(v.search || '');
+                setFilters(v.filters || {});
+                setSortField(v.sortField || '');
+                setSortDir(v.sortDir || 'asc');
+                setPage(1);
+              }}
+            />
             <Button variant="outline" size="sm" onClick={() => setShowFilters((v) => !v)} className="h-8 text-[12px]">
               <Filter className="w-3.5 h-3.5 mr-1" /> Filters
               {Object.values(filters).filter(Boolean).length > 0 && (
@@ -259,21 +287,35 @@ export function RegisterView({ registerId }: Props) {
                 </span>
               )}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-8 text-[12px]">
-              <Upload className="w-3.5 h-3.5 mr-1" /> Import
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 text-[12px]">
-              <Download className="w-3.5 h-3.5 mr-1" /> Export
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => { setEditing(null); setFormOpen(true); }}
-              className="h-8 text-[12px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add Record
-            </Button>
+            {canImport && (
+              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-8 text-[12px]">
+                <Upload className="w-3.5 h-3.5 mr-1" /> Import
+              </Button>
+            )}
+            {canExport && (
+              <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 text-[12px]">
+                <Download className="w-3.5 h-3.5 mr-1" /> Export
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                size="sm"
+                onClick={() => { setEditing(null); setFormOpen(true); }}
+                className="h-8 text-[12px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Record
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Permission notice for read-only users */}
+        {!canCreate && !canEdit && !canDelete && canView && (
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--erp-text-muted)]">
+            <FAIcon name="fa-eye" className="text-[9px]" />
+            <span>Read-only access — you can view records but not modify them</span>
+          </div>
+        )}
 
         {/* Stats strip */}
         {stats && stats.length > 0 && (
@@ -421,9 +463,16 @@ export function RegisterView({ registerId }: Props) {
                     <td className="px-3 py-2 text-right sticky right-0 bg-inherit border-l border-[var(--erp-border)] z-10">
                       <div className="flex items-center justify-end gap-0.5">
                         <IconBtn title="View" onClick={() => setViewing(rec)}><Eye className="w-3.5 h-3.5" /></IconBtn>
-                        <IconBtn title="Edit" onClick={() => { setEditing(rec); setFormOpen(true); }}><Pencil className="w-3.5 h-3.5" /></IconBtn>
+                        {hasStatusCol && (canApprove || canEdit) && (
+                          <IconBtn title="Workflow" onClick={() => setWorkflowTarget(rec)} accent><Workflow className="w-3.5 h-3.5" /></IconBtn>
+                        )}
+                        {canEdit && (
+                          <IconBtn title="Edit" onClick={() => { setEditing(rec); setFormOpen(true); }}><Pencil className="w-3.5 h-3.5" /></IconBtn>
+                        )}
                         <IconBtn title="Print" onClick={() => handlePrint([rec])}><Printer className="w-3.5 h-3.5" /></IconBtn>
-                        <IconBtn title="Delete" danger onClick={() => setDeleteTarget(rec)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+                        {canDelete && (
+                          <IconBtn title="Delete" danger onClick={() => setDeleteTarget(rec)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -529,15 +578,35 @@ export function RegisterView({ registerId }: Props) {
             <Button variant="outline" onClick={() => viewing && handlePrint([viewing])} className="text-[12px] h-9">
               <Printer className="w-4 h-4 mr-1" /> Print
             </Button>
-            <Button
-              onClick={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
-              className="text-[12px] h-9 bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
-            >
-              <Pencil className="w-4 h-4 mr-1" /> Edit Record
-            </Button>
+            {hasStatusCol && (canApprove || canEdit) && (
+              <Button
+                variant="outline"
+                onClick={() => { if (viewing) { setWorkflowTarget(viewing); setViewing(null); } }}
+                className="text-[12px] h-9 border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]"
+              >
+                <Workflow className="w-4 h-4 mr-1" /> Workflow
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                onClick={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
+                className="text-[12px] h-9 bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
+              >
+                <Pencil className="w-4 h-4 mr-1" /> Edit Record
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Approval workflow modal */}
+      <ApprovalWorkflow
+        open={!!workflowTarget}
+        register={register}
+        record={workflowTarget}
+        onClose={() => setWorkflowTarget(null)}
+        onTransition={() => { setWorkflowTarget(null); loadRecords(); }}
+      />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
@@ -727,7 +796,7 @@ function Badge({ variant, children, icon }: { variant: BadgeVariant; children: R
   );
 }
 
-function IconBtn({ children, title, onClick, disabled, danger }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
+function IconBtn({ children, title, onClick, disabled, danger, accent }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean; danger?: boolean; accent?: boolean }) {
   return (
     <button
       title={title}
@@ -736,7 +805,9 @@ function IconBtn({ children, title, onClick, disabled, danger }: { children: Rea
       className={cn(
         'p-1.5 rounded transition-colors',
         disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--erp-bg-hover)]',
-        danger ? 'text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)]' : 'text-[var(--erp-text-secondary)] hover:text-[var(--erp-text)]',
+        danger ? 'text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)]'
+          : accent ? 'text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]'
+          : 'text-[var(--erp-text-secondary)] hover:text-[var(--erp-text)]',
       )}
     >
       {children}

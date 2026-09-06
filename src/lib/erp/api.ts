@@ -60,6 +60,18 @@ export const recordsApi = {
     request<ApiResponse>(`${BASE}/registers/${registerId}/records/${recordId}`, { method: 'DELETE' }),
   bulkCreate: (registerId: string, records: Record<string, any>[]) =>
     request<{ ok: boolean; imported: number; failed: number; errors: { row: number; error: string }[] }>(`${BASE}/registers/${registerId}/records/bulk`, { method: 'POST', body: JSON.stringify({ records }) }),
+  // Status transition (approval workflow)
+  getTransitions: (registerId: string, recordId: string) =>
+    request<{
+      ok: boolean;
+      currentStatus: string;
+      availableActions: { action: string; to: string; label: string; variant: 'success' | 'danger' | 'warning' | 'info' | 'accent' }[];
+    }>(`${BASE}/registers/${registerId}/records/${recordId}/transition`),
+  transition: (registerId: string, recordId: string, action: string, comment?: string) =>
+    request<{ ok: boolean; record: RecordData; transition: { from: string; to: string; action: string } }>(
+      `${BASE}/registers/${registerId}/records/${recordId}/transition`,
+      { method: 'POST', body: JSON.stringify({ action, comment }) },
+    ),
 };
 
 // ---------- Dashboard ----------
