@@ -48,7 +48,7 @@ interface Props {
 type Tab = 'details' | 'history' | 'related' | 'activity';
 
 export function RecordDetailDrawer({ open, register, record, company, onClose, onEdit, onRefresh }: Props) {
-  const { hasPermission, user } = useErpStore();
+  const { hasPermission, user, currency } = useErpStore();
   const [tab, setTab] = useState<Tab>('details');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   // Initialize as true since data loads on mount (component is keyed by record id)
@@ -315,11 +315,12 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
               errors={errors}
               masterData={masterData}
               onChange={setField}
+              currency={currency}
             />
           ) : (
             <>
               {tab === 'details' && (
-                <DetailsTab register={register} record={record} />
+                <DetailsTab register={register} record={record} currency={currency} />
               )}
               {tab === 'history' && (
                 <HistoryTab history={history} loading={historyLoading} hasStatusCol={!!hasStatusCol} />
@@ -358,13 +359,14 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
 
 // ---------- Inline Edit Tab ----------
 function InlineEditTab({
-  register, data, errors, masterData, onChange,
+  register, data, errors, masterData, onChange, currency = 'AED',
 }: {
   register: Register;
   data: Record<string, any>;
   errors: Record<string, string>;
   masterData: Record<string, string[]>;
   onChange: (name: string, value: any) => void;
+  currency?: string;
 }) {
   const cols = register.columns.filter((c) => c.type !== 'auto_increment');
 
@@ -385,7 +387,7 @@ function InlineEditTab({
         <SectionLabel icon="fa-circle-info" label="Record Fields" count={mainFields.length} />
         <div className="grid grid-cols-2 gap-2.5">
           {mainFields.map((col) => (
-            <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} />
+            <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} currency={currency} />
           ))}
         </div>
       </div>
@@ -396,7 +398,7 @@ function InlineEditTab({
           <SectionLabel icon="fa-list-check" label="Tags & Categories" count={multiFields.length} />
           <div className="space-y-2.5">
             {multiFields.map((col) => (
-              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth />
+              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth currency={currency} />
             ))}
           </div>
         </div>
@@ -408,7 +410,7 @@ function InlineEditTab({
           <SectionLabel icon="fa-align-left" label="Notes & Descriptions" count={longFields.length} />
           <div className="space-y-2.5">
             {longFields.map((col) => (
-              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth />
+              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth currency={currency} />
             ))}
           </div>
         </div>
@@ -418,7 +420,7 @@ function InlineEditTab({
 }
 
 function InlineField({
-  col, value, error, masterData, onChange, fullWidth,
+  col, value, error, masterData, onChange, fullWidth, currency = 'AED',
 }: {
   col: ColumnDef;
   value: any;
@@ -426,6 +428,7 @@ function InlineField({
   masterData: Record<string, string[]>;
   onChange: (v: any) => void;
   fullWidth?: boolean;
+  currency?: string;
 }) {
   const label = (
     <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-1 flex items-center gap-1">
@@ -562,7 +565,7 @@ function InlineField({
           {label}
           <div className="relative">
             {col.type === 'currency' && (
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--erp-text-muted)] pointer-events-none">AED</span>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--erp-text-muted)] pointer-events-none">{currency}</span>
             )}
             <Input
               type="number"
@@ -687,7 +690,7 @@ function MultiSelectInline({ options, value, onChange }: { options: string[]; va
 }
 
 // ---------- Details Tab ----------
-function DetailsTab({ register, record }: { register: Register; record: RecordData }) {
+function DetailsTab({ register, record, currency = 'AED' }: { register: Register; record: RecordData; currency?: string }) {
   const cols = register.columns.filter((c) => c.type !== 'auto_increment');
 
   // Group columns by type for better layout
@@ -702,7 +705,7 @@ function DetailsTab({ register, record }: { register: Register; record: RecordDa
         <SectionLabel icon="fa-circle-info" label="Record Fields" count={mainFields.length} />
         <div className="grid grid-cols-2 gap-2.5">
           {mainFields.map((col) => (
-            <FieldCard key={col.name} col={col} value={record.data[col.name]} />
+            <FieldCard key={col.name} col={col} value={record.data[col.name]} currency={currency} />
           ))}
         </div>
       </div>
@@ -713,7 +716,7 @@ function DetailsTab({ register, record }: { register: Register; record: RecordDa
           <SectionLabel icon="fa-list-check" label="Tags & Categories" count={multiFields.length} />
           <div className="space-y-2.5">
             {multiFields.map((col) => (
-              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth />
+              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth currency={currency} />
             ))}
           </div>
         </div>
@@ -725,7 +728,7 @@ function DetailsTab({ register, record }: { register: Register; record: RecordDa
           <SectionLabel icon="fa-align-left" label="Notes & Descriptions" count={longFields.length} />
           <div className="space-y-2.5">
             {longFields.map((col) => (
-              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth />
+              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth currency={currency} />
             ))}
           </div>
         </div>
@@ -734,7 +737,7 @@ function DetailsTab({ register, record }: { register: Register; record: RecordDa
   );
 }
 
-function FieldCard({ col, value, fullWidth }: { col: ColumnDef; value: any; fullWidth?: boolean }) {
+function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef; value: any; fullWidth?: boolean; currency?: string }) {
   const isEmpty = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
   return (
@@ -754,7 +757,7 @@ function FieldCard({ col, value, fullWidth }: { col: ColumnDef; value: any; full
           {'★'.repeat(Number(value) || 0)}<span className="text-[var(--erp-text-muted)]">{'☆'.repeat(5 - (Number(value) || 0))}</span>
         </span>
       ) : col.type === 'currency' ? (
-        <span className="text-[13px] font-mono font-semibold text-[var(--erp-text)]">{formatCurrencyCompact(Number(value) || 0)}</span>
+        <span className="text-[13px] font-mono font-semibold text-[var(--erp-text)]">{formatCurrencyCompact(Number(value) || 0, currency)}</span>
       ) : col.type === 'percentage' ? (
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-mono text-[var(--erp-text)]">{value}%</span>
@@ -1123,8 +1126,8 @@ function colIconFor(type: string): string {
   }
 }
 
-function formatCurrencyCompact(n: number): string {
-  if (n >= 1_000_000) return `AED ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `AED ${(n / 1_000).toFixed(1)}K`;
-  return `AED ${n.toLocaleString()}`;
+function formatCurrencyCompact(n: number, currency = 'AED'): string {
+  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
+  return `${currency} ${n.toLocaleString()}`;
 }

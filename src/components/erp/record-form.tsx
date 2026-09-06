@@ -204,6 +204,7 @@ export function RecordForm({ open, register, record, onClose, onSaved }: Props) 
                     masterData={masterData}
                     onChange={(v) => setField(col.name, v)}
                     fullWidth={col.type === 'long_text' || col.type === 'multi_select'}
+                    currency={currency}
                   />
                 ))}
               </div>
@@ -231,7 +232,7 @@ export function RecordForm({ open, register, record, onClose, onSaved }: Props) 
 }
 
 function FieldRenderer({
-  col, value, error, masterData, onChange, fullWidth,
+  col, value, error, masterData, onChange, fullWidth, currency = 'AED',
 }: {
   col: ColumnDef;
   value: any;
@@ -239,6 +240,7 @@ function FieldRenderer({
   masterData: Record<string, string[]>;
   onChange: (v: any) => void;
   fullWidth?: boolean;
+  currency?: string;
 }) {
   const meta = TYPE_META[col.type];
   const label = (
