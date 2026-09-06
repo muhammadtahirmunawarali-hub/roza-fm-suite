@@ -128,6 +128,47 @@ export const masterDataApi = {
   list: () => request<Record<string, string[]>>(`${BASE}/master-data`),
 };
 
+// ---------- Auth ----------
+export const authApi = {
+  login: (username: string, password: string) =>
+    request<{ ok: boolean; user: User }>(`${BASE}/auth/login`, { method: 'POST', body: JSON.stringify({ username, password }) }),
+  logout: () =>
+    request<ApiResponse>(`${BASE}/auth/logout`, { method: 'POST' }),
+  me: () =>
+    request<{ ok: boolean; authenticated: boolean; user?: User; reason?: string }>(`${BASE}/auth/me`),
+};
+
+// ---------- Users ----------
+export const usersApi = {
+  list: () => request<User[]>(`${BASE}/users`),
+  create: (data: Partial<User> & { password: string }) =>
+    request<User>(`${BASE}/users`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<User> & { password?: string }) =>
+    request<User>(`${BASE}/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  remove: (id: string) =>
+    request<ApiResponse>(`${BASE}/users/${id}`, { method: 'DELETE' }),
+};
+
+// ---------- Saved Views ----------
+export interface SavedView {
+  id: string;
+  name: string;
+  registerId: string;
+  userId?: string | null;
+  isShared: boolean;
+  filters: { search?: string; filters?: Record<string, string>; sortField?: string; sortDir?: 'asc' | 'desc' };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const savedViewsApi = {
+  list: (registerId: string) => request<SavedView[]>(`${BASE}/saved-views?registerId=${registerId}`),
+  create: (data: { name: string; registerId: string; filters: any; isShared?: boolean }) =>
+    request<SavedView>(`${BASE}/saved-views`, { method: 'POST', body: JSON.stringify(data) }),
+  remove: (id: string) =>
+    request<ApiResponse>(`${BASE}/saved-views/${id}`, { method: 'DELETE' }),
+};
+
 // ---------- Column helpers (shared between client & server) ----------
 export const COLUMN_TYPE_META: Record<ColumnDef['type'], { label: string; icon: string; needsOptions: boolean }> = {
   auto_increment: { label: 'Auto Number', icon: 'fa-hashtag', needsOptions: false },

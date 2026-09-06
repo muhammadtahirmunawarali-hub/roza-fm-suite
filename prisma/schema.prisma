@@ -78,6 +78,43 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   auditLogs   AuditLog[]
+  sessions    Session[]
+}
+
+// ============================================================
+// SESSIONS (login tracking for simulated auth)
+// ============================================================
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique // session token (stored in cookie)
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============================================================
+// SAVED VIEWS (user-specific saved filters per register)
+// ============================================================
+
+model SavedView {
+  id          String   @id @default(cuid())
+  name        String
+  registerId  String   // register this view belongs to
+  userId      String?  // owner; null = shared/system
+  filters     String   @default("{}") // JSON: { search, filters, sortField, sortDir }
+  isShared    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([registerId])
+  @@index([userId])
 }
 
 model AuditLog {

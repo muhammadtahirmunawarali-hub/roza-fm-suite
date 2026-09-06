@@ -2,8 +2,10 @@
 
 // FMCore ERP — Main Shell
 // Composes: Sidebar + (Toolbar + TabBar + Content + StatusBar) + AI panel + Notifications + Command Palette + Builder
+// Handles auth gating — shows LoginScreen if user not authenticated.
 import { useEffect } from 'react';
 import { useErpStore } from '@/lib/erp/store';
+import { authApi } from '@/lib/erp/api';
 import { Sidebar } from './sidebar';
 import { Toolbar } from './toolbar';
 import { TabBar } from './tab-bar';
@@ -17,13 +19,18 @@ import { RegisterBuilder } from './register-builder';
 import { ReportsView } from './reports-view';
 import { AuditLogsView } from './audit-logs-view';
 import { SettingsView } from './settings-view';
+import { UsersView } from './users-view';
+import { LoginScreen } from './login-screen';
 import { registersApi } from '@/lib/erp/api';
 
 export function ErpShell() {
-  const { tabs, activeTabId, theme, builderOpen, setBuilderOpen } = useErpStore();
+  const {
+    tabs, activeTabId, theme, builderOpen, setBuilderOpen,
+    user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
+  } = useErpStore();
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
-  // Apply theme to <html> element (next-themes integration)
+  // Apply theme to <html> element
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.classList.remove('dark', 'light');
@@ -31,6 +38,28 @@ export function ErpShell() {
       document.documentElement.style.colorScheme = theme;
     }
   }, [theme]);
+
+  // Check auth on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setAuthLoading(true);
+      try {
+        const res = await authApi.me();
+        if (cancelled) return;
+        if (res.ok && res.authenticated && res.user) {
+          setUser(res.user);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Open register by code via custom event (from notification links)
   useEffect(() => {
@@ -46,6 +75,25 @@ export function ErpShell() {
     return () => window.removeEventListener('fmcore:open-by-code', handler as EventListener);
   }, []);
 
+  // Show nothing while auth is checking (prevents flash of login screen)
+  if (authLoading && !authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[var(--erp-bg)] text-[var(--erp-text-muted)]">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center text-white font-bold text-xl animate-pulse" style={{ background: 'linear-gradient(135deg, var(--erp-accent), #009975)' }}>
+            F
+          </div>
+          <div className="text-[13px]">Loading FMCore ERP...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--erp-bg)] text-[var(--erp-text)]">
       <Sidebar />
@@ -58,6 +106,7 @@ export function ErpShell() {
           {activeTab?.type === 'reports' && <ReportsView />}
           {activeTab?.type === 'audit' && <AuditLogsView />}
           {activeTab?.type === 'settings' && <SettingsView />}
+          {activeTab?.type === 'users' && <UsersView />}
         </main>
         <StatusBar />
       </div>

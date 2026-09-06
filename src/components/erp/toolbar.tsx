@@ -4,8 +4,9 @@
 import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { UserMenu } from './user-menu';
 import { cn } from '@/lib/utils';
-import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, X } from 'lucide-react';
+import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2 } from 'lucide-react';
 import { notificationsApi } from '@/lib/erp/api';
 
 export function Toolbar() {
@@ -44,7 +45,7 @@ export function Toolbar() {
 
   return (
     <header
-      className="flex items-center gap-2 h-[52px] px-3 border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)] shrink-0"
+      className="relative flex items-center gap-2 h-[52px] px-3 border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)] shrink-0"
       style={{ zIndex: 20 }}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -109,14 +110,8 @@ export function Toolbar() {
           onClick={() => setNotifPanel(!notifPanelOpen)}
           badge={unreadCount > 0 ? unreadCount : undefined}
         />
-        <div className="flex items-center gap-2 pl-2 ml-1 border-l border-[var(--erp-border)]">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[12px] text-white shrink-0" style={{ background: 'linear-gradient(135deg, var(--erp-accent), #009975)' }}>
-            AD
-          </div>
-          <div className="hidden lg:block leading-tight">
-            <div className="text-[12px] font-medium text-[var(--erp-text)]">Admin</div>
-            <div className="text-[10px] text-[var(--erp-text-muted)]">Administrator · IT</div>
-          </div>
+        <div className="flex items-center gap-1 pl-2 ml-1 border-l border-[var(--erp-border)]">
+          <UserMenu />
         </div>
       </div>
     </header>

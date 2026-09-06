@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 
 export function StatusBar() {
-  const { tabs, activeTabId } = useErpStore();
+  const { tabs, activeTabId, user } = useErpStore();
   const [now, setNow] = useState('');
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function StatusBar() {
       <div className="flex items-center gap-3">
         <span className="hidden sm:inline">FMCore ERP v1.0.0</span>
         <span className="text-[var(--erp-text-muted)]">·</span>
-        <span className="hidden md:inline">Admin · IT Department</span>
+        <span className="hidden md:inline">{user ? `${user.name} · ${user.role}` : 'Not signed in'}</span>
         <span className="text-[var(--erp-text-muted)] hidden md:inline">·</span>
         <span className="tabular-nums">{now}</span>
       </div>

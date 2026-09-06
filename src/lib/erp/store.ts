@@ -3,7 +3,7 @@
 // FMCore ERP — Client state (Zustand)
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Tab, RegisterCategory, ColumnDef } from './types';
+import type { Tab, User } from './types';
 
 interface ErpState {
   // navigation
@@ -39,6 +39,22 @@ interface ErpState {
   // register builder modal
   builderOpen: boolean;
   setBuilderOpen: (open: boolean) => void;
+
+  // user menu (top-right dropdown)
+  userMenuOpen: boolean;
+  setUserMenu: (open: boolean) => void;
+
+  // auth
+  user: User | null;
+  authLoading: boolean;
+  authChecked: boolean;
+  setUser: (user: User | null) => void;
+  setAuthLoading: (loading: boolean) => void;
+  setAuthChecked: (checked: boolean) => void;
+  logout: () => void;
+
+  // permission check
+  hasPermission: (module: string, action: string) => boolean;
 }
 
 export const useErpStore = create<ErpState>()(
@@ -95,6 +111,28 @@ export const useErpStore = create<ErpState>()(
       // ---------- register builder ----------
       builderOpen: false,
       setBuilderOpen: (open) => set({ builderOpen: open }),
+
+      // ---------- user menu ----------
+      userMenuOpen: false,
+      setUserMenu: (open) => set({ userMenuOpen: open }),
+
+      // ---------- auth ----------
+      user: null,
+      authLoading: true,
+      authChecked: false,
+      setUser: (user) => set({ user, authLoading: false, authChecked: true }),
+      setAuthLoading: (loading) => set({ authLoading: loading }),
+      setAuthChecked: (checked) => set({ authChecked: checked }),
+      logout: () => set({ user: null, userMenuOpen: false, tabs: [{ id: 'dashboard', type: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' }], activeTabId: 'dashboard' }),
+
+      // ---------- permission check ----------
+      hasPermission: (module, action) => {
+        const u = get().user;
+        if (!u) return false;
+        if (u.role === 'Super Admin') return true;
+        const perm = (u.permissions || []).find((p: any) => p.module === module);
+        return !!perm && perm.actions.includes(action);
+      },
     }),
     {
       name: 'fmcore-erp-state',
@@ -103,6 +141,7 @@ export const useErpStore = create<ErpState>()(
         theme: s.theme,
         tabs: s.tabs,
         activeTabId: s.activeTabId,
+        user: s.user,
       }),
     },
   ),
