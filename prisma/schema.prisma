@@ -1,0 +1,147 @@
+// FMCore ERP — Prisma Schema
+// Dynamic Register & Form Builder architecture.
+// Registers are schema-driven (columns stored as JSON), records are JSON blobs.
+// This keeps the FMCore DNA while giving us a real relational DB ready for SaaS migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// CORE: Dynamic Registers (schema-driven "tables")
+// ============================================================
+
+model Register {
+  id          String   @id @default(cuid())
+  code        String   @unique // url-friendly slug, e.g. "workorders"
+  name        String
+  icon        String   @default("fa-table") // Font Awesome icon name
+  category    String   @default("operations") // operations|maintenance|safety|assets|procurement|hr|performance|admin
+  color       String   @default("#00D4AA")
+  description String?
+  // columns is a JSON array of column definitions:
+  // [{ name, type, width, options?, required?, default? }]
+  // type: auto_increment|text|long_text|number|currency|percentage|date|datetime|time|
+  //       dropdown|status|priority|multi_select|email|phone|rating|employee|department|
+  //       building|asset|equipment|vendor
+  columns     String   @default("[]") // JSON
+  isSystem    Boolean  @default(false) // system registers can't be deleted
+  isDeleted   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  records     Record[]
+  auditLogs   AuditLog[]
+}
+
+model Record {
+  id           String   @id @default(cuid())
+  registerId   String
+  register     Register @relation(fields: [registerId], references: [id], onDelete: Cascade)
+  // sequence is used for auto_increment columns (e.g. WO-001, WO-002)
+  sequence     Int      @default(0)
+  // data is a JSON object keyed by column name
+  // { "Date": "2025-02-10", "Status": "Open", "Priority": "High", ... }
+  data         String   @default("{}") // JSON
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  updatedBy    String?
+
+  @@index([registerId])
+  @@index([registerId, isDeleted])
+}
+
+// ============================================================
+// ADMINISTRATION
+// ============================================================
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  username    String   @unique
+  password    String   // plaintext for demo only — replace with hashed in production
+  role        String   @default("Administrator") // Super Admin|Administrator|Manager|Accountant|...
+  branch      String?
+  department  String?
+  avatar      String?  // initials or url
+  status      String   @default("Active") // Active|Inactive|Suspended
+  permissions String   @default("[]") // JSON array of {module, actions[]}
+  lastLoginAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  auditLogs   AuditLog[]
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String   // Created|Updated|Deleted|Approved|Cancelled|Logged In|Exported|Imported
+  module      String   // register name or "Auth" / "Settings" / "Backup"
+  registerId  String?
+  register    Register? @relation(fields: [registerId], references: [id], onDelete: SetNull)
+  recordId    String?
+  oldValue     String?  // JSON snapshot
+  newValue     String?  // JSON snapshot
+  summary     String   // human-readable
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([module])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+// ============================================================
+// SETTINGS (key-value store)
+// ============================================================
+
+model Setting {
+  key         String   @id // e.g. "theme", "currency", "company.name", "numbering.WO"
+  value       String   @default("") // JSON-encoded value
+  category    String   @default("general") // general|company|currency|tax|invoice|numbering|appearance|notifications
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   // low_stock|overdue_invoice|pending_approval|work_order_overdue|maintenance_due|task_due|system
+  title       String
+  message     String
+  severity    String   @default("info") // info|warning|critical|success
+  link        String?  // url to navigate to
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// OPEN TABS (persisted client-side tabs across refreshes)
+// ============================================================
+
+model OpenTab {
+  id          String   @id @default(cuid())
+  tabId       String   @unique // client tab id
+  type        String   // dashboard|register|settings|reports|audit
+  label       String
+  icon        String
+  refId       String?  // register id if type=register
+  order       Int      @default(0)
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}

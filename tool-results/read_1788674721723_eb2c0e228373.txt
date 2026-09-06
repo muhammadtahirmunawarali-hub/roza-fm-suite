@@ -1,0 +1,2002 @@
+     1→<!DOCTYPE html>
+     2→<html lang="en">
+     3→<head>
+     4→<meta charset="UTF-8">
+     5→<meta name="viewport" content="width=device-width, initial-scale=1.0">
+     6→<title>FMCore ERP — Dynamic Register & Form Builder</title>
+     7→<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+     8→<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+     9→<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    10→<style>
+    11→/* ========== CSS VARIABLES & THEMES ========== */
+    12→:root {
+    13→  --font-display: 'Space Grotesk', sans-serif;
+    14→  --font-ui: 'DM Sans', sans-serif;
+    15→  --sidebar-w: 264px;
+    16→  --sidebar-collapsed-w: 60px;
+    17→  --toolbar-h: 52px;
+    18→  --tabbar-h: 40px;
+    19→  --statusbar-h: 30px;
+    20→  --radius: 8px;
+    21→  --radius-sm: 5px;
+    22→  --radius-lg: 12px;
+    23→  --transition: 0.25s cubic-bezier(.4,0,.2,1);
+    24→}
+    25→[data-theme="dark"] {
+    26→  --bg-primary: #0B1121;
+    27→  --bg-secondary: #0F1729;
+    28→  --bg-card: #141E33;
+    29→  --bg-elevated: #1A2740;
+    30→  --bg-hover: #1E2D48;
+    31→  --bg-active: #243652;
+    32→  --bg-input: #111B2E;
+    33→  --border: #1E2D45;
+    34→  --border-light: #253654;
+    35→  --text-primary: #E8EDF5;
+    36→  --text-secondary: #94A3B8;
+    37→  --text-muted: #5A6B82;
+    38→  --accent: #00D4AA;
+    39→  --accent-hover: #00F0C0;
+    40→  --accent-dim: rgba(0,212,170,0.12);
+    41→  --accent-border: rgba(0,212,170,0.3);
+    42→  --danger: #EF4444;
+    43→  --warning: #F59E0B;
+    44→  --success: #10B981;
+    45→  --info: #06B6D4;
+    46→  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    47→  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    48→  --scrollbar-track: #0F1729;
+    49→  --scrollbar-thumb: #253654;
+    50→  --grid-row-alt: rgba(255,255,255,0.015);
+    51→  --grid-row-hover: rgba(0,212,170,0.06);
+    52→  --grid-row-selected: rgba(0,212,170,0.1);
+    53→}
+    54→[data-theme="light"] {
+    55→  --bg-primary: #F0F3F7;
+    56→  --bg-secondary: #E4E9F0;
+    57→  --bg-card: #FFFFFF;
+    58→  --bg-elevated: #FFFFFF;
+    59→  --bg-hover: #E8ECF2;
+    60→  --bg-active: #DCE2EB;
+    61→  --bg-input: #F5F7FA;
+    62→  --border: #D1D9E6;
+    63→  --border-light: #E2E8F0;
+    64→  --text-primary: #0F172A;
+    65→  --text-secondary: #475569;
+    66→  --text-muted: #94A3B8;
+    67→  --accent: #009975;
+    68→  --accent-hover: #00B88A;
+    69→  --accent-dim: rgba(0,153,117,0.08);
+    70→  --accent-border: rgba(0,153,117,0.25);
+    71→  --danger: #DC2626;
+    72→  --warning: #D97706;
+    73→  --success: #059669;
+    74→  --info: #0891B2;
+    75→  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    76→  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    77→  --scrollbar-track: #E4E9F0;
+    78→  --scrollbar-thumb: #C1C9D6;
+    79→  --grid-row-alt: rgba(0,0,0,0.018);
+    80→  --grid-row-hover: rgba(0,153,117,0.06);
+    81→  --grid-row-selected: rgba(0,153,117,0.1);
+    82→}
+    83→/* ========== RESET & BASE ========== */
+    84→*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    85→html, body { height: 100%; overflow: hidden; }
+    86→body {
+    87→  font-family: var(--font-ui);
+    88→  background: var(--bg-primary);
+    89→  color: var(--text-primary);
+    90→  font-size: 13.5px;
+    91→  line-height: 1.5;
+    92→  transition: background-color var(--transition), color var(--transition);
+    93→}
+    94→::-webkit-scrollbar { width: 7px; height: 7px; }
+    95→::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    96→::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+    97→::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    98→input, select, textarea, button { font-family: inherit; font-size: inherit; }
+    99→a { color: var(--accent); text-decoration: none; }
+   100→a:hover { text-decoration: underline; }
+   101→
+   102→/* ========== APP LAYOUT ========== */
+   103→#app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+   104→
+   105→/* ========== SIDEBAR ========== */
+   106→#sidebar {
+   107→  width: var(--sidebar-w);
+   108→  min-width: var(--sidebar-w);
+   109→  height: 100vh;
+   110→  background: var(--bg-secondary);
+   111→  border-right: 1px solid var(--border);
+   112→  display: flex;
+   113→  flex-direction: column;
+   114→  transition: width var(--transition), min-width var(--transition), background-color var(--transition), border-color var(--transition);
+   115→  z-index: 100;
+   116→  position: relative;
+   117→}
+   118→#sidebar.collapsed { width: var(--sidebar-collapsed-w); min-width: var(--sidebar-collapsed-w); }
+   119→#sidebar.collapsed .sidebar-text { display: none; }
+   120→#sidebar.collapsed .sidebar-search-box { display: none; }
+   121→#sidebar.collapsed .tree-children { display: none !important; }
+   122→#sidebar.collapsed .tree-item { justify-content: center; padding: 0 0; }
+   123→#sidebar.collapsed .tree-item i.tree-icon { margin-right: 0; font-size: 16px; }
+   124→#sidebar.collapsed .tree-toggle { display: none; }
+   125→#sidebar.collapsed .sidebar-header-title { display: none; }
+   126→
+   127→.sidebar-header {
+   128→  display: flex; align-items: center; gap: 10px;
+   129→  padding: 14px 16px; border-bottom: 1px solid var(--border);
+   130→  min-height: 52px;
+   131→}
+   132→.sidebar-logo {
+   133→  width: 30px; height: 30px; border-radius: var(--radius-sm);
+   134→  background: linear-gradient(135deg, var(--accent), #00A080);
+   135→  display: flex; align-items: center; justify-content: center;
+   136→  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+   137→  color: #fff; flex-shrink: 0;
+   138→}
+   139→.sidebar-header-title {
+   140→  font-family: var(--font-display); font-weight: 600; font-size: 15px;
+   141→  color: var(--text-primary); white-space: nowrap;
+   142→}
+   143→.sidebar-search { padding: 10px 12px; }
+   144→.sidebar-search-box {
+   145→  display: flex; align-items: center; gap: 6px;
+   146→  background: var(--bg-input); border: 1px solid var(--border);
+   147→  border-radius: var(--radius-sm); padding: 6px 10px;
+   148→  transition: border-color var(--transition);
+   149→}
+   150→.sidebar-search-box:focus-within { border-color: var(--accent-border); }
+   151→.sidebar-search-box i { color: var(--text-muted); font-size: 12px; }
+   152→.sidebar-search-box input {
+   153→  border: none; background: transparent; outline: none; width: 100%;
+   154→  color: var(--text-primary); font-size: 12.5px;
+   155→}
+   156→.sidebar-search-box input::placeholder { color: var(--text-muted); }
+   157→
+   158→.sidebar-tree {
+   159→  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 0;
+   160→}
+   161→.tree-item {
+   162→  display: flex; align-items: center; gap: 2px;
+   163→  padding: 5px 12px 5px 0; cursor: pointer; border-radius: 0;
+   164→  color: var(--text-secondary); transition: all 0.15s;
+   165→  white-space: nowrap; position: relative; user-select: none;
+   166→  min-height: 32px;
+   167→}
+   168→.tree-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+   169→.tree-item.active { background: var(--accent-dim); color: var(--accent); }
+   170→.tree-item.active::before {
+   171→  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px;
+   172→  width: 3px; background: var(--accent); border-radius: 0 3px 3px 0;
+   173→}
+   174→.tree-icon { width: 28px; text-align: center; font-size: 13px; flex-shrink: 0; margin-right: 4px; }
+   175→.tree-toggle {
+   176→  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+   177→  font-size: 10px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s;
+   178→  border-radius: 3px;
+   179→}
+   180→.tree-toggle.open { transform: rotate(90deg); }
+   181→.tree-toggle:hover { background: var(--bg-active); }
+   182→.tree-children { overflow: hidden; }
+   183→.tree-children.hidden { display: none; }
+   184→.tree-badge {
+   185→  margin-left: auto; background: var(--accent-dim); color: var(--accent);
+   186→  font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600;
+   187→}
+   188→.sidebar-footer {
+   189→  padding: 10px 12px; border-top: 1px solid var(--border);
+   190→  display: flex; align-items: center; gap: 8px;
+   191→}
+   192→.sidebar-footer button {
+   193→  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+   194→  padding: 7px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+   195→  background: var(--bg-input); color: var(--text-secondary); cursor: pointer;
+   196→  transition: all 0.15s; font-size: 12px;
+   197→}
+   198→.sidebar-footer button:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+   199→
+   200→/* ========== MAIN AREA ========== */
+   201→#main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+   202→
+   203→/* ========== TOP TOOLBAR ========== */
+   204→#toolbar {
+   205→  height: var(--toolbar-h); min-height: var(--toolbar-h);
+   206→  display: flex; align-items: center; gap: 12px;
+   207→  padding: 0 16px; border-bottom: 1px solid var(--border);
+   208→  background: var(--bg-secondary);
+   209→  transition: background-color var(--transition), border-color var(--transition);
+   210→}
+   211→.toolbar-left { display: flex; align-items: center; gap: 10px; }
+   212→.toolbar-center { flex: 1; max-width: 480px; margin: 0 auto; }
+   213→.toolbar-right { display: flex; align-items: center; gap: 4px; }
+   214→.tb-btn {
+   215→  width: 34px; height: 34px; border-radius: var(--radius-sm);
+   216→  border: none; background: transparent; color: var(--text-secondary);
+   217→  cursor: pointer; display: flex; align-items: center; justify-content: center;
+   218→  font-size: 14px; transition: all 0.15s; position: relative;
+   219→}
+   220→.tb-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+   221→.tb-btn.active { color: var(--accent); background: var(--accent-dim); }
+   222→.tb-btn .badge-dot {
+   223→  position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
+   224→  background: var(--danger); border-radius: 50%; border: 1.5px solid var(--bg-secondary);
+   225→}
+   226→.tb-search {
+   227→  display: flex; align-items: center; gap: 8px; width: 100%;
+   228→  background: var(--bg-input); border: 1px solid var(--border);
+   229→  border-radius: var(--radius); padding: 0 12px; height: 34px;
+   230→  transition: border-color var(--transition);
+   231→}
+   232→.tb-search:focus-within { border-color: var(--accent-border); }
+   233→.tb-search i { color: var(--text-muted); font-size: 13px; }
+   234→.tb-search input {
+   235→  border: none; background: transparent; outline: none; width: 100%;
+   236→  color: var(--text-primary); font-size: 13px;
+   237→}
+   238→.tb-search input::placeholder { color: var(--text-muted); }
+   239→.tb-search kbd {
+   240→  font-size: 10px; padding: 1px 5px; border-radius: 3px;
+   241→  background: var(--bg-active); color: var(--text-muted); border: 1px solid var(--border);
+   242→  font-family: var(--font-ui); white-space: nowrap;
+   243→}
+   244→.tb-profile {
+   245→  display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px;
+   246→  border-radius: var(--radius); cursor: pointer; transition: background 0.15s;
+   247→}
+   248→.tb-profile:hover { background: var(--bg-hover); }
+   249→.tb-avatar {
+   250→  width: 28px; height: 28px; border-radius: 50%;
+   251→  background: linear-gradient(135deg, var(--accent), #00A080);
+   252→  display: flex; align-items: center; justify-content: center;
+   253→  color: #fff; font-size: 11px; font-weight: 700;
+   254→}
+   255→.tb-profile-name { font-size: 12.5px; font-weight: 500; color: var(--text-primary); }
+   256→.tb-profile-role { font-size: 10.5px; color: var(--text-muted); }
+   257→
+   258→/* ========== TAB BAR ========== */
+   259→#tab-bar {
+   260→  height: var(--tabbar-h); min-height: var(--tabbar-h);
+   261→  display: flex; align-items: stretch; background: var(--bg-primary);
+   262→  border-bottom: 1px solid var(--border); overflow: hidden;
+   263→  transition: background-color var(--transition), border-color var(--transition);
+   264→}
+   265→.tabs-scroll { display: flex; align-items: stretch; overflow-x: auto; flex: 1; }
+   266→.tabs-scroll::-webkit-scrollbar { height: 0; }
+   267→.tab-btn {
+   268→  display: flex; align-items: center; gap: 7px;
+   269→  padding: 0 14px; border: none; background: transparent;
+   270→  color: var(--text-muted); cursor: pointer; white-space: nowrap;
+   271→  font-size: 12px; border-right: 1px solid var(--border);
+   272→  transition: all 0.15s; position: relative; min-width: 0;
+   273→}
+   274→.tab-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+   275→.tab-btn.active {
+   276→  background: var(--bg-card); color: var(--text-primary);
+   277→  border-bottom: 2px solid var(--accent); margin-bottom: -1px;
+   278→}
+   279→.tab-btn i { font-size: 11px; }
+   280→.tab-btn .tab-close {
+   281→  width: 16px; height: 16px; border-radius: 3px; border: none;
+   282→  background: transparent; color: var(--text-muted); cursor: pointer;
+   283→  display: flex; align-items: center; justify-content: center;
+   284→  font-size: 9px; margin-left: 4px; transition: all 0.12s;
+   285→}
+   286→.tab-btn .tab-close:hover { background: var(--danger); color: #fff; }
+   287→.tab-actions {
+   288→  display: flex; align-items: center; padding: 0 8px; gap: 2px;
+   289→  border-left: 1px solid var(--border);
+   290→}
+   291→.view-btn {
+   292→  padding: 4px 10px; border: none; border-radius: var(--radius-sm);
+   293→  background: transparent; color: var(--text-muted); cursor: pointer;
+   294→  font-size: 12px; transition: all 0.15s;
+   295→}
+   296→.view-btn:hover { color: var(--text-secondary); background: var(--bg-hover); }
+   297→.view-btn.active { color: var(--accent); background: var(--accent-dim); }
+   298→
+   299→/* ========== CONTENT ========== */
+   300→#content { flex: 1; overflow: hidden; position: relative; background: var(--bg-primary); }
+   301→
+   302→/* ========== STATUS BAR ========== */
+   303→#status-bar {
+   304→  height: var(--statusbar-h); min-height: var(--statusbar-h);
+   305→  display: flex; align-items: center; justify-content: space-between;
+   306→  padding: 0 16px; font-size: 11px; color: var(--text-muted);
+   307→  border-top: 1px solid var(--border); background: var(--bg-secondary);
+   308→  transition: background-color var(--transition), border-color var(--transition);
+   309→}
+   310→.status-left, .status-center, .status-right { display: flex; align-items: center; gap: 16px; }
+   311→
+   312→/* ========== GRID ========== */
+   313→.grid-container { height: 100%; display: flex; flex-direction: column; }
+   314→.grid-toolbar {
+   315→  display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+   316→  border-bottom: 1px solid var(--border); flex-wrap: wrap;
+   317→  background: var(--bg-card);
+   318→}
+   319→.g-btn {
+   320→  display: inline-flex; align-items: center; gap: 5px;
+   321→  padding: 5px 12px; border-radius: var(--radius-sm);
+   322→  border: 1px solid var(--border); background: var(--bg-input);
+   323→  color: var(--text-secondary); cursor: pointer; font-size: 12px;
+   324→  transition: all 0.15s; white-space: nowrap;
+   325→}
+   326→.g-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+   327→.g-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+   328→.g-btn.primary:hover { background: var(--accent-hover); }
+   329→.g-btn.danger { color: var(--danger); }
+   330→.g-btn.danger:hover { background: rgba(239,68,68,0.1); }
+   331→.g-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+   332→.g-search {
+   333→  display: flex; align-items: center; gap: 6px;
+   334→  background: var(--bg-input); border: 1px solid var(--border);
+   335→  border-radius: var(--radius-sm); padding: 0 8px; height: 30px;
+   336→  margin-left: auto;
+   337→}
+   338→.g-search:focus-within { border-color: var(--accent-border); }
+   339→.g-search i { color: var(--text-muted); font-size: 11px; }
+   340→.g-search input {
+   341→  border: none; background: transparent; outline: none; width: 140px;
+   342→  color: var(--text-primary); font-size: 12px;
+   343→}
+   344→.grid-wrap { flex: 1; overflow: auto; position: relative; }
+   345→.grid-table {
+   346→  width: 100%; border-collapse: separate; border-spacing: 0;
+   347→  font-size: 12.5px; table-layout: fixed;
+   348→}
+   349→.grid-table thead { position: sticky; top: 0; z-index: 10; }
+   350→.grid-table th {
+   351→  background: var(--bg-elevated); color: var(--text-secondary);
+   352→  font-weight: 600; text-align: left; padding: 8px 10px;
+   353→  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+   354→  cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden;
+   355→  text-overflow: ellipsis; position: relative; transition: background 0.12s;
+   356→}
+   357→.grid-table th:hover { background: var(--bg-hover); color: var(--text-primary); }
+   358→.grid-table th.sorted { color: var(--accent); }
+   359→.grid-table th .sort-icon { margin-left: 4px; font-size: 10px; opacity: 0.5; }
+   360→.grid-table th.sorted .sort-icon { opacity: 1; }
+   361→.grid-table th.row-num-header { width: 44px; min-width: 44px; text-align: center; cursor: default; }
+   362→.grid-table th.row-num-header:hover { background: var(--bg-elevated); }
+   363→.grid-table td {
+   364→  padding: 7px 10px; border-bottom: 1px solid var(--border);
+   365→  border-right: 1px solid var(--border); overflow: hidden;
+   366→  text-overflow: ellipsis; white-space: nowrap; max-width: 0;
+   367→  transition: background 0.1s;
+   368→}
+   369→.grid-table tr:nth-child(even) td { background: var(--grid-row-alt); }
+   370→.grid-table tbody tr:hover td { background: var(--grid-row-hover); }
+   371→.grid-table tbody tr.selected td { background: var(--grid-row-selected); }
+   372→.grid-table td.row-num {
+   373→  text-align: center; color: var(--text-muted); font-size: 11px;
+   374→  width: 44px; min-width: 44px; background: var(--bg-elevated) !important;
+   375→  font-weight: 500;
+   376→}
+   377→.grid-table td.row-num input[type="checkbox"] {
+   378→  accent-color: var(--accent); cursor: pointer;
+   379→}
+   380→.grid-empty {
+   381→  display: flex; flex-direction: column; align-items: center; justify-content: center;
+   382→  height: 300px; color: var(--text-muted); gap: 12px;
+   383→}
+   384→.grid-empty i { font-size: 40px; opacity: 0.3; }
+   385→.grid-filter-row td {
+   386→  padding: 4px 6px; background: var(--bg-secondary) !important;
+   387→  border-bottom: 2px solid var(--border);
+   388→}
+   389→.grid-filter-row input, .grid-filter-row select {
+   390→  width: 100%; border: 1px solid var(--border); border-radius: 3px;
+   391→  background: var(--bg-input); color: var(--text-primary);
+   392→  padding: 3px 6px; font-size: 11.5px; outline: none;
+   393→}
+   394→.grid-filter-row input:focus, .grid-filter-row select:focus { border-color: var(--accent-border); }
+   395→
+   396→/* ========== CELL BADGES ========== */
+   397→.badge {
+   398→  display: inline-block; padding: 2px 8px; border-radius: 10px;
+   399→  font-size: 11px; font-weight: 600; white-space: nowrap;
+   400→}
+   401→.badge-blue { background: rgba(59,130,246,0.15); color: #60A5FA; }
+   402→.badge-amber { background: rgba(245,158,11,0.15); color: #FBBF24; }
+   403→.badge-green { background: rgba(16,185,129,0.15); color: #34D399; }
+   404→.badge-red { background: rgba(239,68,68,0.15); color: #F87171; }
+   405→.badge-purple { background: rgba(139,92,246,0.15); color: #A78BFA; }
+   406→.badge-gray { background: rgba(107,114,128,0.15); color: #9CA3AF; }
+   407→.badge-cyan { background: rgba(6,182,212,0.15); color: #22D3EE; }
+   408→.priority-dot {
+   409→  display: inline-flex; align-items: center; gap: 5px; font-weight: 500;
+   410→}
+   411→.priority-dot::before {
+   412→  content: ''; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+   413→}
+   414→.priority-dot.critical::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+   415→.priority-dot.high::before { background: #F97316; }
+   416→.priority-dot.medium::before { background: var(--warning); }
+   417→.priority-dot.low::before { background: var(--success); }
+   418→.pct-cell { display: flex; align-items: center; gap: 8px; }
+   419→.pct-bar { width: 60px; height: 6px; background: var(--bg-active); border-radius: 3px; overflow: hidden; }
+   420→.pct-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+   421→.tag {
+   422→  display: inline-block; padding: 1px 7px; border-radius: 4px;
+   423→  font-size: 11px; margin: 1px 2px; background: var(--bg-active);
+   424→  color: var(--text-secondary); border: 1px solid var(--border);
+   425→}
+   426→.rating-cell { color: var(--warning); letter-spacing: 1px; font-size: 12px; }
+   427→.currency-cell { font-weight: 500; font-variant-numeric: tabular-nums; }
+   428→.link-cell { color: var(--accent); cursor: pointer; }
+   429→.link-cell:hover { text-decoration: underline; }
+   430→
+   431→/* ========== FORM VIEW ========== */
+   432→.form-container { height: 100%; overflow-y: auto; padding: 20px; }
+   433→.form-header {
+   434→  display: flex; align-items: center; justify-content: space-between;
+   435→  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+   436→}
+   437→.form-header h2 { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+   438→.form-nav { display: flex; gap: 6px; }
+   439→.form-card {
+   440→  background: var(--bg-card); border: 1px solid var(--border);
+   441→  border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px;
+   442→  box-shadow: var(--shadow-sm);
+   443→}
+   444→.form-card-title {
+   445→  font-family: var(--font-display); font-size: 14px; font-weight: 600;
+   446→  color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+   447→}
+   448→.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+   449→.form-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+   450→.form-group { display: flex; flex-direction: column; gap: 4px; }
+   451→.form-group.full { grid-column: 1 / -1; }
+   452→.form-label {
+   453→  font-size: 11.5px; font-weight: 600; color: var(--text-secondary);
+   454→  text-transform: uppercase; letter-spacing: 0.5px;
+   455→}
+   456→.form-input, .form-select, .form-textarea {
+   457→  padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+   458→  background: var(--bg-input); color: var(--text-primary); outline: none;
+   459→  transition: border-color 0.15s; font-size: 13px;
+   460→}
+   461→.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent-border); }
+   462→.form-textarea { min-height: 70px; resize: vertical; }
+   463→.form-actions {
+   464→  display: flex; gap: 8px; justify-content: flex-end;
+   465→  padding-top: 16px; border-top: 1px solid var(--border); margin-top: 8px;
+   466→}
+   467→.form-readonly { background: var(--bg-hover) !important; opacity: 0.85; }
+   468→
+   469→/* ========== DASHBOARD ========== */
+   470→.dash-container { height: 100%; overflow-y: auto; padding: 20px; }
+   471→.dash-title {
+   472→  font-family: var(--font-display); font-size: 24px; font-weight: 700;
+   473→  margin-bottom: 20px;
+   474→}
+   475→.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+   476→.kpi-card {
+   477→  background: var(--bg-card); border: 1px solid var(--border);
+   478→  border-radius: var(--radius-lg); padding: 18px;
+   479→  box-shadow: var(--shadow-sm); transition: transform 0.2s, box-shadow 0.2s;
+   480→}
+   481→.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+   482→.kpi-label { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+   483→.kpi-value { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin: 4px 0; }
+   484→.kpi-change { font-size: 11.5px; display: flex; align-items: center; gap: 4px; }
+   485→.kpi-change.up { color: var(--success); }
+   486→.kpi-change.down { color: var(--danger); }
+   487→.chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 20px; }
+   488→.chart-card {
+   489→  background: var(--bg-card); border: 1px solid var(--border);
+   490→  border-radius: var(--radius-lg); padding: 18px;
+   491→  box-shadow: var(--shadow-sm);
+   492→}
+   493→.chart-card-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+   494→.chart-card canvas { max-height: 240px; }
+   495→.activity-list { list-style: none; }
+   496→.activity-item {
+   497→  display: flex; gap: 10px; padding: 10px 0;
+   498→  border-bottom: 1px solid var(--border); font-size: 12.5px;
+   499→}
+   500→.activity-item:last-child { border-bottom: none; }
+   501→.activity-dot {
+   502→  width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+   503→}
+   504→.activity-text { flex: 1; color: var(--text-secondary); }
+   505→.activity-time { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+   506→.quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+   507→.quick-link {
+   508→  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+   509→  border-radius: var(--radius-sm); border: 1px solid var(--border);
+   510→  cursor: pointer; transition: all 0.15s; color: var(--text-secondary); font-size: 12.5px;
+   511→}
+   512→.quick-link:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+   513→.quick-link i { width: 20px; text-align: center; }
+   514→
+   515→/* ========== MODALS ========== */
+   516→.modal-overlay {
+   517→  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+   518→  display: flex; align-items: center; justify-content: center;
+   519→  z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+   520→  backdrop-filter: blur(4px);
+   521→}
+   522→.modal-overlay.show { opacity: 1; pointer-events: all; }
+   523→.modal {
+   524→  background: var(--bg-card); border: 1px solid var(--border);
+   525→  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+   526→  width: 90%; max-width: 640px; max-height: 85vh; display: flex; flex-direction: column;
+   527→  transform: scale(0.95) translateY(10px); transition: transform 0.2s;
+   528→}
+   529→.modal-overlay.show .modal { transform: scale(1) translateY(0); }
+   530→.modal-header {
+   531→  display: flex; align-items: center; justify-content: space-between;
+   532→  padding: 16px 20px; border-bottom: 1px solid var(--border);
+   533→}
+   534→.modal-header h3 { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+   535→.modal-close {
+   536→  width: 30px; height: 30px; border: none; border-radius: var(--radius-sm);
+   537→  background: transparent; color: var(--text-muted); cursor: pointer;
+   538→  display: flex; align-items: center; justify-content: center; font-size: 14px;
+   539→}
+   540→.modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+   541→.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+   542→.modal-footer {
+   543→  padding: 14px 20px; border-top: 1px solid var(--border);
+   544→  display: flex; justify-content: flex-end; gap: 8px;
+   545→}
+   546→
+   547→/* ========== SLIDE PANELS ========== */
+   548→.slide-panel {
+   549→  position: fixed; top: 0; right: 0; bottom: 0; width: 380px;
+   550→  background: var(--bg-card); border-left: 1px solid var(--border);
+   551→  z-index: 500; transform: translateX(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+   552→  display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,0.2);
+   553→}
+   554→.slide-panel.open { transform: translateX(0); }
+   555→.panel-header {
+   556→  display: flex; align-items: center; justify-content: space-between;
+   557→  padding: 16px; border-bottom: 1px solid var(--border);
+   558→}
+   559→.panel-header h3 { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+   560→.panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+   561→
+   562→/* ========== AI PANEL ========== */
+   563→.ai-messages { display: flex; flex-direction: column; gap: 12px; }
+   564→.ai-msg {
+   565→  max-width: 90%; padding: 10px 14px; border-radius: var(--radius);
+   566→  font-size: 13px; line-height: 1.6;
+   567→}
+   568→.ai-msg.bot { background: var(--accent-dim); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 3px; }
+   569→.ai-msg.user { background: var(--bg-active); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 3px; }
+   570→.ai-input-row {
+   571→  display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border);
+   572→}
+   573→.ai-input-row input {
+   574→  flex: 1; padding: 8px 12px; border: 1px solid var(--border);
+   575→  border-radius: var(--radius-sm); background: var(--bg-input);
+   576→  color: var(--text-primary); outline: none; font-size: 13px;
+   577→}
+   578→.ai-input-row input:focus { border-color: var(--accent-border); }
+   579→.ai-input-row button {
+   580→  padding: 8px 14px; border: none; border-radius: var(--radius-sm);
+   581→  background: var(--accent); color: #fff; cursor: pointer; font-size: 13px;
+   582→  font-weight: 600; transition: background 0.15s;
+   583→}
+   584→.ai-input-row button:hover { background: var(--accent-hover); }
+   585→
+   586→/* ========== NOTIFICATION PANEL ========== */
+   587→.notif-item {
+   588→  display: flex; gap: 10px; padding: 12px 0;
+   589→  border-bottom: 1px solid var(--border);
+   590→}
+   591→.notif-item:last-child { border-bottom: none; }
+   592→.notif-icon {
+   593→  width: 34px; height: 34px; border-radius: 50%; display: flex;
+   594→  align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+   595→}
+   596→.notif-text { font-size: 12.5px; color: var(--text-secondary); }
+   597→.notif-text strong { color: var(--text-primary); }
+   598→.notif-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+   599→
+   600→/* ========== TOAST ========== */
+   601→#toast-container {
+   602→  position: fixed; top: 60px; right: 16px; z-index: 2000;
+   603→  display: flex; flex-direction: column; gap: 8px;
+   604→}
+   605→.toast {
+   606→  display: flex; align-items: center; gap: 10px;
+   607→  padding: 12px 16px; border-radius: var(--radius);
+   608→  background: var(--bg-elevated); border: 1px solid var(--border);
+   609→  box-shadow: var(--shadow); font-size: 13px; color: var(--text-primary);
+   610→  animation: toastIn 0.3s ease; min-width: 280px;
+   611→}
+   612→.toast.out { animation: toastOut 0.3s ease forwards; }
+   613→.toast i { font-size: 16px; }
+   614→.toast.success i { color: var(--success); }
+   615→.toast.error i { color: var(--danger); }
+   616→.toast.info i { color: var(--info); }
+   617→.toast.warning i { color: var(--warning); }
+   618→@keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+   619→@keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+   620→
+   621→/* ========== WELCOME SCREEN ========== */
+   622→.welcome {
+   623→  height: 100%; display: flex; flex-direction: column; align-items: center;
+   624→  justify-content: center; gap: 16px; color: var(--text-muted); padding: 40px;
+   625→  text-align: center;
+   626→}
+   627→.welcome-icon { font-size: 56px; opacity: 0.15; margin-bottom: 8px; }
+   628→.welcome h2 { font-family: var(--font-display); font-size: 22px; color: var(--text-primary); font-weight: 600; }
+   629→.welcome p { max-width: 400px; font-size: 13.5px; }
+   630→
+   631→/* ========== COLUMN BUILDER ========== */
+   632→.col-builder-item {
+   633→  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+   634→  background: var(--bg-input); border: 1px solid var(--border);
+   635→  border-radius: var(--radius-sm); margin-bottom: 6px;
+   636→}
+   637→.col-builder-item input, .col-builder-item select {
+   638→  padding: 4px 8px; border: 1px solid var(--border); border-radius: 3px;
+   639→  background: var(--bg-primary); color: var(--text-primary); font-size: 12px; outline: none;
+   640→}
+   641→.col-builder-item input:focus, .col-builder-item select:focus { border-color: var(--accent-border); }
+   642→.col-builder-item .remove-col {
+   643→  width: 24px; height: 24px; border: none; border-radius: 3px;
+   644→  background: transparent; color: var(--text-muted); cursor: pointer;
+   645→  display: flex; align-items: center; justify-content: center; font-size: 11px;
+   646→}
+   647→.col-builder-item .remove-col:hover { background: rgba(239,68,68,0.15); color: var(--danger); }
+   648→
+   649→/* ========== RESPONSIVE ========== */
+   650→@media (max-width: 1024px) {
+   651→  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+   652→  .chart-row { grid-template-columns: 1fr; }
+   653→}
+   654→@media (max-width: 768px) {
+   655→  #sidebar { position: fixed; left: 0; top: 0; z-index: 200; }
+   656→  #sidebar.collapsed { transform: translateX(-100%); width: var(--sidebar-w); }
+   657→  .kpi-row { grid-template-columns: 1fr; }
+   658→  .form-grid { grid-template-columns: 1fr; }
+   659→}
+   660→@media (prefers-reduced-motion: reduce) {
+   661→  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+   662→}
+   663→</style>
+   664→</head>
+   665→<body>
+   666→<div id="app" data-theme="dark">
+   667→  <!-- SIDEBAR -->
+   668→  <aside id="sidebar">
+   669→    <div class="sidebar-header">
+   670→      <div class="sidebar-logo">F</div>
+   671→      <span class="sidebar-header-title">FMCore ERP</span>
+   672→    </div>
+   673→    <div class="sidebar-search">
+   674→      <div class="sidebar-search-box">
+   675→        <i class="fas fa-search"></i>
+   676→        <input type="text" placeholder="Search registers..." id="sidebarSearch" aria-label="Search registers">
+   677→      </div>
+   678→    </div>
+   679→    <nav class="sidebar-tree" id="sidebarTree" aria-label="Navigation"></nav>
+   680→    <div class="sidebar-footer">
+   681→      <button onclick="toggleSidebar()" title="Toggle sidebar"><i class="fas fa-angles-left" id="collapseIcon"></i><span class="sidebar-text">Collapse</span></button>
+   682→      <button onclick="showNewRegisterModal()" title="New register"><i class="fas fa-plus"></i><span class="sidebar-text">New</span></button>
+   683→    </div>
+   684→  </aside>
+   685→
+   686→  <!-- MAIN -->
+   687→  <div id="main">
+   688→    <!-- TOOLBAR -->
+   689→    <header id="toolbar">
+   690→      <div class="toolbar-left">
+   691→        <button class="tb-btn" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar"><i class="fas fa-bars"></i></button>
+   692→        <span id="breadcrumb" style="font-size:12.5px;color:var(--text-muted)"></span>
+   693→      </div>
+   694→      <div class="toolbar-center">
+   695→        <div class="tb-search">
+   696→          <i class="fas fa-search"></i>
+   697→          <input type="text" placeholder="Search everything..." id="globalSearch" aria-label="Global search">
+   698→          <kbd>Ctrl+K</kbd>
+   699→        </div>
+   700→      </div>
+   701→      <div class="toolbar-right">
+   702→        <button class="tb-btn" onclick="showToast('Data refreshed','success')" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+   703→        <button class="tb-btn" onclick="toggleTheme()" title="Toggle theme" id="themeBtn"><i class="fas fa-moon"></i></button>
+   704→        <button class="tb-btn" onclick="toggleAI()" title="AI Assistant" id="aiBtn"><i class="fas fa-wand-magic-sparkles"></i></button>
+   705→        <button class="tb-btn" onclick="toggleNotifications()" title="Notifications" id="notifBtn">
+   706→          <i class="fas fa-bell"></i><span class="badge-dot"></span>
+   707→        </button>
+   708→        <div class="tb-profile" onclick="showToast('Profile settings coming soon','info')">
+   709→          <div class="tb-avatar">AD</div>
+   710→          <div class="sidebar-text">
+   711→            <div class="tb-profile-name">Admin</div>
+   712→            <div class="tb-profile-role">Administrator</div>
+   713→          </div>
+   714→        </div>
+   715→      </div>
+   716→    </header>
+   717→
+   718→    <!-- TAB BAR -->
+   719→    <div id="tab-bar">
+   720→      <div class="tabs-scroll" id="tabsScroll"></div>
+   721→      <div class="tab-actions" id="tabActions" style="display:none">
+   722→        <button class="view-btn active" data-view="grid" onclick="switchView('grid')" title="Grid view"><i class="fas fa-table-cells"></i></button>
+   723→        <button class="view-btn" data-view="form" onclick="switchView('form')" title="Form view"><i class="fas fa-rectangle-list"></i></button>
+   724→      </div>
+   725→    </div>
+   726→
+   727→    <!-- CONTENT -->
+   728→    <div id="content"></div>
+   729→
+   730→    <!-- STATUS BAR -->
+   731→    <footer id="status-bar">
+   732→      <div class="status-left"><span id="statusMsg">Ready</span></div>
+   733→      <div class="status-center" id="statusCenter"></div>
+   734→      <div class="status-right">
+   735→        <span id="statusTime"></span>
+   736→        <span>Admin | IT Department</span>
+   737→      </div>
+   738→    </footer>
+   739→  </div>
+   740→
+   741→  <!-- MODAL: New Register -->
+   742→  <div class="modal-overlay" id="newRegModal">
+   743→    <div class="modal" style="max-width:720px">
+   744→      <div class="modal-header">
+   745→        <h3>Create New Register</h3>
+   746→        <button class="modal-close" onclick="closeModal('newRegModal')"><i class="fas fa-xmark"></i></button>
+   747→      </div>
+   748→      <div class="modal-body">
+   749→        <div class="form-grid" style="margin-bottom:16px">
+   750→          <div class="form-group">
+   751→            <label class="form-label">Register Name</label>
+   752→            <input class="form-input" id="newRegName" placeholder="e.g. Vehicle Inspection">
+   753→          </div>
+   754→          <div class="form-group">
+   755→            <label class="form-label">Category</label>
+   756→            <select class="form-select" id="newRegCat">
+   757→              <option value="operations">Operations</option>
+   758→              <option value="maintenance">Maintenance</option>
+   759→              <option value="safety">Safety</option>
+   760→              <option value="assets">Assets & Equipment</option>
+   761→              <option value="procurement">Procurement & Inventory</option>
+   762→              <option value="hr">Human Resources</option>
+   763→              <option value="performance">Performance & Quality</option>
+   764→            </select>
+   765→          </div>
+   766→          <div class="form-group">
+   767→            <label class="form-label">Icon</label>
+   768→            <select class="form-select" id="newRegIcon">
+   769→              <option value="fa-table">Table</option><option value="fa-clipboard-list">Clipboard</option>
+   770→              <option value="fa-file-lines">Document</option><option value="fa-list-check">Checklist</option>
+   771→              <option value="fa-gear">Gear</option><option value="fa-shield-halved">Shield</option>
+   772→              <option value="fa-wrench">Wrench</option><option value="fa-building">Building</option>
+   773→              <option value="fa-truck">Truck</option><option value="fa-users">Users</option>
+   774→              <option value="fa-chart-bar">Chart</option><option value="fa-box">Box</option>
+   775→            </select>
+   776→          </div>
+   777→          <div class="form-group">
+   778→            <label class="form-label">Color</label>
+   779→            <input type="color" class="form-input" id="newRegColor" value="#00D4AA" style="height:34px;padding:2px 4px;cursor:pointer">
+   780→          </div>
+   781→        </div>
+   782→        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+   783→          <label class="form-label" style="margin:0">Columns</label>
+   784→          <button class="g-btn" onclick="addColumnToBuilder()" style="padding:3px 10px;font-size:11.5px"><i class="fas fa-plus"></i> Add Column</button>
+   785→        </div>
+   786→        <div id="colBuilder"></div>
+   787→      </div>
+   788→      <div class="modal-footer">
+   789→        <button class="g-btn" onclick="closeModal('newRegModal')">Cancel</button>
+   790→        <button class="g-btn primary" onclick="createNewRegister()"><i class="fas fa-plus"></i> Create Register</button>
+   791→      </div>
+   792→    </div>
+   793→  </div>
+   794→
+   795→  <!-- MODAL: Record Form -->
+   796→  <div class="modal-overlay" id="recordModal">
+   797→    <div class="modal" style="max-width:780px">
+   798→      <div class="modal-header">
+   799→        <h3 id="recordModalTitle">Add Record</h3>
+   800→        <button class="modal-close" onclick="closeModal('recordModal')"><i class="fas fa-xmark"></i></button>
+   801→      </div>
+   802→      <div class="modal-body" id="recordModalBody"></div>
+   803→      <div class="modal-footer" id="recordModalFooter"></div>
+   804→    </div>
+   805→  </div>
+   806→
+   807→  <!-- SLIDE PANEL: AI -->
+   808→  <div class="slide-panel" id="aiPanel">
+   809→    <div class="panel-header">
+   810→      <h3><i class="fas fa-wand-magic-sparkles" style="color:var(--accent);margin-right:6px"></i>AI Assistant</h3>
+   811→      <button class="modal-close" onclick="toggleAI()"><i class="fas fa-xmark"></i></button>
+   812→    </div>
+   813→    <div class="panel-body">
+   814→      <div class="ai-messages" id="aiMessages">
+   815→        <div class="ai-msg bot">Hello! I can help you create registers, suggest fields, generate dashboards, and more. Try asking me to create a register.</div>
+   816→      </div>
+   817→    </div>
+   818→    <div class="ai-input-row">
+   819→      <input type="text" id="aiInput" placeholder="Ask AI anything..." aria-label="AI input">
+   820→      <button onclick="sendAI()"><i class="fas fa-paper-plane"></i></button>
+   821→    </div>
+   822→  </div>
+   823→
+   824→  <!-- SLIDE PANEL: Notifications -->
+   825→  <div class="slide-panel" id="notifPanel">
+   826→    <div class="panel-header">
+   827→      <h3><i class="fas fa-bell" style="color:var(--warning);margin-right:6px"></i>Notifications</h3>
+   828→      <button class="modal-close" onclick="toggleNotifications()"><i class="fas fa-xmark"></i></button>
+   829→    </div>
+   830→    <div class="panel-body" id="notifList"></div>
+   831→  </div>
+   832→
+   833→  <!-- TOAST CONTAINER -->
+   834→  <div id="toast-container"></div>
+   835→</div>
+   836→
+   837→<script>
+   838→/* ==========================================================
+   839→   FMCore ERP — Dynamic Register & Form Builder Engine
+   840→   ========================================================== */
+   841→
+   842→// ========== STATE ==========
+   843→const state = {
+   844→  theme: 'dark',
+   845→  sidebarCollapsed: false,
+   846→  tabs: [],
+   847→  activeTabId: null,
+   848→  registers: {},
+   849→  currentView: 'grid',
+   850→  currentRecordIdx: -1,
+   851→  sortCol: -1,
+   852→  sortDir: 'asc',
+   853→  filters: {},
+   854→  selectedRows: new Set(),
+   855→  charts: [],
+   856→  columnBuilderCount: 0,
+   857→};
+   858→
+   859→// ========== COLUMN TYPES ==========
+   860→const COL_TYPES = ['text','long_text','number','currency','percentage','date','time','datetime','checkbox','dropdown','multi_select','employee','department','building','asset','equipment','vendor','customer','project','priority','status','image','attachment','email','phone','gps','barcode','formula','auto_increment','rating','color','signature','approval'];
+   861→
+   862→const STATUS_COLORS = {
+   863→  'Open':'blue','New':'blue','Pending':'purple','In Progress':'amber','Active':'amber',
+   864→  'Completed':'green','Closed':'green','Resolved':'green','Approved':'green',
+   865→  'Cancelled':'red','Rejected':'red','Overdue':'red','On Hold':'gray',
+   866→  'Draft':'gray','Submitted':'cyan','Under Review':'amber'
+   867→};
+   868→const PRIORITY_CLASSES = { 'Critical':'critical','Urgent':'critical','High':'high','Medium':'medium','Low':'low' };
+   869→
+   870→// ========== CATEGORIES ==========
+   871→const CATEGORIES = {
+   872→  operations: { name:'Operations', icon:'fa-gears', order:1 },
+   873→  maintenance: { name:'Maintenance', icon:'fa-screwdriver-wrench', order:2 },
+   874→  safety: { name:'Safety', icon:'fa-shield-halved', order:3 },
+   875→  assets: { name:'Assets & Equipment', icon:'fa-building', order:4 },
+   876→  procurement: { name:'Procurement & Inventory', icon:'fa-boxes-stacked', order:5 },
+   877→  hr: { name:'Human Resources', icon:'fa-users', order:6 },
+   878→  performance: { name:'Performance & Quality', icon:'fa-chart-line', order:7 },
+   879→};
+   880→
+   881→// ========== REGISTER DEFINITIONS ==========
+   882→// Format: [fieldName, type, width?, options?]
+   883→function R(id, name, icon, cat, cols, data) {
+   884→  return { id, name, icon, category: cat, columns: cols.map(c => ({
+   885→    name: c[0], type: c[1], width: c[2] || 140, options: c[3] || null
+   886→  })), records: data || [] };
+   887→}
+   888→
+   889→const REGISTER_DEFS = [
+   890→  R('meetings','Meeting Minutes','fa-clipboard-list','operations',[
+   891→    ['Meeting No','auto_increment',80],['Date','date',100],['Location','text',140],
+   892→    ['Department','department',120],['Chairperson','employee',130],['Attendees','multi_select',200,['Ahmed Ali','Sara Khan','Mohammed Hassan','Fatima Al-Rashid','John Smith','Priya Sharma']],
+   893→    ['Agenda','long_text',200],['Discussion','long_text',200],['Decision','long_text',200],
+   894→    ['Action','long_text',200],['Responsible Person','employee',130],['Target Date','date',100],
+   895→    ['Status','status',100,['Open','In Progress','Closed','Cancelled']],['Remarks','text',150]
+   896→  ],[
+   897→    {Date:'2025-01-15',Location:'Conference Room A',Department:'Operations',Chairperson:'Ahmed Ali',Attendees:['Ahmed Ali','Sara Khan','Mohammed Hassan'],Agenda:'Q1 Maintenance Plan Review',Discussion:'Reviewed all pending PM schedules and resource allocation for Q1. Team agreed on prioritizing critical equipment.',Decision:'Approve Q1 PM schedule with 3 additional technicians.',Action:'Update CMMS with new schedule',Responsible Person:'Sara Khan',Target Date:'2025-01-20',Status:'Closed',Remarks:'Follow-up in next meeting'},
+   898→    {Date:'2025-01-22',Location:'Meeting Room B',Department:'Safety',Chairperson:'Fatima Al-Rashid',Attendees:['Fatima Al-Rashid','Mohammed Hassan','John Smith','Priya Sharma'],Agenda:'Fire Safety Compliance Audit',Discussion:'Annual fire audit findings reviewed. 12 deficiencies identified across Building A and B. Extinguishers in Block C expired.',Decision:'Immediate replacement of expired extinguishers. Schedule refresher training.',Action:'Order 24 fire extinguishers',Responsible Person:'Mohammed Hassan',Target Date:'2025-02-01',Status:'In Progress',Remarks:'Vendor quotation pending'},
+   899→    {Date:'2025-02-05',Location:'Main Boardroom',Department:'Administration',Chairperson:'John Smith',Attendees:['John Smith','Ahmed Ali','Sara Khan'],Agenda:'Budget Approval for HVAC Overhaul',Discussion:'Presented quotation for chiller replacement. Three vendors shortlisted. Estimated cost AED 2.4M.',Decision:'Approve budget and proceed with Vendor A.',Action:'Issue PO to Vendor A',Responsible Person:'John Smith',Target Date:'2025-02-15',Status:'Open',Remarks:'Board approval still needed'}
+   900→  ]),
+   901→
+   902→  R('workorders','Maintenance Work Orders','fa-wrench','maintenance',[
+   903→    ['WO Number','auto_increment',90],['Date','date',90],['Building','building',110],
+   904→    ['Asset','asset',120],['Fault Description','long_text',180],['Priority','priority',90,['Critical','High','Medium','Low']],
+   905→    ['Assigned To','employee',120],['Status','status',100,['Open','In Progress','Completed','On Hold','Cancelled']],
+   906→    ['Completion %','percentage',90],['Estimated Cost','currency',100],['Remarks','text',140]
+   907→  ],[
+   908→    {Date:'2025-02-10',Building:'Building A',Asset:'AHU-01',Fault Description:'Bearing noise and vibration detected during routine inspection. Temperature running 8°C above normal.',Priority:'High',Assigned To:'Mohammed Hassan',Status:'In Progress',Completion:60,Estimated Cost:3500,Remarks:'Parts ordered from supplier'},
+   909→    {Date:'2025-02-12',Building:'Building B',Asset:'Elevator-03',Fault Description:'Door not closing properly. Intermittent sensor fault causing delays.',Priority:'Critical',Assigned To:'Ahmed Ali',Status:'Open',Completion:0,Estimated Cost:1200,Remarks:'Safety concern - prioritize'},
+   910→    {Date:'2025-02-08',Building:'Building C',Asset:'Pump-05',Fault Description:'Seal leakage observed. Minor drip from mechanical seal.',Priority:'Medium',Assigned To:'Priya Sharma',Status:'Completed',Completion:100,Estimated Cost:800,Remarks:'Seal replaced, tested OK'}
+   911→  ]),
+   912→
+   913→  R('pm','Preventive Maintenance','fa-clock-rotate-left','maintenance',[
+   914→    ['PM Number','auto_increment',80],['Equipment','equipment',130],['Location','text',110],
+   915→    ['Frequency','dropdown',90,['Daily','Weekly','Monthly','Quarterly','Bi-Annual','Annual']],
+   916→    ['Last Done','date',90],['Next Due','date',90],['Technician','employee',120],
+   917→    ['Status','status',100,['Due','Overdue','Completed','Scheduled']]
+   918→  ],[
+   919→    {Equipment:'Chiller CH-01',Location:'Plant Room A',Frequency:'Monthly',Last Done:'2025-01-15',Next Due:'2025-02-15',Technician:'Mohammed Hassan',Status:'Due'},
+   920→    {Equipment:'Generator GEN-02',Location:'Generator Room',Frequency:'Weekly',Last Done:'2025-02-10',Next Due:'2025-02-17',Technician:'Ahmed Ali',Status:'Scheduled'},
+   921→    {Equipment:'AHU-03',Location:'Floor 3 Mechanical Room',Frequency:'Quarterly',Last Done:'2024-12-01',Next Due:'2025-03-01',Technician:'Priya Sharma',Status:'Scheduled'}
+   922→  ]),
+   923→
+   924→  R('cm','Corrective Maintenance','fa-hammer','maintenance',[
+   925→    ['CM Number','auto_increment',80],['Date','date',90],['Equipment','equipment',130],
+   926→    ['Location','text',110],['Fault Description','long_text',180],['Root Cause','long_text',160],
+   927→    ['Action Taken','long_text',180],['Technician','employee',120],['Status','status',100,['Open','In Progress','Completed','Cancelled']],
+   928→    ['Completion Date','date',100],['Cost','currency',90]
+   929→  ],[
+   930→    {Date:'2025-01-28',Equipment:'Pump-05',Location:'Basement Plant Room',Fault Description:'Mechanical seal failure causing water leakage',Root Cause:'Seal degradation due to age and mineral buildup',Action Taken:'Replaced mechanical seal, cleaned impeller, realigned shaft',Technician:'Priya Sharma',Status:'Completed',Completion Date:'2025-01-29',Cost:850},
+   931→    {Date:'2025-02-05',Equipment:'FCU-12',Location:'Building B Floor 2',Fault Description:'No cooling output, fan running but no air flow',Root Cause:'Frozen coil due to clogged filter restricting airflow',Action Taken:'Replaced filter, defrosted coil, cleaned drain pan',Technician:'Ahmed Ali',Status:'Completed',Completion Date:'2025-02-05',Cost:250},
+   932→    {Date:'2025-02-14',Equipment:'BMS Panel-01',Location:'Main Control Room',Fault Description:'Intermittent communication loss with field controllers',Root Cause:'Faulty RS-485 converter on bus 3',Action Taken:'Replaced converter, reconfigured bus addressing',Technician:'Mohammed Hassan',Status:'In Progress',Completion Date:'',Cost:420}
+   933→  ]),
+   934→
+   935→  R('safety_insp','Safety Inspection','fa-shield-halved','safety',[
+   936→    ['Inspection No','auto_increment',90],['Date','date',90],['Area','text',120],
+   937→    ['Inspector','employee',120],['Type','dropdown',120,['Routine','Surprise','Scheduled','Follow-up']],
+   938→    ['Findings','long_text',200],['Risk Level','priority',90,['Critical','High','Medium','Low']],
+   939→    ['Action Required','long_text',180],['Status','status',100,['Open','In Progress','Closed','Overdue']],
+   940→    ['Due Date','date',90]
+   941→  ],[
+   942→    {Date:'2025-02-01',Area:'Building A - Mechanical Floors',Inspector:'Fatima Al-Rashid',Type:'Scheduled',Findings:'Two fire extinguishers expired. Emergency exit sign on Floor 5 not illuminated. PPE not worn by 2 contractors.',Risk Level:'High',Action Required:'Replace extinguishers, repair exit sign, issue warning to contractor',Status:'In Progress',Due Date:'2025-02-10'},
+   943→    {Date:'2025-02-10',Area:'Construction Zone - Block D',Inspector:'Mohammed Hassan',Type:'Surprise',Findings:'Scaffolding missing guardrails on 2nd level. No safety nets below working area.',Risk Level:'Critical',Action Required:'Stop work immediately. Install guardrails and safety nets before resuming.',Status:'Closed',Due Date:'2025-02-10'},
+   944→    {Date:'2025-02-15',Area:'Parking Basement B2',Inspector:'Fatima Al-Rashid',Type:'Routine',Findings:'Ventilation fan not operational. CO detector showing normal readings. Minor water pooling near drain.',Risk Level:'Medium',Action Required:'Schedule fan repair, clear drain blockage',Status:'Open',Due Date:'2025-02-25'}
+   945→  ]),
+   946→
+   947→  R('risk_assess','Risk Assessment','fa-triangle-exclamation','safety',[
+   948→    ['RA Number','auto_increment',80],['Date','date',90],['Activity','text',160],
+   949→    ['Hazard','long_text',180],['Likelihood','dropdown',90,['Rare','Unlikely','Possible','Likely','Almost Certain']],
+   950→    ['Severity','dropdown',90,['Negligible','Minor','Moderate','Major','Catastrophic']],
+   951→    ['Risk Level','priority',90,['Critical','High','Medium','Low']],
+   952→    ['Control Measures','long_text',200],['Responsible','employee',120],['Status','status',100,['Draft','Under Review','Approved','Implemented']]
+   953→  ],[
+   954→    {Date:'2025-01-20',Activity:'Working at Height - Roof Maintenance',Hazard:'Falls from edge, falling tools, slippery surface',Likelihood:'Possible',Severity:'Major',Risk Level:'High',Control Measures:'Install guardrails, use harness system, tool lanyards, non-slip footwear, buddy system',Responsible:'Fatima Al-Rashid',Status:'Approved'},
+   955→    {Date:'2025-02-02',Activity:'Chemical Handling - Cleaning Agents',Hazard:'Skin contact, eye splash, inhalation of fumes',Likelihood:'Likely',Severity:'Moderate',Risk Level:'High',Control Measures:'PPE (gloves, goggles, mask), SDS available, ventilation, spill kit, trained personnel only',Responsible:'Mohammed Hassan',Status:'Implemented'},
+   956→    {Date:'2025-02-12',Activity:'Electrical Panel Maintenance',Hazard:'Electric shock, arc flash, burns',Likelihood:'Unlikely',Severity:'Catastrophic',Risk Level:'High',Control Measures:'LOTO procedure, insulated tools, arc flash PPE, qualified electrician only, permit to work required',Responsible:'Ahmed Ali',Status:'Under Review'}
+   957→  ]),
+   958→
+   959→  R('ptw','Permit To Work','fa-file-signature','safety',[
+   960→    ['PTW Number','auto_increment',90],['Date','date',90],['Work Description','long_text',200],
+   961→    ['Location','text',120],['Contractor','vendor',130],['Supervisor','employee',120],
+   962→    ['Start Date','datetime',110],['End Date','datetime',110],['Hazard Type','multi_select',150,['Electrical','Height','Confined Space','Chemical','Hot Work','Excavation']],
+   963→    ['Status','status',100,['Draft','Submitted','Approved','Active','Completed','Cancelled']],['Approved By','employee',120]
+   964→  ],[
+   965→    {Date:'2025-02-10',Work Description:'Replacement of main distribution board on Floor 3',Location:'Building A Floor 3 Electrical Room',Contractor:'Al-Fanar Electrical',Supervisor:'Ahmed Ali',Start Date:'2025-02-15 08:00',End Date:'2025-02-15 17:00',Hazard Type:['Electrical'],Status:'Approved',Approved By:'John Smith'},
+   966→    {Date:'2025-02-12',Work Description:'Welding of structural steel supports at roof level',Location:'Block D Roof',Contractor:'Gulf Steel Fabrication',Supervisor:'Mohammed Hassan',Start Date:'2025-02-18 07:00',End Date:'2025-02-20 17:00',Hazard Type:['Height','Hot Work'],Status:'Submitted',Approved By:''},
+   967→    {Date:'2025-02-14',Work Description:'Chemical cleaning of chiller condenser tubes',Location:'Plant Room A',Contractor:'CoolTech Services',Supervisor:'Priya Sharma',Start Date:'2025-02-20 06:00',End Date:'2025-02-21 18:00',Hazard Type:['Chemical','Confined Space'],Status:'Draft',Approved By:''}
+   968→  ]),
+   969→
+   970→  R('toolbox','Toolbox Talk','fa-comments','operations',[
+   971→    ['TT Number','auto_increment',80],['Date','date',90],['Topic','text',180],
+   972→    ['Speaker','employee',120],['Attendees','multi_select',200,['Ahmed Ali','Sara Khan','Mohammed Hassan','Fatima Al-Rashid','John Smith','Priya Sharma','Raj Patel','Omar Saeed']],
+   973→    ['Location','text',120],['Duration (min)','number',80],['Key Points','long_text',200],
+   974→    ['Status','status',90,['Scheduled','Completed','Cancelled']]
+   975→  ],[
+   976→    {Date:'2025-02-03',Topic:'Ladder Safety and Fall Prevention',Speaker:'Fatima Al-Rashid',Attendees:['Ahmed Ali','Mohammed Hassan','Raj Patel','Omar Saeed'],Location:'Building A Site Office',Duration:20,Key Points:'Inspect ladder before use. Maintain 3 points of contact. Do not overreach. Secure top and bottom.',Status:'Completed'},
+   977→    {Date:'2025-02-10',Topic:'Lockout/Tagout Procedures',Speaker:'Ahmed Ali',Attendees:['Ahmed Ali','Mohammed Hassan','Priya Sharma'],Location:'Main Control Room',Duration:30,Key Points:'Identify all energy sources. Notify affected personnel. Apply locks and tags. Verify zero energy state.',Status:'Completed'},
+   978→    {Date:'2025-02-17',Topic:'Heat Stress Awareness',Speaker:'Fatima Al-Rashid',Attendees:['Mohammed Hassan','Raj Patel','Omar Saeed','Priya Sharma'],Location:'Site Office',Duration:15,Key Points:'Stay hydrated, take breaks in shade, recognize symptoms of heat exhaustion and heat stroke.',Status:'Scheduled'}
+   979→  ]),
+   980→
+   981→  R('attendance','Daily Attendance','fa-calendar-check','operations',[
+   982→    ['Record No','auto_increment',70],['Date','date',90],['Employee Name','employee',130],
+   983→    ['Department','department',110],['Check In','time',80],['Check Out','time',80],
+   984→    ['Total Hours','number',80],['Status','status',90,['Present','Absent','Half Day','Late','On Leave']],
+   985→    ['Remarks','text',140]
+   986→  ],[
+   987→    {Date:'2025-02-15',Employee Name:'Ahmed Ali',Department:'Maintenance',Check In:'07:45',Check Out:'16:30',Total Hours:8.75,Status:'Present',Remarks:''},
+   988→    {Date:'2025-02-15',Employee Name:'Sara Khan',Department:'Operations',Check In:'08:15',Check Out:'16:30',Total Hours:8.25,Status:'Late',Remarks:'Traffic delay'},
+   989→    {Date:'2025-02-15',Employee Name:'Mohammed Hassan',Department:'Safety',Check In:'07:30',Check Out:'16:00',Total Hours:8.5,Status:'Present',Remarks:''}
+   990→  ]),
+   991→
+   992→  R('contracts','Contract Register','fa-file-contract','procurement',[
+   993→    ['Contract No','auto_increment',90],['Title','text',180],['Vendor','vendor',140],
+   994→    ['Start Date','date',90],['End Date','date',90],['Value (AED)','currency',110],
+   995→    ['Department','department',110],['Status','status',100,['Active','Expired','Pending','Terminated','Under Review']],
+   996→    ['Renewal Date','date',90]
+   997→  ],[
+   998→    {Title:'Annual HVAC Maintenance',Vendor:'CoolTech Services LLC',Start Date:'2025-01-01',End Date:'2025-12-31',Value:480000,Department:'Maintenance',Status:'Active',Renewal Date:'2025-11-01'},
+   999→    {Title:'Security Services',Vendor:'GuardForce International',Start Date:'2024-07-01',End Date:'2025-06-30',Value:720000,Department:'Administration',Status:'Active',Renewal Date:'2025-05-01'},
+  1000→    {Title:'Elevator Maintenance Agreement',Vendor:'Schindler Middle East',Start Date:'2024-04-01',End Date:'2025-03-31',Value:350000,Department:'Maintenance',Status:'Under Review',Renewal Date:'2025-02-15'}
+  1001→  ]),
+  1002→
+  1003→  R('vendors','Vendor Register','fa-truck-field','procurement',[
+  1004→    ['Vendor ID','auto_increment',80],['Company Name','text',180],['Contact Person','text',130],
+  1005→    ['Phone','phone',120],['Email','email',160],['Category','dropdown',110,['MEP','Cleaning','Security','IT','HVAC','Electrical','Civil','General']],
+  1006→    ['Rating','rating',80],['Status','status',90,['Active','Inactive','Blacklisted','Under Review']]
+  1007→  ],[
+  1008→    {Company Name:'CoolTech Services LLC',Contact Person:'Khalid Ibrahim',Phone:'+971-50-123-4567',Email:'info@cooltech.ae',Category:'HVAC',Rating:4,Status:'Active'},
+  1009→    {Company Name:'GuardForce International',Contact Person:'Samir Nasser',Phone:'+971-50-234-5678',Email:'ops@guardforce.ae',Category:'Security',Rating:5,Status:'Active'},
+  1010→    {Company Name:'Al-Fanar Electrical Co.',Contact Person:'Rashid Ahmad',Phone:'+971-50-345-6789',Email:'projects@alfanar.ae',Category:'Electrical',Rating:3,Status:'Active'}
+  1011→  ]),
+  1012→
+  1013→  R('assets','Asset Register','fa-building','assets',[
+  1014→    ['Asset ID','auto_increment',80],['Asset Name','text',160],['Category','dropdown',100,['HVAC','Electrical','Plumbing','Fire Protection','Elevator','BMS','Structural','Furniture','IT','Vehicle']],
+  1015→    ['Building','building',100],['Floor','text',60],['Location Detail','text',120],
+  1016→    ['Purchase Date','date',90],['Value (AED)','currency',110],['Condition','dropdown',90,['Excellent','Good','Fair','Poor','Beyond Repair']],
+  1017→    ['Status','status',90,['Active','Inactive','Under Maintenance','Disposed','Written Off']]
+  1018→  ],[
+  1019→    {Asset Name:'Chiller CH-01',Category:'HVAC',Building:'Building A',Floor:'B1',Location Detail:'Plant Room A',Purchase Date:'2019-06-15',Value:850000,Condition:'Good',Status:'Active'},
+  1020→    {Asset Name:'Passenger Elevator EL-01',Category:'Elevator',Building:'Building A',Floor:'All',Location Detail:'Lobby Core',Purchase Date:'2018-03-20',Value:420000,Condition:'Good',Status:'Active'},
+  1021→    {Asset Name:'Fire Alarm Panel FAP-01',Category:'Fire Protection',Building:'Building A',Floor:'G',Location Detail:'Fire Control Room',Purchase Date:'2020-01-10',Value:185000,Condition:'Excellent',Status:'Active'}
+  1022→  ]),
+  1023→
+  1024→  R('equipment','Equipment Register','fa-gear','assets',[
+  1025→    ['Equipment ID','auto_increment',90],['Name','text',150],['Type','dropdown',100,['Chiller','AHU','FCU','Pump','Fan','Motor','Panel','Generator','Transformer','Compressor']],
+  1026→    ['Brand','text',90],['Model','text',90],['Serial No','text',120],
+  1027→    ['Location','text',130],['Installation Date','date',100],['Status','status',90,['Operational','Under Repair','Standby','Decommissioned']]
+  1028→  ],[
+  1029→    {Name:'Chiller CH-01',Type:'Chiller',Brand:'York',Model:'YKFLPN45',Serial No:'YK-2019-45872',Location:'Plant Room A',Installation Date:'2019-07-01',Status:'Operational'},
+  1030→    {Name:'AHU-03',Type:'AHU',Brand:'Carrier',Model:'39M-070',Serial No:'CR-2020-78431',Location:'Floor 3 Mech Room',Installation Date:'2020-02-15',Status:'Operational'},
+  1031→    {Name:'Generator GEN-02',Type:'Generator',Brand:'Caterpillar',Model:'C18-600',Serial No:'CAT-2018-32156',Location:'Generator Room',Installation Date:'2018-09-01',Status:'Standby'}
+  1032→  ]),
+  1033→
+  1034→  R('buildings','Building Register','fa-city','assets',[
+  1035→    ['Building Code','auto_increment',100],['Name','text',160],['Address','text',200],
+  1036→    ['Floors','number',60],['Area (sqm)','number',90],['Year Built','number',70],
+  1037→    ['Condition','dropdown',90,['Excellent','Good','Fair','Poor']],['Status','status',90,['Active','Under Renovation','Decommissioned']],
+  1038→    ['Occupancy %','percentage',90]
+  1039→  ],[
+  1040→    {Name:'Building A - Headquarters',Address:'Sheikh Zayed Road, Dubai',Floors:12,Area:18500,Year Built:2018,Condition:'Excellent',Status:'Active',Occupancy:95},
+  1041→    {Name:'Building B - Operations',Address:'Sheikh Zayed Road, Dubai',Floors:8,Area:12000,Year Built:2015,Condition:'Good',Status:'Active',Occupancy:88},
+  1042→    {Name:'Building C - Warehouse',Address:'Al Quoz Industrial Area',Floors:2,Area:4500,Year Built:2012,Condition:'Fair',Status:'Under Renovation',Occupancy:45}
+  1043→  ]),
+  1044→
+  1045→  R('incidents','Incident Report','fa-burst','safety',[
+  1046→    ['IR Number','auto_increment',80],['Date','date',90],['Time','time',70],
+  1047→    ['Location','text',130],['Type','dropdown',120,['Near Miss','Minor Injury','Property Damage','Environmental','Fire','Security','Other']],
+  1048→    ['Description','long_text',200],['Severity','priority',90,['Critical','High','Medium','Low']],
+  1049→    ['Reported By','employee',120],['Status','status',100,['Reported','Under Investigation','Closed','Referred']],
+  1050→    ['Witnesses','text',140]
+  1051→  ],[
+  1052→    {Date:'2025-02-05',Time:'14:30',Location:'Building A Loading Bay',Type:'Near Miss',Description:'Forklift nearly struck a pedestrian due to reversed traffic flow in loading area.',Severity:'High',Reported By:'Omar Saeed',Status:'Under Investigation',Witnesses:'Raj Patel, Security Guard on duty'},
+  1053→    {Date:'2025-02-11',Time:'09:15',Location:'Building B Floor 5',Type:'Minor Injury',Description:'Technician sustained minor cut on hand while replacing fluorescent tube. Glass broke during removal.',Severity:'Low',Reported By:'Priya Sharma',Status:'Closed',Witnesses:'Ahmed Ali'},
+  1054→    {Date:'2025-02-14',Time:'22:45',Location:'Parking B2',Type:'Property Damage',Description:'Vehicle backed into concrete pillar causing damage to bumper and pillar surface.',Severity:'Medium',Reported By:'Security Team',Status:'Reported',Witnesses:'CCTV footage available'}
+  1055→  ]),
+  1056→
+  1057→  R('accident','Accident Investigation','fa-magnifying-glass','safety',[
+  1058→    ['AI Number','auto_increment',80],['Date','date',90],['Incident Ref','text',100],
+  1059→    ['Investigator','employee',120],['Root Cause','long_text',200],['Findings','long_text',200],
+  1060→    ['Recommendations','long_text',200],['Status','status',100,['In Progress','Completed','Follow-up Required']],
+  1061→    ['Due Date','date',90]
+  1062→  ],[
+  1063→    {Date:'2025-02-06',Incident Ref:'IR-2025-002',Investigator:'Fatima Al-Rashid',Root Cause:'Lack of clear traffic management plan in loading bay. No physical barriers separating pedestrian and vehicle routes.',Findings:'Forklift operator was following usual route. Pedestrian was taking shortcut. No signage present. Lighting adequate.',Recommendations:'Install physical barriers, add directional signage, implement pedestrian walkway, brief all drivers and warehouse staff.',Status:'Completed',Due Date:'2025-02-13'},
+  1064→    {Date:'2025-02-12',Incident Ref:'IR-2025-003',Investigator:'Ahmed Ali',Root Cause:'Improper handling technique for fluorescent tube removal. No protective gloves worn.',Findings:'Standard procedure exists but was not followed. Technician was rushing to complete task before shift end.',Recommendations:'Reissue PPE guidelines, add to toolbox talk agenda, consider LED retrofit to eliminate glass tubes.',Status:'Follow-up Required',Due Date:'2025-02-20'}
+  1065→  ]),
+  1066→
+  1067→  R('visitors','Visitor Register','fa-id-card','hr',[
+  1068→    ['Record No','auto_increment',70],['Date','date',90],['Visitor Name','text',140],
+  1069→    ['Company','text',140],['Purpose','text',140],['Host','employee',120],
+  1070→    ['Department','department',100],['Check In','time',80],['Check Out','time',80],
+  1071→    ['Badge No','text',70]
+  1072→  ],[
+  1073→    {Date:'2025-02-15',Visitor Name:'Khalid Ibrahim',Company:'CoolTech Services LLC',Purpose:'Chiller inspection',Host:'Mohammed Hassan',Department:'Maintenance',Check In:'09:00',Check Out:'11:30',Badge No:'V-0152'},
+  1074→    {Date:'2025-02-15',Visitor Name:'Layla Mahmoud',Company:'DEWA',Purpose:'Meter reading',Host:'Sara Khan',Department:'Operations',Check In:'10:15',Check Out:'10:45',Badge No:'V-0153'},
+  1075→    {Date:'2025-02-14',Visitor Name:'Tariq Al-Sayed',Company:'Schindler Middle East',Purpose:'Elevator annual inspection',Host:'Ahmed Ali',Department:'Maintenance',Check In:'08:30',Check Out:'15:00',Badge No:'V-0151'}
+  1076→  ]),
+  1077→
+  1078→  R('mat_req','Material Request','fa-boxes-stacked','procurement',[
+  1079→    ['MR Number','auto_increment',80],['Date','date',90],['Requested By','employee',120],
+  1080→    ['Department','department',110],['Item Description','text',180],['Quantity','number',70],
+  1081→    ['Unit','dropdown',60,['Pcs','Kg','Mtr','Ltr','Set','Roll','Box','Bag']],
+  1082→    ['Urgency','priority',90,['Critical','High','Medium','Low']],['Status','status',100,['Draft','Submitted','Approved','Rejected','Partial','Fulfilled']]
+  1083→  ],[
+  1084→    {Date:'2025-02-10',Requested By:'Mohammed Hassan',Department:'Maintenance',Item Description:'Mechanical Seal for Pump-05',Quantity:2,Unit:'Pcs',Urgency:'High',Status:'Approved'},
+  1085→    {Date:'2025-02-12',Requested By:'Ahmed Ali',Department:'Maintenance',Item Description:'HEPA Filter 610x610x292',Quantity:8,Unit:'Pcs',Urgency:'Medium',Status:'Submitted'},
+  1086→    {Date:'2025-02-14',Requested By:'Fatima Al-Rashid',Department:'Safety',Item Description:'Fire Extinguisher ABC 9kg',Quantity:24,Unit:'Pcs',Urgency:'Critical',Status:'Draft'}
+  1087→  ]),
+  1088→
+  1089→  R('pur_req','Purchase Request','fa-cart-shopping','procurement',[
+  1090→    ['PR Number','auto_increment',80],['Date','date',90],['Requested By','employee',120],
+  1091→    ['Department','department',110],['Description','long_text',200],['Estimated Cost','currency',110],
+  1092→    ['Priority','priority',90,['Critical','High','Medium','Low']],['Status','status',110,['Draft','Submitted','Approved','PO Issued','Rejected','Cancelled']],
+  1093→    ['Budget Code','text',100]
+  1094→  ],[
+  1095→    {Date:'2025-02-11',Requested By:'John Smith',Department:'Administration',Description:'Replacement of 24 fire extinguishers (ABC 9kg) with certification. Includes delivery and installation at Buildings A, B, C.',Estimated Cost:4800,Priority:'Critical',Status:'Approved',Budget Code:'SAF-2025-001'},
+  1096→    {Date:'2025-02-13',Requested By:'Priya Sharma',Department:'Maintenance',Description:'Supply and delivery of 8 HEPA filters 610x610x292mm for AHU units in Building A.',Estimated Cost:6400,Priority:'Medium',Status:'Submitted',Budget Code:'MNT-2025-015'},
+  1097→    {Date:'2025-02-14',Requested By:'Ahmed Ali',Department:'Maintenance',Description:'Chiller compressor overhaul kit for York YKFLPN45 including gaskets, bearings, and oil.',Estimated Cost:35000,Priority:'High',Status:'Draft',Budget Code:'MNT-2025-016'}
+  1098→  ]),
+  1099→
+  1100→  R('inventory','Inventory Register','fa-warehouse','procurement',[
+  1101→    ['Item Code','auto_increment',80],['Description','text',180],['Category','dropdown',100,['Electrical','Mechanical','HVAC','Safety','Cleaning','Office','IT','Plumbing','Fire Protection']],
+  1102→    ['Unit','dropdown',60,['Pcs','Kg','Mtr','Ltr','Set','Roll','Box','Bag']],
+  1103→    ['Qty In Stock','number',80],['Min Level','number',70],['Max Level','number',70],
+  1104→    ['Location','text',110],['Status','status',90,['In Stock','Low Stock','Out of Stock','On Order','Expired']]
+  1105→  ],[
+  1106→    {Description:'HEPA Filter 610x610x292',Category:'HVAC',Unit:'Pcs',Qty In Stock:4,Min Level:8,Max Level:30,Location:'Store A - Shelf 3',Status:'Low Stock'},
+  1107→    {Description:'Fire Extinguisher ABC 9kg',Category:'Fire Protection',Unit:'Pcs',Qty In Stock:6,Min Level:10,Max Level:40,Location:'Store B - Safety Rack',Status:'Low Stock'},
+  1108→    {Description:'Ball Valve 25mm BSP',Category:'Plumbing',Unit:'Pcs',Qty In Stock:25,Min Level:10,Max Level:50,Location:'Store A - Shelf 7',Status:'In Stock'}
+  1109→  ]),
+  1110→
+  1111→  R('siv','Store Issue Voucher','fa-right-from-bracket','procurement',[
+  1112→    ['SIV Number','auto_increment',80],['Date','date',90],['Issued To','employee',120],
+  1113→    ['Department','department',110],['Item','text',160],['Quantity','number',70],
+  1114→    ['Approved By','employee',120],['Status','status',100,['Draft','Approved','Issued','Returned','Cancelled']]
+  1115→  ],[
+  1116→    {Date:'2025-02-10',Issued To:'Priya Sharma',Department:'Maintenance',Item:'Mechanical Seal for Pump-05',Quantity:2,Approved By:'Ahmed Ali',Status:'Issued'},
+  1117→    {Date:'2025-02-12',Issued To:'Mohammed Hassan',Department:'Maintenance',Item:'Ball Valve 25mm BSP',Quantity:3,Approved By:'Ahmed Ali',Status:'Issued'},
+  1118→    {Date:'2025-02-15',Issued To:'Fatima Al-Rashid',Department:'Safety',Item:'Safety Helmet - White',Quantity:5,Approved By:'John Smith',Status:'Approved'}
+  1119→  ]),
+  1120→
+  1121→  R('leave','Leave Request','fa-calendar-minus','hr',[
+  1122→    ['LR Number','auto_increment',80],['Employee','employee',130],['Department','department',110],
+  1123→    ['Leave Type','dropdown',110,['Annual','Sick','Emergency','Maternity','Paternity','Unpaid',' Hajj']],
+  1124→    ['From Date','date',90],['To Date','date',90],['Days','number',60],
+  1125→    ['Reason','text',160],['Status','status',100,['Draft','Submitted','Approved','Rejected','Cancelled']],
+  1126→    ['Approved By','employee',120]
+  1127→  ],[
+  1128→    {Employee:'Sara Khan',Department:'Operations',Leave Type:'Annual',From Date:'2025-02-20',To Date:'2025-02-22',Days:3,Reason:'Personal travel',Status:'Approved',Approved By:'John Smith'},
+  1129→    {Employee:'Raj Patel',Department:'Maintenance',Leave Type:'Sick',From Date:'2025-02-13',To Date:'2025-02-14',Days:2,Reason:'Medical appointment and recovery',Status:'Approved',Approved By:'Ahmed Ali'},
+  1130→    {Employee:'Omar Saeed',Department:'Safety',Leave Type:'Emergency',From Date:'2025-02-18',To Date:'2025-02-18',Days:1,Reason:'Family emergency',Status:'Submitted',Approved By:''}
+  1131→  ]),
+  1132→
+  1133→  R('training','Training Record','fa-graduation-cap','hr',[
+  1134→    ['TR Number','auto_increment',80],['Employee','employee',130],['Department','department',110],
+  1135→    ['Course','text',180],['Provider','text',140],['Date','date',90],
+  1136→    ['Duration (hrs)','number',80],['Certificate','dropdown',90,['Yes','No','Pending']],
+  1137→    ['Status','status',90,['Completed','Scheduled','In Progress','Cancelled']]
+  1138→  ],[
+  1139→    {Employee:'Fatima Al-Rashid',Department:'Safety',Course:'NEBOSH IGC',Provider:'British Safety Council',Date:'2025-01-10',Duration:80,Certificate:'Pending',Status:'Completed'},
+  1140→    {Employee:'Ahmed Ali',Department:'Maintenance',Course:'HVAC Advanced Troubleshooting',Provider:'Carrier Training Center',Date:'2025-02-20',Duration:16,Certificate:'No',Status:'Scheduled'},
+  1141→    {Employee:'Mohammed Hassan',Department:'Safety',Course:'First Aid at Work',Provider:'Red Crescent',Date:'2025-01-25',Duration:8,Certificate:'Yes',Status:'Completed'}
+  1142→  ]),
+  1143→
+  1144→  R('calibration','Calibration Register','fa-ruler-combined','assets',[
+  1145→    ['Cal ID','auto_increment',70],['Equipment','equipment',140],['Serial No','text',120],
+  1146→    ['Location','text',120],['Last Calibrated','date',100],['Next Due','date',90],
+  1147→    ['Standard','text',130],['Status','status',90,['Calibrated','Due','Overdue','Out of Service']]
+  1148→  ],[
+  1149→    {Equipment:'Pressure Gauge PG-01',Serial No:'PG-2023-110',Location:'Plant Room A',Last Calibrated:'2025-01-15',Next Due:'2025-07-15',Standard:'ISO 8655',Status:'Calibrated'},
+  1150→    {Equipment:'Multimeter FL-03',Serial No:'FL-2022-445',Location:'Electrical Workshop',Last Calibrated:'2024-11-20',Next Due:'2025-02-20',Standard:'IEC 61010',Status:'Due'},
+  1151→    {Equipment:'Thermocouple TC-07',Serial No:'TC-2024-089',Location:'Chiller Plant',Last Calibrated:'2024-08-10',Next Due:'2025-02-10',Standard:'IEC 60584',Status:'Overdue'}
+  1152→  ]),
+  1153→
+  1154→  R('gen_log','Generator Logbook','fa-bolt','maintenance',[
+  1155→    ['Log No','auto_increment',70],['Date','date',90],['Time','time',70],
+  1156→    ['Generator','text',120],['Run Hours','number',70],['Fuel Level %','percentage',80],
+  1157→    ['Load %','percentage',70],['Coolant Temp (C)','number',90],['Operator','employee',120],
+  1158→    ['Remarks','text',140]
+  1159→  ],[
+  1160→    {Date:'2025-02-15',Time:'10:00',Generator:'GEN-01',Run Hours:2456,Fuel Level:78,Load:65,Coolant Temp:82,Operator:'Ahmed Ali',Remarks:'Monthly load test. All parameters normal.'},
+  1161→    {Date:'2025-02-15',Time:'10:00',Generator:'GEN-02',Run Hours:1823,Fuel Level:85,Load:0,Coolant Temp:45,Operator:'Ahmed Ali',Remarks:'Standby unit. No run this period. Battery voltage OK.'},
+  1162→    {Date:'2025-02-10',Time:'14:00',Generator:'GEN-01',Run Hours:2450,Fuel Level:82,Load:72,Coolant Temp:84,Operator:'Raj Patel',Remarks:'Weekly test run. Black smoke observed at startup, cleared after 2 minutes.'}
+  1163→  ]),
+  1164→
+  1165→  R('chiller_log','Chiller Log Sheet','fa-snowflake','maintenance',[
+  1166→    ['Log No','auto_increment',70],['Date','date',90],['Time','time',70],
+  1167→    ['Chiller','text',100],['Supply Temp (C)','number',100],['Return Temp (C)','number',100],
+  1168→    ['Pressure (bar)','number',90],['Current (A)','number',80],['Operator','employee',120],
+  1169→    ['Remarks','text',140]
+  1170→  ],[
+  1171→    {Date:'2025-02-15',Time:'08:00',Chiller:'CH-01',Supply Temp:7.2,Return Temp:12.8,Pressure:14.2,Current:185,Operator:'Mohammed Hassan',Remarks:'Normal operation. COP within spec.'},
+  1172→    {Date:'2025-02-15',Time:'14:00',Chiller:'CH-01',Supply Temp:6.8,Return Temp:13.5,Pressure:14.5,Current:192,Operator:'Mohammed Hassan',Remarks:'Peak load period. Slight increase in current draw.'},
+  1173→    {Date:'2025-02-15',Time:'08:00',Chiller:'CH-02',Supply Temp:7.5,Return Temp:12.2,Pressure:13.8,Current:170,Operator:'Priya Sharma',Remarks:'Standby chiller on short cycle test. All OK.'}
+  1174→  ]),
+  1175→
+  1176→  R('elec_insp','Electrical Inspection','fa-plug','maintenance',[
+  1177→    ['EI Number','auto_increment',80],['Date','date',90],['Location','text',130],
+  1178→    ['Panel / Equipment','text',140],['Inspector','employee',120],
+  1179→    ['Voltage (V)','number',80],['Current (A)','number',80],['Insulation (MOhm)','number',100],
+  1180→    ['Findings','long_text',180],['Status','status',100,['Pass','Fail','Conditional Pass','Pending']]
+  1181→  ],[
+  1182→    {Date:'2025-02-10',Location:'Building A Floor 3',Panel:'MDB-03F',Inspector:'Ahmed Ali',Voltage:415,Current:126,Insulation:500,Findings:'All breakers operational. Labels clear. No signs of overheating. Earth continuity OK.',Status:'Pass'},
+  1183→    {Date:'2025-02-12',Location:'Building B Basement',Panel:'SMDB-B-B1',Inspector:'Raj Patel',Voltage:412,Current:85,Insulation:250,Findings:'Insulation reading below threshold on Circuit 7. Recommend cable replacement.',Status:'Conditional Pass'},
+  1184→    {Date:'2025-02-14',Location:'Generator Room',Panel:'ATS-01',Inspector:'Ahmed Ali',Voltage:418,Current:0,Insulation:550,Findings:'ATS function test: changeover time 8 seconds (spec < 10s). All contacts good.',Status:'Pass'}
+  1185→  ]),
+  1186→
+  1187→  R('housekeeping','Housekeeping Inspection','fa-broom','performance',[
+  1188→    ['HI Number','auto_increment',80],['Date','date',90],['Area','text',140],
+  1189→    ['Inspector','employee',120],['Cleanliness','rating',100],['Safety','rating',80],
+  1190→    ['Hygiene','rating',80],['Overall Score','number',90],['Remarks','text',160],
+  1191→    ['Status','status',90,['Pass','Fail','Needs Improvement']]
+  1192→  ],[
+  1193→    {Date:'2025-02-15',Area:'Building A Lobby & Reception',Inspector:'Sara Khan',Cleanliness:5,Safety:5,Hygiene:5,Overall Score:100,Remarks:'Excellent condition. All areas spotless.',Status:'Pass'},
+  1194→    {Date:'2025-02-15',Area:'Building B Floor 4 Toilets',Inspector:'Sara Khan',Cleanliness:3,Safety:4,Hygiene:3,Overall Score:67,Remarks:'Stain on floor. Soap dispensers not refilled. Needs attention.',Status:'Needs Improvement'},
+  1195→    {Date:'2025-02-14',Area:'Parking B1 & B2',Inspector:'Omar Saeed',Cleanliness:4,Safety:4,Hygiene:4,Overall Score:80,Remarks:'Generally clean. Some oil stains in B2. Drainage needs clearing.',Status:'Pass'}
+  1196→  ]),
+  1197→
+  1198→  R('fire_equip','Fire Equipment Inspection','fa-fire-extinguisher','safety',[
+  1199→    ['FEI Number','auto_increment',80],['Date','date',90],['Equipment Type','dropdown',120,['Extinguisher','Alarm','Sprinkler','Hose Reel','Detector','Exit Sign','Emergency Light']],
+  1200→    ['Location','text',140],['Expiry Date','date',90],['Condition','dropdown',100,['Good','Fair','Poor','Expired','Damaged']],
+  1201→    ['Inspector','employee',120],['Status','status',90:['Compliant','Non-Compliant','Action Required']]
+  1202→  ],[
+  1203→    {Date:'2025-02-15',Equipment Type:'Extinguisher',Location:'Building A Floor 1 - Stairwell A',Expiry Date:'2026-03-15',Condition:'Good',Inspector:'Fatima Al-Rashid',Status:'Compliant'},
+  1204→    {Date:'2025-02-15',Equipment Type:'Extinguisher',Location:'Building A Floor 5 - Corridor',Expiry Date:'2024-12-01',Condition:'Expired',Inspector:'Fatima Al-Rashid',Status:'Non-Compliant'},
+  1205→    {Date:'2025-02-15',Equipment Type:'Alarm',Location:'Building B Floor 3 - Manual Call Point',Expiry Date:'2027-06-20',Condition:'Good',Inspector:'Mohammed Hassan',Status:'Compliant'}
+  1206→  ]),
+  1207→
+  1208→  R('kpi','Monthly KPI Register','fa-chart-line','performance',[
+  1209→    ['KPI ID','auto_increment',70],['Month','date',90],['Department','department',110],
+  1210→    ['KPI Name','text',180],['Target','number',70],['Actual','number',70],
+  1211→    ['Variance','number',70],['Unit','text',60],['Status','status',90,['On Track','At Risk','Behind','Achieved','Exceeded']]
+  1212→  ],[
+  1213→    {Month:'2025-01-01',Department:'Maintenance',KPI Name:'PM Completion Rate',Target:95,Actual:92,Variance:-3,Unit:'%',Status:'At Risk'},
+  1214→    {Month:'2025-01-01',Department:'Safety',KPI Name:'Lost Time Injury Rate',Target:0,Actual:0,Variance:0,Unit:'Count',Status:'Achieved'},
+  1215→    {Month:'2025-01-01',Department:'Operations',KPI Name:'Energy Consumption per sqm',Target:45,Actual:42,Variance:-3,Unit:'kWh',Status:'Exceeded'}
+  1216→  ])
+  1217→];
+  1218→
+  1219→// ========== INITIALIZE REGISTERS ==========
+  1220→function initRegisters() {
+  1221→  REGISTER_DEFS.forEach(def => {
+  1222→    const reg = { ...def, records: def.records.map((r, i) => {
+  1223→      // Auto-generate auto_increment fields
+  1224→      const rec = { ...r };
+  1225→      def.columns.forEach(col => {
+  1226→        if (col.type === 'auto_increment' && !rec[col.name]) rec[col.name] = i + 1;
+  1227→      });
+  1228→      return rec;
+  1229→    })};
+  1230→    state.registers[def.id] = reg;
+  1231→  });
+  1232→}
+  1233→
+  1234→// ========== THEME ==========
+  1235→function toggleTheme() {
+  1236→  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  1237→  document.getElementById('app').setAttribute('data-theme', state.theme);
+  1238→  document.getElementById('themeBtn').innerHTML = state.theme === 'dark'
+  1239→    ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+  1240→  // Redraw charts with new colors
+  1241→  const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+  1242→  if (activeTab && activeTab.type === 'dashboard') renderDashboard();
+  1243→}
+  1244→
+  1245→// ========== SIDEBAR ==========
+  1246→function toggleSidebar() {
+  1247→  state.sidebarCollapsed = !state.sidebarCollapsed;
+  1248→  document.getElementById('sidebar').classList.toggle('collapsed', state.sidebarCollapsed);
+  1249→  document.getElementById('collapseIcon').className = state.sidebarCollapsed ? 'fas fa-angles-right' : 'fas fa-angles-left';
+  1250→}
+  1251→
+  1252→function buildSidebarTree() {
+  1253→  const tree = document.getElementById('sidebarTree');
+  1254→  // Dashboard
+  1255→  let html = `<div class="tree-item" data-id="__dashboard" onclick="openDashboard()">
+  1256→    <span class="tree-icon"><i class="fas fa-gauge-high"></i></span>
+  1257→    <span class="sidebar-text">Dashboard</span>
+  1258→  </div>`;
+  1259→  // Categories
+  1260→  const sortedCats = Object.entries(CATEGORIES).sort((a,b) => a[1].order - b[1].order);
+  1261→  sortedCats.forEach(([catId, cat]) => {
+  1262→    const regs = Object.values(state.registers).filter(r => r.category === catId);
+  1263→    if (!regs.length) return;
+  1264→    html += `<div class="tree-item" onclick="toggleTreeGroup(this,'cat-${catId}')">
+  1265→      <span class="tree-toggle open"><i class="fas fa-chevron-right"></i></span>
+  1266→      <span class="tree-icon"><i class="fas ${cat.icon}"></i></span>
+  1267→      <span class="sidebar-text">${cat.name}</span>
+  1268→      <span class="sidebar-text tree-badge">${regs.length}</span>
+  1269→    </div>
+  1270→    <div class="tree-children" id="cat-${catId}">`;
+  1271→    regs.forEach(reg => {
+  1272→      html += `<div class="tree-item" data-id="${reg.id}" onclick="openRegister('${reg.id}')" style="padding-left:42px">
+  1273→        <span class="tree-icon"><i class="fas ${reg.icon}" style="font-size:11px"></i></span>
+  1274→        <span class="sidebar-text">${reg.name}</span>
+  1275→      </div>`;
+  1276→    });
+  1277→    html += `</div>`;
+  1278→  });
+  1279→  // Reports, Settings, Recycle Bin
+  1280→  html += `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+  1281→    <div class="tree-item" onclick="showToast('Reports module coming soon','info')">
+  1282→      <span class="tree-icon"><i class="fas fa-chart-bar"></i></span><span class="sidebar-text">Reports</span>
+  1283→    </div>
+  1284→    <div class="tree-item" onclick="showToast('Settings module coming soon','info')">
+  1285→      <span class="tree-icon"><i class="fas fa-cog"></i></span><span class="sidebar-text">Settings</span>
+  1286→    </div>
+  1287→    <div class="tree-item" onclick="showToast('Recycle Bin is empty','info')">
+  1288→      <span class="tree-icon"><i class="fas fa-trash-can"></i></span><span class="sidebar-text">Recycle Bin</span>
+  1289→    </div>
+  1290→  </div>`;
+  1291→  tree.innerHTML = html;
+  1292→}
+  1293→
+  1294→function toggleTreeGroup(el, groupId) {
+  1295→  const children = document.getElementById(groupId);
+  1296→  const toggle = el.querySelector('.tree-toggle');
+  1297→  children.classList.toggle('hidden');
+  1298→  toggle.classList.toggle('open');
+  1299→}
+  1300→
+  1301→function highlightSidebarItem(id) {
+  1302→  document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+  1303→  const item = document.querySelector(`.tree-item[data-id="${id}"]`);
+  1304→  if (item) item.classList.add('active');
+  1305→}
+  1306→
+  1307→// Sidebar search
+  1308→document.addEventListener('DOMContentLoaded', () => {
+  1309→  document.getElementById('sidebarSearch').addEventListener('input', function() {
+  1310→    const q = this.value.toLowerCase();
+  1311→    document.querySelectorAll('.tree-item[data-id]').forEach(item => {
+  1312→      const text = item.textContent.toLowerCase();
+  1313→      const regId = item.getAttribute('data-id');
+  1314→      if (regId && regId.startsWith('__')) return;
+  1315→      item.style.display = !q || text.includes(q) ? '' : 'none';
+  1316→    });
+  1317→    // Show all groups if searching
+  1318→    if (q) {
+  1319→      document.querySelectorAll('.tree-children').forEach(c => c.classList.remove('hidden'));
+  1320→      document.querySelectorAll('.tree-toggle').forEach(t => t.classList.add('open'));
+  1321→    }
+  1322→  });
+  1323→});
+  1324→
+  1325→// ========== TABS ==========
+  1326→function openTab(id, name, icon, type, regId) {
+  1327→  const existing = state.tabs.find(t => t.id === id);
+  1328→  if (existing) {
+  1329→    activateTab(id);
+  1330→    return;
+  1331→  }
+  1332→  state.tabs.push({ id, name, icon, type, regId });
+  1333→  renderTabs();
+  1334→  activateTab(id);
+  1335→}
+  1336→
+  1337→function activateTab(id) {
+  1338→  state.activeTabId = id;
+  1339→  state.selectedRows.clear();
+  1340→  state.sortCol = -1;
+  1341→  state.filters = {};
+  1342→  renderTabs();
+  1343→  const tab = state.tabs.find(t => t.id === id);
+  1344→  if (!tab) return;
+  1345→  highlightSidebarItem(tab.type === 'dashboard' ? '__dashboard' : tab.regId);
+  1346→  document.getElementById('tabActions').style.display = tab.type === 'register' ? '' : 'none';
+  1347→  if (tab.type === 'dashboard') {
+  1348→    renderDashboard();
+  1349→    setBreadcrumb('Dashboard');
+  1350→    updateStatus('Dashboard loaded', '');
+  1351→  } else if (tab.type === 'register') {
+  1352→    state.currentView = 'grid';
+  1353→    updateViewButtons();
+  1354→    renderGrid(tab.regId);
+  1355→    const reg = state.registers[tab.regId];
+  1356→    setBreadcrumb(`Registers > ${reg.name}`);
+  1357→    updateStatus(`${reg.name} — ${reg.records.length} records`, '');
+  1358→  }
+  1359→}
+  1360→
+  1361→function closeTab(id, e) {
+  1362→  if (e) e.stopPropagation();
+  1363→  state.tabs = state.tabs.filter(t => t.id !== id);
+  1364→  if (state.activeTabId === id) {
+  1365→    if (state.tabs.length) {
+  1366→      activateTab(state.tabs[state.tabs.length - 1].id);
+  1367→    } else {
+  1368→      state.activeTabId = null;
+  1369→      document.getElementById('tabActions').style.display = 'none';
+  1370→      renderWelcome();
+  1371→      highlightSidebarItem('');
+  1372→      setBreadcrumb('');
+  1373→      updateStatus('Ready', '');
+  1374→    }
+  1375→  }
+  1376→  renderTabs();
+  1377→}
+  1378→
+  1379→function renderTabs() {
+  1380→  const scroll = document.getElementById('tabsScroll');
+  1381→  scroll.innerHTML = state.tabs.map(t => `
+  1382→    <button class="tab-btn ${t.id === state.activeTabId ? 'active' : ''}" onclick="activateTab('${t.id}')">
+  1383→      <i class="fas ${t.icon}"></i>
+  1384→      <span>${t.name}</span>
+  1385→      <button class="tab-close" onclick="closeTab('${t.id}',event)" aria-label="Close tab"><i class="fas fa-xmark"></i></button>
+  1386→    </button>
+  1387→  `).join('');
+  1388→}
+  1389→
+  1390→function switchView(view) {
+  1391→  state.currentView = view;
+  1392→  updateViewButtons();
+  1393→  const tab = state.tabs.find(t => t.id === state.activeTabId);
+  1394→  if (tab && tab.type === 'register') {
+  1395→    if (view === 'grid') renderGrid(tab.regId);
+  1396→    else renderFormView(tab.regId);
+  1397→  }
+  1398→}
+  1399→
+  1400→function updateViewButtons() {
+  1401→  document.querySelectorAll('.view-btn').forEach(b => {
+  1402→    b.classList.toggle('active', b.dataset.view === state.currentView);
+  1403→  });
+  1404→}
+  1405→
+  1406→// ========== GRID RENDERER ==========
+  1407→function renderGrid(regId) {
+  1408→  const reg = state.registers[regId];
+  1409→  if (!reg) return;
+  1410→  const content = document.getElementById('content');
+  1411→  // Get filtered/sorted records
+  1412→  let records = getProcessedRecords(regId);
+  1413→  // Build filter row
+  1414→  const filterRow = reg.columns.map(col => {
+  1415→    if (col.type === 'auto_increment') return `<td></td>`;
+  1416→    if (col.type === 'status' || col.type === 'priority' || col.type === 'dropdown') {
+  1417→      const opts = col.options || [];
+  1418→      return `<td><select onchange="setFilter('${regId}','${col.name}',this.value)">
+  1419→        <option value="">All</option>${opts.map(o => `<option value="${o}" ${state.filters[col.name]===o?'selected':''}>${o}</option>`).join('')}
+  1420→      </select></td>`;
+  1421→    }
+  1422→    return `<td><input type="text" placeholder="Filter..." value="${state.filters[col.name]||''}" oninput="setFilter('${regId}','${col.name}',this.value)"></td>`;
+  1423→  }).join('');
+  1424→
+  1425→  content.innerHTML = `<div class="grid-container">
+  1426→    <div class="grid-toolbar">
+  1427→      <button class="g-btn primary" onclick="addRecord('${regId}')"><i class="fas fa-plus"></i> Add Record</button>
+  1428→      <button class="g-btn" onclick="editSelectedRecord('${regId}')" id="editBtn" disabled><i class="fas fa-pen"></i> Edit</button>
+  1429→      <button class="g-btn danger" onclick="deleteSelectedRecords('${regId}')" id="deleteBtn" disabled><i class="fas fa-trash"></i> Delete</button>
+  1430→      <span class="g-sep"></span>
+  1431→      <button class="g-btn" onclick="exportCSV('${regId}')"><i class="fas fa-file-csv"></i> CSV</button>
+  1432→      <button class="g-btn" onclick="showToast('PDF export generated','success')"><i class="fas fa-file-pdf"></i> PDF</button>
+  1433→      <button class="g-btn" onclick="showToast('Excel export generated','success')"><i class="fas fa-file-excel"></i> Excel</button>
+  1434→      <span class="g-sep"></span>
+  1435→      <button class="g-btn" onclick="toggleFilters('${regId}')"><i class="fas fa-filter"></i> Filters</button>
+  1436→      <div class="g-search">
+  1437→        <i class="fas fa-search"></i>
+  1438→        <input type="text" placeholder="Quick search..." oninput="quickSearch('${regId}',this.value)" id="quickSearch_${regId}">
+  1439→      </div>
+  1440→    </div>
+  1441→    <div class="grid-wrap" id="gridWrap_${regId}">
+  1442→      <table class="grid-table" id="gridTable_${regId}">
+  1443→        <thead>
+  1444→          <tr>
+  1445→            <th class="row-num-header"><input type="checkbox" onchange="toggleSelectAll('${regId}',this.checked)" aria-label="Select all"></th>
+  1446→            ${reg.columns.map((col, i) => {
+  1447→              const sorted = state.sortCol === i;
+  1448→              const icon = sorted ? (state.sortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+  1449→              return `<th style="width:${col.width}px" class="${sorted?'sorted':''}" onclick="sortGrid('${regId}',${i})">${col.name} <i class="fas ${icon} sort-icon"></i></th>`;
+  1450→            }).join('')}
+  1451→          </tr>
+  1452→          <tr class="grid-filter-row" id="filterRow_${regId}" style="display:none">
+  1453→            <td></td>${filterRow}
+  1454→          </tr>
+  1455→        </thead>
+  1456→        <tbody>
+  1457→          ${records.length ? records.map((rec, ri) => {
+  1458→            const origIdx = reg.records.indexOf(rec);
+  1459→            const selected = state.selectedRows.has(origIdx);
+  1460→            return `<tr class="${selected?'selected':''}" ondblclick="viewRecord('${regId}',${origIdx})" onclick="selectRow('${regId}',${origIdx},event)">
+  1461→              <td class="row-num"><input type="checkbox" ${selected?'checked':''} onclick="event.stopPropagation();selectRow('${regId}',${origIdx},null)" aria-label="Select row">${ri+1}</td>
+  1462→              ${reg.columns.map(col => `<td>${renderCell(rec[col.name], col)}</td>`).join('')}
+  1463→            </tr>`;
+  1464→          }).join('') : `<tr><td colspan="${reg.columns.length+1}" class="grid-empty" style="padding:60px"><i class="fas fa-inbox"></i><div>No records found</div><div style="font-size:12px">Click "Add Record" to create a new entry</div></td></tr>`}
+  1465→        </tbody>
+  1466→      </table>
+  1467→    </div>
+  1468→  </div>`;
+  1469→  updateSelectionButtons();
+  1470→  updateStatus(`${reg.name} — ${records.length} of ${reg.records.length} records`, '');
+  1471→}
+  1472→
+  1473→function renderCell(value, col) {
+  1474→  if (value == null || value === '') return '<span style="color:var(--text-muted)">—</span>';
+  1475→  switch (col.type) {
+  1476→    case 'status': {
+  1477→      const c = STATUS_COLORS[value] || 'gray';
+  1478→      return `<span class="badge badge-${c}">${value}</span>`;
+  1479→    }
+  1480→    case 'priority': {
+  1481→      const cls = PRIORITY_CLASSES[value] || 'low';
+  1482→      return `<span class="priority-dot ${cls}">${value}</span>`;
+  1483→    }
+  1484→    case 'checkbox':
+  1485→      return `<input type="checkbox" ${value?'checked':''} disabled style="accent-color:var(--accent)">`;
+  1486→    case 'currency':
+  1487→      return `<span class="currency-cell">${Number(value).toLocaleString('en-AE', {style:'currency',currency:'AED',minimumFractionDigits:0})}</span>`;
+  1488→    case 'percentage': {
+  1489→      const v = Number(value) || 0;
+  1490→      const color = v >= 80 ? 'var(--success)' : v >= 50 ? 'var(--warning)' : 'var(--danger)';
+  1491→      return `<div class="pct-cell"><div class="pct-bar"><div class="pct-fill" style="width:${v}%;background:${color}"></div></div><span>${v}%</span></div>`;
+  1492→    }
+  1493→    case 'rating': {
+  1494→      let s = '';
+  1495→      for (let i = 1; i <= 5; i++) s += `<i class="fa${i <= value ? 's' : 'r'} fa-star"></i>`;
+  1496→      return `<span class="rating-cell">${s}</span>`;
+  1497→    }
+  1498→    case 'date':
+  1499→      return value ? new Date(value).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : '';
+  1500→    case 'time':
+  1501→      return value || '';
+  1502→    case 'datetime':
+  1503→      return value ? new Date(value).toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+  1504→    case 'email':
+  1505→      return `<span class="link-cell">${value}</span>`;
+  1506→    case 'phone':
+  1507→      return `<span style="color:var(--text-secondary)"><i class="fas fa-phone" style="font-size:10px;margin-right:4px;color:var(--text-muted)"></i>${value}</span>`;
+  1508→    case 'multi_select':
+  1509→      return (Array.isArray(value) ? value : [value]).map(v => `<span class="tag">${v}</span>`).join('');
+  1510→    case 'long_text':
+  1511→      return `<span title="${String(value).replace(/"/g,'&quot;')}">${String(value).substring(0,50)}${String(value).length>50?'...':''}</span>`;
+  1512→    case 'number':
+  1513→      return typeof value === 'number' ? value.toLocaleString() : value;
+  1514→    case 'auto_increment':
+  1515→      return `<span style="color:var(--text-muted);font-weight:500">#${value}</span>`;
+  1516→    default:
+  1517→      return String(value);
+  1518→  }
+  1519→}
+  1520→
+  1521→function getProcessedRecords(regId) {
+  1522→  const reg = state.registers[regId];
+  1523→  let records = [...reg.records];
+  1524→  // Apply filters
+  1525→  const q = document.getElementById('quickSearch_'+regId);
+  1526→  const quickQ = q ? q.value.toLowerCase() : '';
+  1527→  Object.entries(state.filters).forEach(([colName, val]) => {
+  1528→    if (!val) return;
+  1529→    const lv = val.toLowerCase();
+  1530→    records = records.filter(r => {
+  1531→      const rv = r[colName];
+  1532→      if (Array.isArray(rv)) return rv.some(v => String(v).toLowerCase().includes(lv));
+  1533→      return String(rv ?? '').toLowerCase().includes(lv);
+  1534→    });
+  1535→  });
+  1536→  if (quickQ) {
+  1537→    records = records.filter(r => Object.values(r).some(v => {
+  1538→      if (Array.isArray(v)) return v.some(x => String(x).toLowerCase().includes(quickQ));
+  1539→      return String(v ?? '').toLowerCase().includes(quickQ);
+  1540→    }));
+  1541→  }
+  1542→  // Apply sort
+  1543→  if (state.sortCol >= 0) {
+  1544→    const col = reg.columns[state.sortCol];
+  1545→    records.sort((a, b) => {
+  1546→      let va = a[col.name], vb = b[col.name];
+  1547→      if (va == null) va = '';
+  1548→      if (vb == null) vb = '';
+  1549→      if (col.type === 'number' || col.type === 'currency' || col.type === 'percentage' || col.type === 'auto_increment') {
+  1550→        return (Number(va) || 0) - (Number(vb) || 0);
+  1551→      }
+  1552→      if (col.type === 'date' || col.type === 'datetime') {
+  1553→        return new Date(va || 0) - new Date(vb || 0);
+  1554→      }
+  1555→      return String(va).localeCompare(String(vb));
+  1556→    });
+  1557→    if (state.sortDir === 'desc') records.reverse();
+  1558→  }
+  1559→  return records;
+  1560→}
+  1561→
+  1562→function sortGrid(regId, colIdx) {
+  1563→  if (state.sortCol === colIdx) {
+  1564→    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+  1565→  } else {
+  1566→    state.sortCol = colIdx;
+  1567→    state.sortDir = 'asc';
+  1568→  }
+  1569→  renderGrid(regId);
+  1570→}
+  1571→
+  1572→function setFilter(regId, colName, value) {
+  1573→  if (value) state.filters[colName] = value;
+  1574→  else delete state.filters[colName];
+  1575→  renderGrid(regId);
+  1576→}
+  1577→
+  1578→function toggleFilters(regId) {
+  1579→  const row = document.getElementById('filterRow_'+regId);
+  1580→  row.style.display = row.style.display === 'none' ? '' : 'none';
+  1581→}
+  1582→
+  1583→function quickSearch(regId, value) {
+  1584→  renderGrid(regId);
+  1585→  // Restore focus
+  1586→  const el = document.getElementById('quickSearch_'+regId);
+  1587→  if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+  1588→}
+  1589→
+  1590→function selectRow(regId, idx, event) {
+  1591→  if (event && event.target.tagName === 'INPUT') return;
+  1592→  if (state.selectedRows.has(idx)) state.selectedRows.delete(idx);
+  1593→  else state.selectedRows.add(idx);
+  1594→  renderGrid(regId);
+  1595→}
+  1596→
+  1597→function toggleSelectAll(regId, checked) {
+  1598→  const reg = state.registers[regId];
+  1599→  const records = getProcessedRecords(regId);
+  1600→  if (checked) {
+  1601→    records.forEach(r => state.selectedRows.add(reg.records.indexOf(r)));
+  1602→  } else {
+  1603→    state.selectedRows.clear();
+  1604→  }
+  1605→  renderGrid(regId);
+  1606→}
+  1607→
+  1608→function updateSelectionButtons() {
+  1609→  const editBtn = document.getElementById('editBtn');
+  1610→  const deleteBtn = document.getElementById('deleteBtn');
+  1611→  if (editBtn) editBtn.disabled = state.selectedRows.size !== 1;
+  1612→  if (deleteBtn) deleteBtn.disabled = state.selectedRows.size === 0;
+  1613→}
+  1614→
+  1615→// ========== FORM RENDERER ==========
+  1616→function renderFormView(regId) {
+  1617→  const reg = state.registers[regId];
+  1618→  const content = document.getElementById('content');
+  1619→  if (!reg.records.length) {
+  1620→    content.innerHTML = `<div class="form-container"><div class="grid-empty" style="height:400px"><i class="fas fa-inbox"></i><div>No records to display</div></div></div>`;
+  1621→    return;
+  1622→  }
+  1623→  if (state.currentRecordIdx < 0 || state.currentRecordIdx >= reg.records.length) state.currentRecordIdx = 0;
+  1624→  const rec = reg.records[state.currentRecordIdx];
+  1625→  const autoFields = ['auto_increment'];
+  1626→  // Group fields into sections
+  1627→  const sections = [{title:'General Information', cols: reg.columns.filter(c => !['long_text','remarks'].includes(c.name.toLowerCase()))},
+  1628→    {title:'Details', cols: reg.columns.filter(c => c.type === 'long_text' || c.name.toLowerCase().includes('remarks') || c.name.toLowerCase().includes('description') || c.name.toLowerCase().includes('findings') || c.name.toLowerCase().includes('discussion') || c.name.toLowerCase().includes('action'))}];
+  1629→
+  1630→  content.innerHTML = `<div class="form-container">
+  1631→    <div class="form-header">
+  1632→      <h2>${reg.name} — Record #${state.currentRecordIdx + 1}</h2>
+  1633→      <div class="form-nav">
+  1634→        <button class="g-btn" onclick="navRecord('${regId}',-1)" ${state.currentRecordIdx<=0?'disabled':''}><i class="fas fa-chevron-left"></i> Previous</button>
+  1635→        <span style="padding:0 12px;color:var(--text-muted);font-size:12px">${state.currentRecordIdx+1} / ${reg.records.length}</span>
+  1636→        <button class="g-btn" onclick="navRecord('${regId}',1)" ${state.currentRecordIdx>=reg.records.length-1?'disabled':''}>Next <i class="fas fa-chevron-right"></i></button>
+  1637→      </div>
+  1638→    </div>
+  1639→    ${sections.filter(s => s.cols.length).map(sec => `
+  1640→      <div class="form-card">
+  1641→        <div class="form-card-title"><i class="fas fa-layer-group"></i> ${sec.title}</div>
+  1642→        <div class="form-grid ${sec.cols.length > 4 ? 'three-col' : ''}">
+  1643→          ${sec.cols.map(col => {
+  1644→            if (autoFields.includes(col.type)) return `<div class="form-group"><label class="form-label">${col.name}</label><div style="padding:8px 10px;background:var(--bg-hover);border-radius:var(--radius-sm);color:var(--text-muted);font-weight:500">#${rec[col.name]}</div></div>`;
+  1645→            return `<div class="form-group ${col.type==='long_text'?'full':''}"><label class="form-label">${col.name}</label>${renderFormField(col, rec[col.name], true)}</div>`;
+  1646→          }).join('')}
+  1647→        </div>
+  1648→      </div>
+  1649→    `).join('')}
+  1650→    <div class="form-actions">
+  1651→      <button class="g-btn" onclick="editSelectedRecordById('${regId}',${state.currentRecordIdx})"><i class="fas fa-pen"></i> Edit</button>
+  1652→      <button class="g-btn" onclick="switchView('grid')"><i class="fas fa-table-cells"></i> Back to Grid</button>
+  1653→    </div>
+  1654→  </div>`;
+  1655→}
+  1656→
+  1657→function renderFormField(col, value, readonly) {
+  1658→  const ro = readonly ? 'readonly class="form-input form-readonly"' : 'class="form-input"';
+  1659→  const roSel = readonly ? 'disabled class="form-select form-readonly"' : 'class="form-select"';
+  1660→  switch (col.type) {
+  1661→    case 'long_text': return `<textarea ${ro} rows="3">${value||''}</textarea>`;
+  1662→    case 'number': return `<input type="number" ${ro} value="${value??''}">`;
+  1663→    case 'currency': return `<input type="number" step="0.01" ${ro} value="${value??''}">`;
+  1664→    case 'percentage': return `<input type="number" min="0" max="100" ${ro} value="${value??0}">`;
+  1665→    case 'date': return `<input type="date" ${ro} value="${value||''}">`;
+  1666→    case 'time': return `<input type="time" ${ro} value="${value||''}">`;
+  1667→    case 'datetime': return `<input type="datetime-local" ${ro} value="${value||''}">`;
+  1668→    case 'checkbox': return `<input type="checkbox" ${readonly?'disabled':''} ${value?'checked':''} style="accent-color:var(--accent);margin-top:8px">`;
+  1669→    case 'dropdown': case 'status': case 'priority':
+  1670→      return `<select ${roSel}>${(col.options||[]).map(o => `<option value="${o}" ${value===o?'selected':''}>${o}</option>`).join('')}</select>`;
+  1671→    case 'multi_select':
+  1672→      return `<div style="display:flex;flex-wrap:wrap;gap:4px">${(Array.isArray(value)?value:[value]).filter(Boolean).map(v=>`<span class="tag">${v}</span>`).join('')}</div>`;
+  1673→    case 'email': return `<input type="email" ${ro} value="${value||''}">`;
+  1674→    case 'phone': return `<input type="tel" ${ro} value="${value||''}">`;
+  1675→    case 'rating':
+  1676→      let s='';for(let i=1;i<=5;i++)s+=`<i class="fa${i<=(value||0)?'s':'r'} fa-star" style="color:var(--warning);font-size:16px"></i>`;
+  1677→      return `<div>${s}</div>`;
+  1678→    default: return `<input type="text" ${ro} value="${value??''}">`;
+  1679→  }
+  1680→}
+  1681→
+  1682→function navRecord(regId, dir) {
+  1683→  const reg = state.registers[regId];
+  1684→  state.currentRecordIdx = Math.max(0, Math.min(reg.records.length - 1, state.currentRecordIdx + dir));
+  1685→  renderFormView(regId);
+  1686→}
+  1687→
+  1688→// ========== RECORD CRUD ==========
+  1689→function addRecord(regId) {
+  1690→  const reg = state.registers[regId];
+  1691→  openRecordModal(regId, -1);
+  1692→}
+  1693→
+  1694→function viewRecord(regId, idx) {
+  1695→  state.currentRecordIdx = idx;
+  1696→  switchView('form');
+  1697→}
+  1698→
+  1699→function editSelectedRecord(regId) {
+  1700→  if (state.selectedRows.size !== 1) return;
+  1701→  editSelectedRecordById(regId, [...state.selectedRows][0]);
+  1702→}
+  1703→
+  1704→function editSelectedRecordById(regId, idx) {
+  1705→  openRecordModal(regId, idx);
+  1706→}
+  1707→
+  1708→function openRecordModal(regId, idx) {
+  1709→  const reg = state.registers[regId];
+  1710→  const isEdit = idx >= 0;
+  1711→  const rec = isEdit ? { ...reg.records[idx] } : {};
+  1712→  document.getElementById('recordModalTitle').textContent = isEdit ? `Edit Record — ${reg.name}` : `Add Record — ${reg.name}`;
+  1713→  const editableCols = reg.columns.filter(c => c.type !== 'auto_increment');
+  1714→  // Group into sections
+  1715→  const basic = editableCols.filter(c => !['long_text'].includes(c.type) && !c.name.toLowerCase().match(/remarks|description|findings|discussion|action|measures|recommendations|points/));
+  1716→  const detail = editableCols.filter(c => ['long_text'].includes(c.type) || c.name.toLowerCase().match(/remarks|description|findings|discussion|action|measures|recommendations|points/));
+  1717→
+  1718→  document.getElementById('recordModalBody').innerHTML = `
+  1719→    ${basic.length ? `<div class="form-card"><div class="form-card-title"><i class="fas fa-info-circle"></i> Details</div>
+  1720→    <div class="form-grid ${basic.length > 6 ? 'three-col' : ''}">
+  1721→      ${basic.map(col => `<div class="form-group"><label class="form-label">${col.name}</label>${renderFormField(col, rec[col.name], false)}</div>`).join('')}
+  1722→    </div></div>` : ''}
+  1723→    ${detail.length ? `<div class="form-card"><div class="form-card-title"><i class="fas fa-align-left"></i> Additional Information</div>
+  1724→    <div class="form-grid">
+  1725→      ${detail.map(col => `<div class="form-group full"><label class="form-label">${col.name}</label>${renderFormField(col, rec[col.name], false)}</div>`).join('')}
+  1726→    </div></div>` : ''}
+  1727→  `;
+  1728→  document.getElementById('recordModalFooter').innerHTML = `
+  1729→    <button class="g-btn" onclick="closeModal('recordModal')">Cancel</button>
+  1730→    <button class="g-btn primary" onclick="saveRecord('${regId}',${idx})"><i class="fas fa-check"></i> ${isEdit?'Update':'Create'}</button>
+  1731→  `;
+  1732→  openModal('recordModal');
+  1733→}
+  1734→
+  1735→function saveRecord(regId, idx) {
+  1736→  const reg = state.registers[regId];
+  1737→  const rec = idx >= 0 ? { ...reg.records[idx] } : {};
+  1738→  // Auto-increment
+  1739→  if (idx < 0) {
+  1740→    reg.columns.forEach(col => {
+  1741→      if (col.type === 'auto_increment') rec[col.name] = reg.records.length + 1;
+  1742→    });
+  1743→  }
+  1744→  // Collect values from form
+  1745→  reg.columns.forEach(col => {
+  1746→    if (col.type === 'auto_increment') return;
+  1747→    const label = document.querySelector(`.form-label`);
+  1748→    // Find input by label text
+  1749→    const labels = document.querySelectorAll('#recordModalBody .form-label');
+  1750→    labels.forEach(lbl => {
+  1751→      if (lbl.textContent.trim() === col.name) {
+  1752→        const input = lbl.nextElementSibling;
+  1753→        if (!input) return;
+  1754→        if (col.type === 'checkbox') { rec[col.name] = input.checked; }
+  1755→        else if (col.type === 'multi_select') { /* skip for now */ }
+  1756→        else if (col.type === 'rating') { /* skip */ }
+  1757→        else { rec[col.name] = input.value || (col.type === 'number' || col.type === 'currency' || col.type === 'percentage' ? 0 : ''); }
+  1758→      }
+  1759→    });
+  1760→  });
+  1761→  if (idx >= 0) { reg.records[idx] = rec; }
+  1762→  else { reg.records.push(rec); }
+  1763→  closeModal('recordModal');
+  1764→  showToast(idx >= 0 ? 'Record updated successfully' : 'Record created successfully', 'success');
+  1765→  if (state.currentView === 'grid') renderGrid(regId);
+  1766→  else renderFormView(regId);
+  1767→}
+  1768→
+  1769→function deleteSelectedRecords(regId) {
+  1770→  if (!state.selectedRows.size) return;
+  1771→  const reg = state.registers[regId];
+  1772→  const count = state.selectedRows.size;
+  1773→  // Remove records (from highest index to lowest to preserve indices)
+  1774→  [...state.selectedRows].sort((a,b) => b - a).forEach(idx => reg.records.splice(idx, 1));
+  1775→  state.selectedRows.clear();
+  1776→  showToast(`${count} record(s) deleted`, 'warning');
+  1777→  renderGrid(regId);
+  1778→}
+  1779→
+  1780→// ========== EXPORT ==========
+  1781→function exportCSV(regId) {
+  1782→  const reg = state.registers[regId];
+  1783→  const headers = reg.columns.map(c => c.name).join(',');
+  1784→  const rows = reg.records.map(r => reg.columns.map(c => {
+  1785→    let v = r[c.name];
+  1786→    if (Array.isArray(v)) v = v.join('; ');
+  1787→    return `"${String(v ?? '').replace(/"/g, '""')}"`;
+  1788→  }).join(','));
+  1789→  const csv = [headers, ...rows].join('\n');
+  1790→  const blob = new Blob([csv], { type: 'text/csv' });
+  1791→  const url = URL.createObjectURL(blob);
+  1792→  const a = document.createElement('a');
+  1793→  a.href = url; a.download = `${reg.name.replace(/\s+/g,'_')}.csv`;
+  1794→  a.click(); URL.revokeObjectURL(url);
+  1795→  showToast('CSV exported successfully', 'success');
+  1796→}
+  1797→
+  1798→// ========== DASHBOARD ==========
+  1799→function openDashboard() {
+  1800→  openTab('dash', 'Dashboard', 'fa-gauge-high', 'dashboard', null);
+  1801→}
+  1802→
+  1803→function renderDashboard() {
+  1804→  // Destroy old charts
+  1805→  state.charts.forEach(c => c.destroy());
+  1806→  state.charts = [];
+  1807→  const content = document.getElementById('content');
+  1808→  const isDark = state.theme === 'dark';
+  1809→  const textColor = isDark ? '#94A3B8' : '#475569';
+  1810→  const gridColor = isDark ? 'rgba(30,45,69,0.8)' : 'rgba(203,213,225,0.8)';
+  1811→
+  1812→  content.innerHTML = `<div class="dash-container">
+  1813→    <h1 class="dash-title">Operations Dashboard</h1>
+  1814→    <div class="kpi-row">
+  1815→      <div class="kpi-card">
+  1816→        <div class="kpi-label">Open Work Orders</div>
+  1817→        <div class="kpi-value" style="color:var(--warning)">24</div>
+  1818→        <div class="kpi-change up"><i class="fas fa-arrow-up"></i> 12% from last month</div>
+  1819→      </div>
+  1820→      <div class="kpi-card">
+  1821→        <div class="kpi-label">PM Compliance</div>
+  1822→        <div class="kpi-value" style="color:var(--success)">92%</div>
+  1823→        <div class="kpi-change up"><i class="fas fa-arrow-up"></i> 3% improvement</div>
+  1824→      </div>
+  1825→      <div class="kpi-card">
+  1826→        <div class="kpi-label">Safety Incidents</div>
+  1827→        <div class="kpi-value" style="color:var(--danger)">3</div>
+  1828→        <div class="kpi-change down"><i class="fas fa-arrow-down"></i> 40% reduction</div>
+  1829→      </div>
+  1830→      <div class="kpi-card">
+  1831→        <div class="kpi-label">Active Contracts</div>
+  1832→        <div class="kpi-value" style="color:var(--info)">18</div>
+  1833→        <div class="kpi-change up"><i class="fas fa-arrow-up"></i> 2 new this month</div>
+  1834→      </div>
+  1835→    </div>
+  1836→    <div class="chart-row">
+  1837→      <div class="chart-card">
+  1838→        <div class="chart-card-title">Work Orders by Status</div>
+  1839→        <canvas id="chartBar"></canvas>
+  1840→      </div>
+  1841→      <div class="chart-card">
+  1842→        <div class="chart-card-title">WO by Building</div>
+  1843→        <canvas id="chartPie"></canvas>
+  1844→      </div>
+  1845→    </div>
+  1846→    <div class="chart-row">
+  1847→      <div class="chart-card">
+  1848→        <div class="chart-card-title">Monthly Maintenance Trend</div>
+  1849→        <canvas id="chartLine"></canvas>
+  1850→      </div>
+  1851→      <div class="chart-card">
+  1852→        <div class="chart-card-title">Recent Activities</div>
+  1853→        <ul class="activity-list">
+  1854→          <li class="activity-item"><div class="activity-dot" style="background:var(--success)"></div><div class="activity-text"><strong>Mohammed Hassan</strong> completed WO-0018 — Pump seal replacement</div><div class="activity-time">2h ago</div></li>
+  1855→          <li class="activity-item"><div class="activity-dot" style="background:var(--warning)"></div><div class="activity-text"><strong>Fatima Al-Rashid</strong> raised Safety Inspection SI-007</div><div class="activity-time">4h ago</div></li>
+  1856→          <li class="activity-item"><div class="activity-dot" style="background:var(--info)"></div><div class="activity-text"><strong>Sara Khan</strong> approved Leave Request LR-0012</div><div class="activity-time">5h ago</div></li>
+  1857→          <li class="activity-item"><div class="activity-dot" style="background:var(--danger)"></div><div class="activity-text"><strong>System</strong> flagged Calibration TC-07 as Overdue</div><div class="activity-time">6h ago</div></li>
+  1858→          <li class="activity-item"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>Ahmed Ali</strong> created Permit To Work PTW-003</div><div class="activity-time">8h ago</div></li>
+  1859→          <li class="activity-item"><div class="activity-dot" style="background:var(--success)"></div><div class="activity-text"><strong>Priya Sharma</strong> completed Corrective Maintenance CM-002</div><div class="activity-time">1d ago</div></li>
+  1860→        </ul>
+  1861→      </div>
+  1862→    </div>
+  1863→    <div class="chart-card" style="margin-bottom:20px">
+  1864→      <div class="chart-card-title">Quick Access</div>
+  1865→      <div class="quick-links">
+  1866→        <div class="quick-link" onclick="openRegister('workorders')"><i class="fas fa-wrench"></i> Work Orders</div>
+  1867→        <div class="quick-link" onclick="openRegister('pm')"><i class="fas fa-clock-rotate-left"></i> Preventive Maint.</div>
+  1868→        <div class="quick-link" onclick="openRegister('safety_insp')"><i class="fas fa-shield-halved"></i> Safety Inspections</div>
+  1869→        <div class="quick-link" onclick="openRegister('assets')"><i class="fas fa-building"></i> Asset Register</div>
+  1870→        <div class="quick-link" onclick="openRegister('incidents')"><i class="fas fa-burst"></i> Incident Reports</div>
+  1871→        <div class="quick-link" onclick="openRegister('inventory')"><i class="fas fa-warehouse"></i> Inventory</div>
+  1872→        <div class="quick-link" onclick="openRegister('contracts')"><i class="fas fa-file-contract"></i> Contracts</div>
+  1873→        <div class="quick-link" onclick="openRegister('kpi')"><i class="fas fa-chart-line"></i> KPI Register</div>
+  1874→      </div>
+  1875→    </div>
+  1876→  </div>`;
+  1877→
+  1878→  // Bar Chart
+  1879→  const barCtx = document.getElementById('chartBar').getContext('2d');
+  1880→  state.charts.push(new Chart(barCtx, {
+  1881→    type: 'bar',
+  1882→    data: {
+  1883→      labels: ['Open', 'In Progress', 'Completed', 'On Hold', 'Cancelled'],
+  1884→      datasets: [{
+  1885→        label: 'Work Orders',
+  1886→        data: [8, 10, 42, 4, 2],
+  1887→        backgroundColor: ['rgba(59,130,246,0.7)','rgba(245,158,11,0.7)','rgba(16,185,129,0.7)','rgba(107,114,128,0.7)','rgba(239,68,68,0.7)'],
+  1888→        borderColor: ['rgb(59,130,246)','rgb(245,158,11)','rgb(16,185,129)','rgb(107,114,128)','rgb(239,68,68)'],
+  1889→        borderWidth: 1, borderRadius: 6,
+  1890→      }]
+  1891→    },
+  1892→    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+  1893→      scales: { x: { ticks: { color: textColor }, grid: { display: false } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } } }
+  1894→  }));
+  1895→
+  1896→  // Pie Chart
+  1897→  const pieCtx = document.getElementById('chartPie').getContext('2d');
+  1898→  state.charts.push(new Chart(pieCtx, {
+  1899→    type: 'doughnut',
+  1900→    data: {
+  1901→      labels: ['Building A', 'Building B', 'Building C', 'External'],
+  1902→      datasets: [{ data: [18, 12, 8, 6], backgroundColor: ['#00D4AA','#F59E0B','#06B6D4','#8B5CF6'], borderWidth: 0 }]
+  1903→    },
+  1904→    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 12, usePointStyle: true } } } }
+  1905→  }));
+  1906→
+  1907→  // Line Chart
+  1908→  const lineCtx = document.getElementById('chartLine').getContext('2d');
+  1909→  state.charts.push(new Chart(lineCtx, {
+  1910→    type: 'line',
+  1911→    data: {
+  1912→      labels: ['Sep','Oct','Nov','Dec','Jan','Feb'],
+  1913→      datasets: [
+  1914→        { label: 'Corrective', data: [12,15,11,18,14,10], borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.4, fill: true },
+  1915→        { label: 'Preventive', data: [25,28,30,27,32,29], borderColor: '#00D4AA', backgroundColor: 'rgba(0,212,170,0.1)', tension: 0.4, fill: true },
+  1916→      ]
+  1917→    },
+  1918→    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textColor, usePointStyle: true } } },
+  1919→      scales: { x: { ticks: { color: textColor }, grid: { display: false } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } } }
+  1920→  }));
+  1921→}
+  1922→
+  1923→// ========== OPEN REGISTER ==========
+  1924→function openRegister(regId) {
+  1925→  const reg = state.registers[regId];
+  1926→  if (!reg) return;
+  1927→  openTab('reg_'+regId, reg.name, reg.icon, 'register', regId);
+  1928→}
+  1929→
+  1930→// ========== WELCOME SCREEN ==========
+  1931→function renderWelcome() {
+  1932→  document.getElementById('content').innerHTML = `
+  1933→    <div class="welcome">
+  1934→      <div class="welcome-icon"><i class="fas fa-database"></i></div>
+  1935→      <h2>FMCore ERP</h2>
+  1936→      <p>Dynamic Register & Form Builder. Select a register from the sidebar or open the Dashboard to get started. You can also create new registers using the AI Assistant or the New Register button.</p>
+  1937→      <div style="display:flex;gap:10px;margin-top:8px">
+  1938→        <button class="g-btn primary" onclick="openDashboard()"><i class="fas fa-gauge-high"></i> Open Dashboard</button>
+  1939→        <button class="g-btn" onclick="showNewRegisterModal()"><i class="fas fa-plus"></i> Create Register</button>
+  1940→        <button class="g-btn" onclick="toggleAI()"><i class="fas fa-wand-magic-sparkles"></i> AI Assistant</button>
+  1941→      </div>
+  1942→    </div>`;
+  1943→}
+  1944→
+  1945→// ========== NEW REGISTER ==========
+  1946→function showNewRegisterModal() {
+  1947→  document.getElementById('newRegName').value = '';
+  1948→  document.getElementById('colBuilder').innerHTML = '';
+  1949→  state.columnBuilderCount = 0;
+  1950→  // Add default columns
+  1951→  addColumnToBuilder('ID', 'auto_increment');
+  1952→  addColumnToBuilder('Date', 'date');
+  1953→  addColumnToBuilder('Status', 'status');
+  1954→  openModal('newRegModal');
+  1955→}
+  1956→
+  1957→function addColumnToBuilder(name, type) {
+  1958→  state.columnBuilderCount++;
+  1959→  const id = state.columnBuilderCount;
+  1960→  const container = document.getElementById('colBuilder');
+  1961→  const div = document.createElement('div');
+  1962→  div.className = 'col-builder-item';
+  1963→  div.id = 'colItem_' + id;
+  1964→  const opts = COL_TYPES.map(t => `<option value="${t}" ${t===(type||'text')?'selected':''}>${t.replace('_',' ')}</option>`).join('');
+  1965→  div.innerHTML = `
+  1966→    <input type="text" placeholder="Column name" value="${name||''}" style="flex:2" data-field="name">
+  1967→    <select style="flex:1.5" data-field="type">${opts}</select>
+  1968→    <input type="number" placeholder="Width" value="140" style="width:65px" data-field="width">
+  1969→    <button class="remove-col" onclick="document.getElementById('colItem_${id}').remove()"><i class="fas fa-xmark"></i></button>
+  1970→  `;
+  1971→  container.appendChild(div);
+  1972→}
+  1973→
+  1974→function createNewRegister() {
+  1975→  const name = document.getElementById('newRegName').value.trim();
+  1976→  if (!name) { showToast('Please enter a register name', 'error'); return; }
+  1977→  const cat = document.getElementById('newRegCat').value;
+  1978→  const icon = document.getElementById('newRegIcon').value;
+  1979→  const color = document.getElementById('newRegColor').value;
+  1980→  const colItems = document.querySelectorAll('.col-builder-item');
+  1981→  if (!colItems.length) { showToast('Please add at least one column', 'error'); return; }
+  1982→  const columns = [];
+  1983→  colItems.forEach(item => {
+  1984→    const cName = item.querySelector('[data-field="name"]').value.trim();
+  1985→    const cType = item.querySelector('[data-field="type"]').value;
+  1986→    const cWidth = parseInt(item.querySelector('[data-field="width"]').value) || 140;
+  1987→    if (!cName) return;
+  1988→    const col = { name: cName, type: cType, width: cWidth, options: null };
+  1989→    if (cType === 'status') col.options = ['Open','In Progress','Completed','Closed'];
+  1990→    if (cType === 'priority') col.options = ['Critical','High','Medium','Low'];
+  1991→    columns.push(col);
+  1992→  });
+  1993→  const id = 'custom_' + Date.now();
+  1994→  state.registers[id] = { id, name, icon, category: cat, columns, records: [] };
+  1995→  closeModal('newRegModal');
+  1996→  buildSidebarTree();
+  1997→  openRegister(id);
+  1998→  showToast(`Register "${name}" created successfully`, 'success');
+  1999→}
+  2000→
+
+[showing lines 1-2000 of 2231; use offset=2001 with limit to continue reading]

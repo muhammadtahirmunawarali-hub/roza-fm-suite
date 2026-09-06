@@ -1,0 +1,2341 @@
+MASTER PROMPT — BUILD A COMPLETE SCALABLE ERP SYSTEM FROM THE ATTACHED REFERENCE FILE
+
+ROLE
+You are a senior enterprise software architect, ERP consultant, UI/UX designer, database architect, JavaScript engineer, and QA engineer.
+
+I am attaching an existing ERP file/system/reference.
+
+Your task is NOT to create a simple demo.
+
+Your task is to carefully study the attached ERP and rebuild/improve it into a COMPLETE, FUNCTIONAL, SCALABLE, PROFESSIONAL ERP APPLICATION.
+
+The initial deliverable should be a browser-based HTML application that can run easily, while the architecture must be prepared for future migration into a proper multi-user SaaS ERP.
+
+==================================================
+1. FIRST — ANALYZE THE ATTACHED ERP
+==================================================
+
+Before changing or generating anything:
+
+1. Inspect the complete attached ERP.
+2. Identify every:
+   - Page
+   - Module
+   - Sub-module
+   - Menu
+   - Tab
+   - Dashboard widget
+   - Form
+   - Table
+   - Button
+   - Filter
+   - Search field
+   - Status
+   - Workflow
+   - Calculation
+   - Report
+   - Settings option
+   - User action
+   - Data relationship
+   - Existing feature
+
+3. Do NOT remove useful functionality from the attached ERP.
+
+4. Improve incomplete, weak, duplicated, broken, or badly designed functions.
+
+5. Maintain the overall business purpose of the original ERP while upgrading it to enterprise quality.
+
+6. Before coding, create an internal system map showing:
+
+ERP
+├── Dashboard
+├── Modules
+├── Sub Modules
+├── Master Data
+├── Transactions
+├── Reports
+├── Administration
+└── Settings
+
+Use the attached system as the main reference.
+
+==================================================
+2. IMPORTANT DEVELOPMENT RULE
+==================================================
+
+THIS MUST NOT BE A STATIC UI MOCKUP.
+
+Every visible feature must work.
+
+DO NOT create:
+
+- Dead buttons
+- Fake dropdowns
+- Placeholder forms
+- Non-functional search bars
+- Dummy export buttons
+- Empty report pages
+- Fake save buttons
+- Hard-coded dashboard totals
+- Fake charts
+- Fake notifications
+- Buttons without event logic
+
+If a feature appears in the interface, it must perform its intended function.
+
+==================================================
+3. APPLICATION ARCHITECTURE
+==================================================
+
+Develop the ERP using a clean modular architecture.
+
+Initial version:
+
+HTML5
+CSS3
+Vanilla JavaScript / modular JavaScript
+IndexedDB for local persistent storage
+
+The application should run directly in a modern browser.
+
+Where technically practical, keep deployment simple.
+
+If using multiple files provides significantly better maintainability, organize them professionally.
+
+Recommended structure:
+
+/erp
+    index.html
+    /css
+        main.css
+        components.css
+        responsive.css
+    /js
+        app.js
+        router.js
+        database.js
+        state.js
+        permissions.js
+        utilities.js
+        validation.js
+        backup.js
+        /modules
+    /assets
+    /data
+
+However, if I specifically request a single-file version, generate:
+
+index.html
+
+containing:
+
+HTML
+CSS
+JavaScript
+
+inside one self-contained file.
+
+==================================================
+4. SCALABILITY REQUIREMENT
+==================================================
+
+The ERP must be designed so the frontend can later connect to:
+
+REST API
+Node.js
+Express / Fastify
+PostgreSQL
+Supabase
+Neon PostgreSQL
+Firebase
+or another production backend.
+
+Do not tightly couple the UI directly to localStorage.
+
+Create a data service/repository layer.
+
+Example concept:
+
+UI
+↓
+Application Services
+↓
+Data Repository
+↓
+IndexedDB
+
+Later:
+
+UI
+↓
+Application Services
+↓
+REST API
+↓
+PostgreSQL
+
+This should allow migration to SaaS without rebuilding the complete frontend.
+
+==================================================
+5. DATA STORAGE
+==================================================
+
+Use IndexedDB as the primary local database.
+
+Do NOT use localStorage as the main ERP database.
+
+localStorage may only be used for lightweight preferences such as:
+
+Theme
+Sidebar state
+Language
+UI settings
+
+Use IndexedDB for:
+
+Customers
+Suppliers
+Products
+Employees
+Assets
+Sales
+Purchases
+Invoices
+Payments
+Expenses
+Inventory
+Transactions
+Work Orders
+Documents metadata
+Notifications
+Audit logs
+Settings
+etc.
+
+==================================================
+6. DATABASE DESIGN
+==================================================
+
+Design normalized logical entities.
+
+Every important record should contain fields such as:
+
+id
+uuid
+companyId
+branchId
+createdAt
+createdBy
+updatedAt
+updatedBy
+status
+isDeleted
+
+Use unique IDs.
+
+Prepare architecture for:
+
+Multi-company
+Multi-branch
+Multi-location
+Multi-user
+Multi-warehouse
+Multi-department
+
+Maintain proper entity relationships.
+
+Examples:
+
+Customer
+↓
+Quotation
+↓
+Sales Order
+↓
+Delivery
+↓
+Invoice
+↓
+Payment
+
+Supplier
+↓
+Purchase Request
+↓
+Purchase Order
+↓
+Goods Receipt
+↓
+Supplier Invoice
+↓
+Payment
+
+Product
+↓
+Stock Movement
+↓
+Warehouse
+↓
+Inventory Balance
+
+==================================================
+7. CORE ERP MODULES
+==================================================
+
+Keep all modules already available in the attached ERP.
+
+Also evaluate whether the following modules are required.
+
+------------------------------------------
+A. DASHBOARD
+------------------------------------------
+
+Create a professional ERP dashboard containing relevant KPIs.
+
+Possible cards:
+
+Total Revenue
+Sales
+Purchases
+Expenses
+Outstanding Receivables
+Outstanding Payables
+Inventory Value
+Low Stock Items
+Active Customers
+Active Suppliers
+Employees
+Open Tasks
+Open Work Orders
+
+Charts should use real application data.
+
+Provide:
+
+Date filters
+Branch filters
+Department filters
+Custom date range
+
+Dashboard data must automatically update after transactions.
+
+------------------------------------------
+B. COMPANY MANAGEMENT
+------------------------------------------
+
+Company profile
+
+Company Name
+Logo
+Registration Number
+Tax Number
+Address
+Phone
+Email
+Website
+Currency
+Country
+Timezone
+Fiscal Year
+Invoice Settings
+
+Support future multi-company architecture.
+
+------------------------------------------
+C. BRANCH MANAGEMENT
+------------------------------------------
+
+Branch Name
+Branch Code
+Address
+Manager
+Phone
+Status
+
+Records should be assignable to branches where appropriate.
+
+------------------------------------------
+D. CUSTOMER MANAGEMENT / CRM
+------------------------------------------
+
+Customer Code
+Customer Name
+Company
+Contact Person
+Phone
+Email
+Address
+Country
+Tax Number
+Credit Limit
+Payment Terms
+Opening Balance
+Current Balance
+Status
+Notes
+
+Functions:
+
+Add
+Edit
+Delete / archive
+Search
+Filter
+Sort
+View customer profile
+Customer transaction history
+Customer statement
+Outstanding balance
+Invoices
+Payments
+
+------------------------------------------
+E. SUPPLIER MANAGEMENT
+------------------------------------------
+
+Supplier Code
+Supplier Name
+Company
+Contact
+Phone
+Email
+Address
+Tax Number
+Payment Terms
+Opening Balance
+Outstanding Balance
+Status
+
+Functions:
+
+Add
+Edit
+Archive
+Search
+Supplier history
+Purchase history
+Supplier statement
+Payments
+Outstanding balance
+
+------------------------------------------
+F. PRODUCT / ITEM MANAGEMENT
+------------------------------------------
+
+Item Code
+SKU
+Barcode
+Product Name
+Category
+Subcategory
+Brand
+Unit
+Purchase Price
+Selling Price
+Tax
+Minimum Stock
+Maximum Stock
+Reorder Level
+Warehouse
+Opening Stock
+Current Stock
+Image
+Description
+Status
+
+Functions:
+
+Add
+Edit
+Clone
+Archive
+Search
+Filter
+Import
+Export
+Stock history
+
+------------------------------------------
+G. CATEGORY MANAGEMENT
+------------------------------------------
+
+Product Category
+Subcategory
+Brand
+Unit of Measure
+
+Allow reusable master-data management.
+
+------------------------------------------
+H. INVENTORY MANAGEMENT
+------------------------------------------
+
+Support:
+
+Warehouses
+Stock In
+Stock Out
+Stock Transfer
+Stock Adjustment
+Opening Stock
+Damaged Stock
+Returned Stock
+Reserved Stock
+Available Stock
+
+Create stock ledger.
+
+Every stock transaction should generate a stock movement.
+
+Example:
+
+movementId
+productId
+warehouseId
+movementType
+quantityIn
+quantityOut
+referenceType
+referenceId
+date
+userId
+
+Never directly manipulate stock totals without creating stock movement history.
+
+------------------------------------------
+I. WAREHOUSE MANAGEMENT
+------------------------------------------
+
+Warehouse Code
+Warehouse Name
+Location
+Manager
+Status
+
+Support transfers between warehouses.
+
+------------------------------------------
+J. SALES
+------------------------------------------
+
+Support sales workflow:
+
+Quotation
+↓
+Sales Order
+↓
+Delivery Note
+↓
+Invoice
+↓
+Payment
+
+Allow conversion between documents.
+
+Quotation → Sales Order
+Sales Order → Invoice
+Invoice → Payment
+
+Fields:
+
+Document Number
+Customer
+Date
+Due Date
+Reference
+Salesperson
+Items
+Quantity
+Unit Price
+Discount
+Tax
+Subtotal
+Total
+Paid
+Balance
+Status
+Notes
+
+Statuses:
+
+Draft
+Pending
+Approved
+Partial
+Paid
+Overdue
+Cancelled
+
+------------------------------------------
+K. PURCHASE
+------------------------------------------
+
+Support:
+
+Purchase Request
+Purchase Order
+Goods Receipt
+Supplier Invoice
+Supplier Payment
+
+Fields:
+
+Supplier
+Reference
+Date
+Items
+Quantity
+Unit Cost
+Discount
+Tax
+Subtotal
+Total
+Payment Status
+Purchase Status
+
+Inventory should increase only when the appropriate goods receipt transaction occurs.
+
+------------------------------------------
+L. EXPENSE MANAGEMENT
+------------------------------------------
+
+Expense Number
+Category
+Date
+Vendor
+Description
+Amount
+Tax
+Payment Method
+Reference
+Attachment
+Branch
+Department
+Status
+
+Support expense categories.
+
+------------------------------------------
+M. PAYMENT MANAGEMENT
+------------------------------------------
+
+Support:
+
+Cash
+Bank Transfer
+Card
+Cheque
+Other
+
+Track:
+
+Incoming Payments
+Outgoing Payments
+Customer Payments
+Supplier Payments
+
+Support:
+
+Partial payment
+Full payment
+Multiple payments per invoice
+Outstanding balances
+
+------------------------------------------
+N. ACCOUNTING FOUNDATION
+------------------------------------------
+
+Prepare architecture for:
+
+Chart of Accounts
+Journal Entries
+General Ledger
+Accounts Receivable
+Accounts Payable
+Trial Balance
+Profit & Loss
+Balance Sheet
+Cash Flow
+
+If the attached ERP already includes accounting, preserve and improve it.
+
+Do not fake accounting calculations.
+
+Use double-entry principles if implementing accounting transactions.
+
+------------------------------------------
+O. EMPLOYEE MANAGEMENT
+------------------------------------------
+
+Employee ID
+Name
+Department
+Designation
+Phone
+Email
+Joining Date
+Salary
+Manager
+Status
+Documents
+Notes
+
+Functions:
+
+Add
+Edit
+Archive
+Search
+Filter
+
+------------------------------------------
+P. DEPARTMENT MANAGEMENT
+------------------------------------------
+
+Department
+Manager
+Employees
+Status
+
+------------------------------------------
+Q. ASSET MANAGEMENT
+------------------------------------------
+
+Asset Code
+Asset Name
+Category
+Brand
+Model
+Serial Number
+Purchase Date
+Purchase Cost
+Location
+Department
+Assigned Employee
+Warranty
+Condition
+Status
+
+Maintain asset history.
+
+------------------------------------------
+R. MAINTENANCE / WORK ORDERS
+------------------------------------------
+
+Work Order Number
+Title
+Asset
+Location
+Priority
+Category
+Assigned Technician
+Reported By
+Description
+Status
+Start Date
+Due Date
+Completion Date
+Parts Used
+Labor Hours
+Cost
+Comments
+Attachments
+
+Statuses:
+
+Open
+Assigned
+In Progress
+On Hold
+Completed
+Cancelled
+
+------------------------------------------
+S. PREVENTIVE MAINTENANCE
+------------------------------------------
+
+Support:
+
+Daily
+Weekly
+Monthly
+Quarterly
+Half-Yearly
+Yearly
+Custom schedules
+
+Automatically calculate:
+
+Next Due Date
+
+Maintain maintenance history.
+
+------------------------------------------
+T. TASK MANAGEMENT
+------------------------------------------
+
+Task
+Description
+Assigned User
+Department
+Priority
+Start Date
+Due Date
+Status
+Progress
+Comments
+
+Support:
+
+Kanban view
+List view
+Calendar-ready structure
+
+------------------------------------------
+U. REPORTING
+------------------------------------------
+
+Create a comprehensive report center.
+
+Possible reports:
+
+Sales Report
+Sales by Product
+Sales by Customer
+Purchases
+Purchase by Supplier
+Inventory
+Stock Ledger
+Low Stock
+Stock Valuation
+Expenses
+Profitability
+Customer Balances
+Supplier Balances
+Payments
+Employee Report
+Asset Report
+Maintenance Report
+Work Order Report
+
+Every report should support relevant:
+
+Date Filter
+Search
+Branch
+Status
+Category
+Export
+Print
+
+==================================================
+8. CRUD OPERATIONS
+==================================================
+
+Every master-data and transaction module should support appropriate CRUD operations.
+
+CREATE
+READ
+UPDATE
+DELETE / ARCHIVE
+
+Prefer soft-delete for important ERP records.
+
+Never permanently delete financial or transactional data without safeguards.
+
+==================================================
+9. SEARCH
+==================================================
+
+Implement real-time search where suitable.
+
+Search should support relevant fields such as:
+
+ID
+Code
+Name
+Description
+Phone
+Email
+Reference Number
+Invoice Number
+SKU
+Barcode
+
+==================================================
+10. FILTERING
+==================================================
+
+Provide context-aware filters.
+
+Examples:
+
+Date
+Status
+Category
+Branch
+Department
+Warehouse
+Customer
+Supplier
+Employee
+Priority
+
+Allow multiple filters where practical.
+
+==================================================
+11. SORTING
+==================================================
+
+Tables must support sorting.
+
+Example:
+
+Name
+Date
+Amount
+Status
+Quantity
+Reference Number
+
+==================================================
+12. PAGINATION
+==================================================
+
+Large tables must support pagination.
+
+Examples:
+
+10
+25
+50
+100
+
+records per page.
+
+Do not attempt to render thousands of rows simultaneously.
+
+==================================================
+13. FORMS
+==================================================
+
+Create professional forms.
+
+Requirements:
+
+Clear labels
+Logical sections
+Required field indicator
+Field validation
+Helpful error messages
+Default values
+Dropdowns where appropriate
+Date pickers
+Numeric validation
+Currency formatting
+
+Prevent invalid submissions.
+
+==================================================
+14. VALIDATION
+==================================================
+
+Implement validation for:
+
+Required values
+Email
+Phone
+Numeric values
+Negative values
+Quantities
+Dates
+Duplicate codes
+Duplicate invoice numbers
+Duplicate SKUs
+
+Business validation should also be included.
+
+Example:
+
+Cannot sell more stock than available unless negative inventory is explicitly allowed.
+
+==================================================
+15. DOCUMENT NUMBERING
+==================================================
+
+Create automatic numbering.
+
+Example:
+
+CUS-000001
+SUP-000001
+QUO-2026-000001
+SO-2026-000001
+INV-2026-000001
+PO-2026-000001
+GRN-2026-000001
+WO-2026-000001
+AST-000001
+
+Allow prefixes to be configured in Settings.
+
+==================================================
+16. CALCULATIONS
+==================================================
+
+All calculations must work.
+
+Example:
+
+Quantity × Unit Price = Line Total
+
+Subtotal
+- Discount
++ Tax
+= Grand Total
+
+Grand Total
+- Payments
+= Balance Due
+
+Round currency correctly.
+
+Avoid floating-point calculation errors where possible.
+
+==================================================
+17. AUDIT LOG
+==================================================
+
+Create an audit trail.
+
+Track:
+
+User
+Action
+Module
+Record ID
+Old Value
+New Value
+Date
+Time
+
+Actions:
+
+Created
+Updated
+Deleted
+Approved
+Cancelled
+Logged In
+Exported
+Imported
+
+==================================================
+18. USER MANAGEMENT
+==================================================
+
+Prepare structure for multiple users.
+
+User fields:
+
+Name
+Email
+Username
+Role
+Branch
+Department
+Status
+
+Roles may include:
+
+Super Admin
+Administrator
+Manager
+Accountant
+Sales Manager
+Sales User
+Purchasing
+Storekeeper
+HR
+Technician
+Employee
+Viewer
+
+==================================================
+19. ROLE BASED ACCESS CONTROL
+==================================================
+
+Design RBAC.
+
+Permission examples:
+
+View
+Create
+Edit
+Delete
+Approve
+Cancel
+Print
+Export
+Import
+
+Permissions should be configurable per module.
+
+Example:
+
+Inventory
+View: YES
+Create: YES
+Edit: YES
+Delete: NO
+Approve: NO
+
+Even if authentication is simulated locally initially, architecture should be compatible with server-side RBAC later.
+
+==================================================
+20. LOGIN
+==================================================
+
+Create a professional login screen if required by the attached ERP.
+
+For offline demonstration, local accounts may be used.
+
+But clearly separate authentication logic so it can later connect to:
+
+Supabase Auth
+Firebase Auth
+Auth0
+Custom API
+
+Never treat frontend-only authentication as production security.
+
+==================================================
+21. UI / UX
+==================================================
+
+Create a premium enterprise interface.
+
+Style direction:
+
+Modern
+Professional
+Minimal
+Clean
+Corporate
+High information density
+Easy navigation
+
+Avoid excessive gradients or childish styling.
+
+Use:
+
+Sidebar
+Top navigation bar
+Breadcrumbs
+Dashboard cards
+Professional tables
+Modals
+Drawers
+Tooltips
+Dropdowns
+Tabs
+Badges
+Notifications
+Toast messages
+
+==================================================
+22. SIDEBAR
+==================================================
+
+Sidebar should support:
+
+Logo
+Company Name
+Navigation
+Expandable modules
+Active state
+Collapse
+Mobile mode
+
+Possible menu:
+
+Dashboard
+
+CRM
+  Customers
+
+Sales
+  Quotations
+  Sales Orders
+  Deliveries
+  Invoices
+  Payments
+
+Purchasing
+  Suppliers
+  Purchase Requests
+  Purchase Orders
+  Goods Receipts
+
+Inventory
+  Products
+  Categories
+  Warehouses
+  Stock Movements
+  Adjustments
+
+Finance
+  Expenses
+  Payments
+  Accounting
+
+HR
+  Employees
+  Departments
+
+Assets
+  Asset Register
+  Maintenance
+  Work Orders
+  Preventive Maintenance
+
+Tasks
+
+Reports
+
+Administration
+  Users
+  Roles
+  Audit Logs
+
+Settings
+
+Modify this structure based on the attached ERP.
+
+==================================================
+23. RESPONSIVE DESIGN
+==================================================
+
+Application must work on:
+
+1920 desktop
+1366 laptop
+Tablet
+Mobile
+
+No horizontal overflow except where intentionally used for large data tables.
+
+On mobile:
+
+Collapse sidebar
+Provide mobile navigation
+Resize cards
+Stack forms
+Make tables usable
+Keep primary actions accessible
+
+==================================================
+24. THEMES
+==================================================
+
+Support:
+
+Light Mode
+Dark Mode
+
+Remember user preference.
+
+==================================================
+25. SETTINGS
+==================================================
+
+Create centralized settings.
+
+Possible sections:
+
+General
+Company
+Branches
+Currency
+Tax
+Invoice
+Document Numbering
+Inventory
+Sales
+Purchasing
+Email
+Notifications
+Users
+Permissions
+Backup
+Appearance
+
+==================================================
+26. IMPORT
+==================================================
+
+Provide import support where useful.
+
+CSV import for:
+
+Products
+Customers
+Suppliers
+Employees
+Assets
+
+Import workflow:
+
+Select file
+Preview data
+Map columns
+Validate
+Show errors
+Confirm import
+Import valid rows
+
+Do not blindly import corrupt data.
+
+==================================================
+27. EXPORT
+==================================================
+
+Support:
+
+CSV
+Excel-compatible CSV/XLSX where technically available
+JSON
+Print
+PDF-ready print layout
+
+Export actual filtered data.
+
+==================================================
+28. PRINTING
+==================================================
+
+Create professional print layouts for:
+
+Quotation
+Sales Order
+Invoice
+Purchase Order
+Delivery Note
+Goods Receipt
+Customer Statement
+Supplier Statement
+Work Order
+Reports
+
+Printed documents should contain:
+
+Logo
+Company Information
+Document Number
+Date
+Party Information
+Item Table
+Totals
+Terms
+Signature Area
+
+==================================================
+29. BACKUP SYSTEM
+==================================================
+
+Create full database backup.
+
+Provide:
+
+Export Backup
+
+Example:
+
+erp-backup-YYYY-MM-DD-HHMM.json
+
+Backup should include all IndexedDB data.
+
+==================================================
+30. RESTORE SYSTEM
+==================================================
+
+Provide:
+
+Import Backup
+Validate Backup
+Show summary
+Confirm Restore
+
+Never overwrite current data without confirmation.
+
+==================================================
+31. AUTO SAVE
+==================================================
+
+All committed data must persist automatically in IndexedDB.
+
+Page refresh must not erase records.
+
+Closing/reopening the browser must preserve data.
+
+==================================================
+32. SAMPLE DATA
+==================================================
+
+Provide a small sample dataset only for initial demonstration.
+
+Do NOT depend on sample data for system operation.
+
+Allow sample data to be removed.
+
+==================================================
+33. NOTIFICATIONS
+==================================================
+
+Create notification architecture.
+
+Examples:
+
+Low stock
+Overdue invoice
+Pending approval
+Work order overdue
+Maintenance due
+Task due
+
+Notifications should derive from real system data.
+
+==================================================
+34. GLOBAL SEARCH
+==================================================
+
+Implement a global search architecture.
+
+Possible search entities:
+
+Customers
+Suppliers
+Invoices
+Products
+Purchase Orders
+Work Orders
+Employees
+Assets
+
+==================================================
+35. COMMANDS / QUICK ACTIONS
+==================================================
+
+Provide convenient quick actions such as:
+
++ Customer
++ Supplier
++ Product
++ Invoice
++ Purchase Order
++ Expense
++ Employee
++ Work Order
+
+==================================================
+36. ERROR HANDLING
+==================================================
+
+Never allow silent errors.
+
+Display user-friendly messages.
+
+Examples:
+
+Record saved successfully.
+
+Unable to save record.
+
+Duplicate SKU detected.
+
+Insufficient inventory.
+
+Invalid date range.
+
+==================================================
+37. CONFIRMATION
+==================================================
+
+Require confirmation for important actions:
+
+Delete
+Cancel invoice
+Restore backup
+Reset application
+Stock adjustment
+Financial transaction reversal
+
+==================================================
+38. PERFORMANCE
+==================================================
+
+Optimize for large datasets.
+
+Avoid unnecessary DOM rendering.
+
+Use:
+
+Pagination
+IndexedDB indexes
+Efficient filtering
+Reusable UI components
+Event delegation where useful
+
+System should remain responsive with thousands of records.
+
+==================================================
+39. CODE QUALITY
+==================================================
+
+Code must be:
+
+Readable
+Maintainable
+Modular
+Well structured
+Consistently named
+Commented where necessary
+
+Avoid:
+
+Massive duplicated functions
+Inline onclick everywhere
+Global variable pollution
+Repeated CSS
+Spaghetti JavaScript
+
+==================================================
+40. STATE MANAGEMENT
+==================================================
+
+Create centralized application state where appropriate.
+
+State may contain:
+
+Current user
+Company
+Branch
+Theme
+Current module
+Filters
+Notifications
+
+Do not unnecessarily duplicate state.
+
+==================================================
+41. ROUTING
+==================================================
+
+Use SPA-style routing where practical.
+
+Example:
+
+#/dashboard
+#/customers
+#/customers/123
+#/sales/invoices
+#/inventory/products
+#/reports/sales
+#/settings
+
+Browser back/forward should work appropriately.
+
+==================================================
+42. REUSABLE COMPONENTS
+==================================================
+
+Develop reusable components/functions for:
+
+Tables
+Forms
+Modal
+Dropdown
+Badge
+Pagination
+Search
+Filters
+Toast
+Confirmation
+Date picker
+Currency input
+Print template
+
+==================================================
+43. SaaS READY ARCHITECTURE
+==================================================
+
+Prepare every important record for tenant isolation.
+
+Example:
+
+tenantId
+companyId
+branchId
+
+Eventually:
+
+Tenant A must never access Tenant B data.
+
+Do not rely on frontend filtering for production tenant security.
+
+The backend/database must enforce tenant boundaries when SaaS migration occurs.
+
+==================================================
+44. FUTURE API LAYER
+==================================================
+
+Create repositories/services such as:
+
+CustomerService
+ProductService
+SalesService
+PurchaseService
+InventoryService
+EmployeeService
+AssetService
+ReportService
+
+Initial implementation:
+
+IndexedDBRepository
+
+Future implementation:
+
+ApiRepository
+
+This separation is extremely important.
+
+==================================================
+45. FUTURE CLOUD DATABASE
+==================================================
+
+Architecture should support migration to PostgreSQL.
+
+Possible future tables:
+
+tenants
+companies
+branches
+users
+roles
+permissions
+customers
+suppliers
+products
+warehouses
+stock_movements
+quotations
+sales_orders
+invoices
+invoice_items
+payments
+purchase_orders
+purchase_items
+expenses
+employees
+assets
+work_orders
+tasks
+notifications
+audit_logs
+settings
+
+==================================================
+46. FUTURE AI CAPABILITY
+==================================================
+
+Prepare architecture for adding an AI Assistant.
+
+Future AI capabilities may include:
+
+"Show invoices overdue more than 30 days."
+
+"Which products are running low?"
+
+"Generate monthly sales summary."
+
+"Which customers owe the most?"
+
+"Show maintenance due this week."
+
+"Analyze expenses."
+
+AI must query controlled application APIs/data services rather than directly manipulating core data.
+
+==================================================
+47. SECURITY PRINCIPLES
+==================================================
+
+Even for the initial browser version:
+
+Sanitize user input.
+
+Avoid unsafe HTML injection.
+
+Do not use eval().
+
+Escape dynamic content.
+
+Validate imported files.
+
+Do not expose real production passwords or API keys in HTML.
+
+Never place database service-role secrets in frontend code.
+
+==================================================
+48. ACCESSIBILITY
+==================================================
+
+Use:
+
+Semantic HTML
+Keyboard navigation
+Readable font sizes
+Proper labels
+Visible focus states
+Sufficient contrast
+
+==================================================
+49. PROFESSIONAL EMPTY STATES
+==================================================
+
+When no records exist, show useful messages.
+
+Example:
+
+"No customers have been created yet."
+
+Button:
+
++ Add Customer
+
+Do not display broken empty tables.
+
+==================================================
+50. LOADING STATES
+==================================================
+
+For operations requiring processing, provide loading indicators.
+
+Prevent duplicate submissions.
+
+==================================================
+51. DATA RELATIONSHIPS
+==================================================
+
+Maintain referential integrity at the application level.
+
+Example:
+
+Do not delete a customer that has historical invoices.
+
+Instead allow:
+
+Deactivate customer
+
+Historical transactions must remain intact.
+
+==================================================
+52. TRANSACTION REVERSAL
+==================================================
+
+Financial/stock records should generally be reversed or cancelled instead of simply deleted.
+
+Example:
+
+Posted Invoice
+→ Cancel Invoice
+
+Stock Receipt
+→ Reversal Entry
+
+Maintain traceability.
+
+==================================================
+53. DASHBOARD CALCULATIONS
+==================================================
+
+Never hard-code KPI values.
+
+Example:
+
+Revenue = sum of applicable invoice/sales transactions.
+
+Outstanding = Invoice Total - Payments.
+
+Low Stock = products where available quantity <= reorder level.
+
+==================================================
+54. REPORT ENGINE
+==================================================
+
+Reports should calculate data dynamically from actual records.
+
+Provide reusable report utilities.
+
+Reports must react to filters.
+
+==================================================
+55. DATE SYSTEM
+==================================================
+
+Store dates consistently.
+
+Allow configured display format such as:
+
+DD/MM/YYYY
+MM/DD/YYYY
+YYYY-MM-DD
+
+Use proper date comparison logic.
+
+==================================================
+56. CURRENCY SYSTEM
+==================================================
+
+Support configurable currency.
+
+Example:
+
+QAR
+USD
+EUR
+GBP
+PKR
+AED
+SAR
+
+Currency formatting should come from company settings.
+
+Prepare architecture for future multi-currency support.
+
+==================================================
+57. TAX SYSTEM
+==================================================
+
+Support configurable taxes.
+
+Tax may be:
+
+Inclusive
+Exclusive
+
+Allow zero-tax items.
+
+Prepare for multiple tax rates.
+
+==================================================
+58. APPROVAL WORKFLOWS
+==================================================
+
+Prepare architecture for approvals.
+
+Examples:
+
+Purchase Request
+Draft → Submitted → Approved → Rejected
+
+Purchase Order
+Draft → Pending Approval → Approved
+
+Expense
+Draft → Submitted → Approved → Paid
+
+==================================================
+59. ATTACHMENTS
+==================================================
+
+Where practical allow supporting files/images for:
+
+Customers
+Suppliers
+Products
+Employees
+Assets
+Expenses
+Work Orders
+
+For the local version, store responsibly.
+
+For future SaaS, architecture should support external object storage such as:
+
+Cloudflare R2
+AWS S3
+Supabase Storage
+
+Do not store massive binary objects directly inside relational database tables.
+
+==================================================
+60. IMAGE STORAGE ARCHITECTURE
+==================================================
+
+For future cloud deployment:
+
+Store file/object path in the database.
+
+Example:
+
+product.imagePath
+
+Actual file:
+
+Cloudflare R2 / Object Storage
+
+Create a storage abstraction layer if appropriate.
+
+==================================================
+61. DATA BACKUP COMPATIBILITY
+==================================================
+
+Backup files should include a schema version.
+
+Example:
+
+{
+  "schemaVersion": 1,
+  "appVersion": "1.0.0",
+  "exportedAt": "...",
+  "data": {}
+}
+
+This allows future migrations.
+
+==================================================
+62. VERSIONING
+==================================================
+
+Maintain application version information.
+
+Example:
+
+ERP Version 1.0.0
+
+Prepare data migration utilities when IndexedDB schemas change.
+
+==================================================
+63. SYSTEM HEALTH
+==================================================
+
+Provide optional administrative information:
+
+Application Version
+Database Version
+Record Counts
+Storage Usage
+Last Backup
+Environment
+
+==================================================
+64. DEMO VS PRODUCTION
+==================================================
+
+Clearly separate:
+
+Demo functionality
+
+from
+
+Production security requirements.
+
+Never imply that local browser authentication is secure enough for internet-facing production use.
+
+==================================================
+65. TESTING
+==================================================
+
+Before declaring the ERP complete, test every module.
+
+Test:
+
+Create
+Edit
+Delete/archive
+Search
+Filter
+Sort
+Pagination
+Calculations
+Import
+Export
+Print
+Navigation
+Mobile
+Dark mode
+Backup
+Restore
+
+==================================================
+66. WORKFLOW TEST
+==================================================
+
+Test at least one complete workflow.
+
+Example:
+
+Create Customer
+
+→ Create Product
+
+→ Add Stock
+
+→ Create Quotation
+
+→ Convert to Sales Order
+
+→ Generate Invoice
+
+→ Receive Partial Payment
+
+→ Receive Final Payment
+
+→ Verify Customer Balance
+
+→ Verify Inventory
+
+→ Verify Dashboard
+
+→ Verify Reports
+
+All related numbers must update correctly.
+
+==================================================
+67. PURCHASE WORKFLOW TEST
+==================================================
+
+Create Supplier
+
+→ Create Purchase Order
+
+→ Receive Goods
+
+→ Inventory increases
+
+→ Create Supplier Invoice
+
+→ Make Payment
+
+→ Supplier outstanding balance updates
+
+→ Reports update
+
+==================================================
+68. MAINTENANCE WORKFLOW TEST
+==================================================
+
+Create Asset
+
+→ Create Work Order
+
+→ Assign Technician
+
+→ Update Work Order
+
+→ Add Parts
+
+→ Complete Work Order
+
+→ Update Asset History
+
+→ Update Dashboard/Reports
+
+==================================================
+69. NO FEATURE REGRESSION
+==================================================
+
+Compare final system with the attached original ERP.
+
+Create a checklist of every original feature.
+
+Confirm each feature is:
+
+Retained
+Improved
+Replaced with a better equivalent
+
+Do not accidentally remove useful functionality.
+
+==================================================
+70. UI CONSISTENCY
+==================================================
+
+Use one consistent design system.
+
+Define:
+
+Spacing
+Typography
+Border radius
+Table style
+Button style
+Form style
+Modal style
+Card style
+Status colors
+Icons
+
+Avoid each page looking like a different application.
+
+==================================================
+71. ERP DESIGN QUALITY
+==================================================
+
+The interface should look suitable for a commercial SaaS ERP product.
+
+Target quality comparable conceptually to modern systems such as:
+
+Odoo
+Zoho
+ERPNext
+SAP Business One
+Microsoft Dynamics
+
+Do NOT directly copy their copyrighted UI.
+
+Use them only as quality benchmarks.
+
+==================================================
+72. FINAL DELIVERY
+==================================================
+
+Deliver:
+
+1. Fully functional ERP files.
+2. Clean directory structure.
+3. README.
+4. Module documentation.
+5. Database schema explanation.
+6. Sample login information if applicable.
+7. Backup/restore instructions.
+8. Deployment instructions.
+9. SaaS migration notes.
+10. Future backend migration plan.
+11. Known limitations.
+12. Testing checklist.
+13. Completed feature checklist.
+
+==================================================
+73. IMPORTANT CODING INSTRUCTION
+==================================================
+
+Do NOT immediately generate thousands of lines without understanding the existing attached ERP.
+
+Proceed systematically.
+
+PHASE 1
+Analyze existing ERP.
+
+PHASE 2
+Create application architecture.
+
+PHASE 3
+Create database/data models.
+
+PHASE 4
+Build reusable UI foundation.
+
+PHASE 5
+Implement core modules.
+
+PHASE 6
+Implement transactions/workflows.
+
+PHASE 7
+Implement reports.
+
+PHASE 8
+Implement administration/settings.
+
+PHASE 9
+Implement backup/import/export.
+
+PHASE 10
+Test the complete application.
+
+==================================================
+74. WHEN MODIFYING EXISTING CODE
+==================================================
+
+Do not unnecessarily rewrite working sections.
+
+First understand:
+
+What currently works?
+What is broken?
+What is incomplete?
+What needs refactoring?
+What can be retained?
+
+Make controlled changes.
+
+Do not destroy the existing application structure without a technical reason.
+
+==================================================
+75. IF THE EXISTING ERP IS A SINGLE HTML FILE
+==================================================
+
+If the attached ERP is currently a single HTML file:
+
+First inspect the complete file.
+
+Preserve existing working functionality.
+
+Improve architecture internally.
+
+Use clearly separated sections:
+
+CONFIGURATION
+
+DATABASE
+
+DATA SERVICES
+
+UTILITIES
+
+STATE
+
+ROUTER
+
+COMPONENTS
+
+MODULES
+
+REPORTING
+
+BACKUP
+
+INITIALIZATION
+
+Avoid uncontrolled JavaScript scattered throughout the file.
+
+==================================================
+76. SINGLE HTML REQUIREMENT
+==================================================
+
+If delivering a single HTML version:
+
+It must work by opening:
+
+index.html
+
+directly in a browser whenever browser security limitations permit.
+
+Avoid mandatory CDN dependencies wherever possible.
+
+Prefer embedded:
+
+CSS
+JavaScript
+SVG icons
+
+The application should continue functioning offline except features that genuinely require internet services.
+
+==================================================
+77. DO NOT OVER-SIMPLIFY
+==================================================
+
+Do not remove functionality simply because implementing it is difficult.
+
+This is intended to become a real commercial ERP platform.
+
+Use enterprise-quality architecture while keeping the user experience simple.
+
+==================================================
+78. PRIORITY
+==================================================
+
+Priorities in order:
+
+1. Data integrity
+2. Functional workflows
+3. Reliability
+4. Maintainability
+5. Scalability
+6. Security architecture
+7. User experience
+8. Visual appearance
+
+Do not sacrifice correct ERP logic for fancy UI.
+
+==================================================
+79. MOST IMPORTANT FINAL RULE
+==================================================
+
+DO NOT BUILD ONLY THE FRONTEND APPEARANCE.
+
+BUILD THE APPLICATION LOGIC.
+
+Every module must connect logically to related modules.
+
+Example:
+
+Sales affects customer balance.
+
+Sales affects inventory.
+
+Payments affect invoice balance.
+
+Purchases affect supplier balance.
+
+Goods receipts affect inventory.
+
+Expenses affect financial reporting.
+
+Work orders affect asset history.
+
+Maintenance affects due schedules.
+
+All dashboards and reports must calculate from actual application data.
+
+==================================================
+80. COMPLETION CRITERIA
+==================================================
+
+The ERP is considered complete only when:
+
+- Main navigation works.
+- Every delivered button works.
+- Forms save data.
+- Saved data remains after refresh.
+- Editing works.
+- Search works.
+- Filters work.
+- Sorting works.
+- Pagination works.
+- Calculations work.
+- Transactions update related records.
+- Dashboard uses real records.
+- Reports use real records.
+- Backup works.
+- Restore works.
+- Import/export works where implemented.
+- Print layouts work.
+- Responsive design works.
+- No major console errors exist.
+- No critical dead features remain.
+
+==================================================
+FINAL INSTRUCTION TO THE AI
+==================================================
+
+Now inspect the ERP file that I have attached.
+
+DO NOT start by blindly replacing the system.
+
+First understand the complete current ERP.
+
+Then develop the improved version using the requirements above.
+
+Where the attached ERP contains business-specific modules or functions not mentioned in this master prompt, PRESERVE THEM and integrate them into the new architecture.
+
+If there is a conflict between generic ERP functionality described above and a specialized workflow in my attached ERP, prioritize the actual business workflow found in my ERP unless it creates a technical/data-integrity problem.
+
+The final objective is:
+
+A COMPLETE, PROFESSIONAL, FUNCTIONAL, OFFLINE-CAPABLE, SCALABLE ERP APPLICATION that can initially operate as an HTML/browser application and later be migrated into a CLOUD-BASED, MULTI-USER, MULTI-COMPANY SaaS ERP without rebuilding the entire product.
+
+Start with a COMPLETE ANALYSIS OF THE ATTACHED FILE and then proceed with implementation.

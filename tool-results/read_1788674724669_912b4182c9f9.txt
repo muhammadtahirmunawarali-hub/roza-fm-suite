@@ -1,0 +1,2002 @@
+     1→     1→MASTER PROMPT — BUILD A COMPLETE SCALABLE ERP SYSTEM FROM THE ATTACHED REFERENCE FILE
+     2→     2→
+     3→     3→ROLE
+     4→     4→You are a senior enterprise software architect, ERP consultant, UI/UX designer, database architect, JavaScript engineer, and QA engineer.
+     5→     5→
+     6→     6→I am attaching an existing ERP file/system/reference.
+     7→     7→
+     8→     8→Your task is NOT to create a simple demo.
+     9→     9→
+    10→    10→Your task is to carefully study the attached ERP and rebuild/improve it into a COMPLETE, FUNCTIONAL, SCALABLE, PROFESSIONAL ERP APPLICATION.
+    11→    11→
+    12→    12→The initial deliverable should be a browser-based HTML application that can run easily, while the architecture must be prepared for future migration into a proper multi-user SaaS ERP.
+    13→    13→
+    14→    14→==================================================
+    15→    15→1. FIRST — ANALYZE THE ATTACHED ERP
+    16→    16→==================================================
+    17→    17→
+    18→    18→Before changing or generating anything:
+    19→    19→
+    20→    20→1. Inspect the complete attached ERP.
+    21→    21→2. Identify every:
+    22→    22→   - Page
+    23→    23→   - Module
+    24→    24→   - Sub-module
+    25→    25→   - Menu
+    26→    26→   - Tab
+    27→    27→   - Dashboard widget
+    28→    28→   - Form
+    29→    29→   - Table
+    30→    30→   - Button
+    31→    31→   - Filter
+    32→    32→   - Search field
+    33→    33→   - Status
+    34→    34→   - Workflow
+    35→    35→   - Calculation
+    36→    36→   - Report
+    37→    37→   - Settings option
+    38→    38→   - User action
+    39→    39→   - Data relationship
+    40→    40→   - Existing feature
+    41→    41→
+    42→    42→3. Do NOT remove useful functionality from the attached ERP.
+    43→    43→
+    44→    44→4. Improve incomplete, weak, duplicated, broken, or badly designed functions.
+    45→    45→
+    46→    46→5. Maintain the overall business purpose of the original ERP while upgrading it to enterprise quality.
+    47→    47→
+    48→    48→6. Before coding, create an internal system map showing:
+    49→    49→
+    50→    50→ERP
+    51→    51→├── Dashboard
+    52→    52→├── Modules
+    53→    53→├── Sub Modules
+    54→    54→├── Master Data
+    55→    55→├── Transactions
+    56→    56→├── Reports
+    57→    57→├── Administration
+    58→    58→└── Settings
+    59→    59→
+    60→    60→Use the attached system as the main reference.
+    61→    61→
+    62→    62→==================================================
+    63→    63→2. IMPORTANT DEVELOPMENT RULE
+    64→    64→==================================================
+    65→    65→
+    66→    66→THIS MUST NOT BE A STATIC UI MOCKUP.
+    67→    67→
+    68→    68→Every visible feature must work.
+    69→    69→
+    70→    70→DO NOT create:
+    71→    71→
+    72→    72→- Dead buttons
+    73→    73→- Fake dropdowns
+    74→    74→- Placeholder forms
+    75→    75→- Non-functional search bars
+    76→    76→- Dummy export buttons
+    77→    77→- Empty report pages
+    78→    78→- Fake save buttons
+    79→    79→- Hard-coded dashboard totals
+    80→    80→- Fake charts
+    81→    81→- Fake notifications
+    82→    82→- Buttons without event logic
+    83→    83→
+    84→    84→If a feature appears in the interface, it must perform its intended function.
+    85→    85→
+    86→    86→==================================================
+    87→    87→3. APPLICATION ARCHITECTURE
+    88→    88→==================================================
+    89→    89→
+    90→    90→Develop the ERP using a clean modular architecture.
+    91→    91→
+    92→    92→Initial version:
+    93→    93→
+    94→    94→HTML5
+    95→    95→CSS3
+    96→    96→Vanilla JavaScript / modular JavaScript
+    97→    97→IndexedDB for local persistent storage
+    98→    98→
+    99→    99→The application should run directly in a modern browser.
+   100→   100→
+   101→   101→Where technically practical, keep deployment simple.
+   102→   102→
+   103→   103→If using multiple files provides significantly better maintainability, organize them professionally.
+   104→   104→
+   105→   105→Recommended structure:
+   106→   106→
+   107→   107→/erp
+   108→   108→    index.html
+   109→   109→    /css
+   110→   110→        main.css
+   111→   111→        components.css
+   112→   112→        responsive.css
+   113→   113→    /js
+   114→   114→        app.js
+   115→   115→        router.js
+   116→   116→        database.js
+   117→   117→        state.js
+   118→   118→        permissions.js
+   119→   119→        utilities.js
+   120→   120→        validation.js
+   121→   121→        backup.js
+   122→   122→        /modules
+   123→   123→    /assets
+   124→   124→    /data
+   125→   125→
+   126→   126→However, if I specifically request a single-file version, generate:
+   127→   127→
+   128→   128→index.html
+   129→   129→
+   130→   130→containing:
+   131→   131→
+   132→   132→HTML
+   133→   133→CSS
+   134→   134→JavaScript
+   135→   135→
+   136→   136→inside one self-contained file.
+   137→   137→
+   138→   138→==================================================
+   139→   139→4. SCALABILITY REQUIREMENT
+   140→   140→==================================================
+   141→   141→
+   142→   142→The ERP must be designed so the frontend can later connect to:
+   143→   143→
+   144→   144→REST API
+   145→   145→Node.js
+   146→   146→Express / Fastify
+   147→   147→PostgreSQL
+   148→   148→Supabase
+   149→   149→Neon PostgreSQL
+   150→   150→Firebase
+   151→   151→or another production backend.
+   152→   152→
+   153→   153→Do not tightly couple the UI directly to localStorage.
+   154→   154→
+   155→   155→Create a data service/repository layer.
+   156→   156→
+   157→   157→Example concept:
+   158→   158→
+   159→   159→UI
+   160→   160→↓
+   161→   161→Application Services
+   162→   162→↓
+   163→   163→Data Repository
+   164→   164→↓
+   165→   165→IndexedDB
+   166→   166→
+   167→   167→Later:
+   168→   168→
+   169→   169→UI
+   170→   170→↓
+   171→   171→Application Services
+   172→   172→↓
+   173→   173→REST API
+   174→   174→↓
+   175→   175→PostgreSQL
+   176→   176→
+   177→   177→This should allow migration to SaaS without rebuilding the complete frontend.
+   178→   178→
+   179→   179→==================================================
+   180→   180→5. DATA STORAGE
+   181→   181→==================================================
+   182→   182→
+   183→   183→Use IndexedDB as the primary local database.
+   184→   184→
+   185→   185→Do NOT use localStorage as the main ERP database.
+   186→   186→
+   187→   187→localStorage may only be used for lightweight preferences such as:
+   188→   188→
+   189→   189→Theme
+   190→   190→Sidebar state
+   191→   191→Language
+   192→   192→UI settings
+   193→   193→
+   194→   194→Use IndexedDB for:
+   195→   195→
+   196→   196→Customers
+   197→   197→Suppliers
+   198→   198→Products
+   199→   199→Employees
+   200→   200→Assets
+   201→   201→Sales
+   202→   202→Purchases
+   203→   203→Invoices
+   204→   204→Payments
+   205→   205→Expenses
+   206→   206→Inventory
+   207→   207→Transactions
+   208→   208→Work Orders
+   209→   209→Documents metadata
+   210→   210→Notifications
+   211→   211→Audit logs
+   212→   212→Settings
+   213→   213→etc.
+   214→   214→
+   215→   215→==================================================
+   216→   216→6. DATABASE DESIGN
+   217→   217→==================================================
+   218→   218→
+   219→   219→Design normalized logical entities.
+   220→   220→
+   221→   221→Every important record should contain fields such as:
+   222→   222→
+   223→   223→id
+   224→   224→uuid
+   225→   225→companyId
+   226→   226→branchId
+   227→   227→createdAt
+   228→   228→createdBy
+   229→   229→updatedAt
+   230→   230→updatedBy
+   231→   231→status
+   232→   232→isDeleted
+   233→   233→
+   234→   234→Use unique IDs.
+   235→   235→
+   236→   236→Prepare architecture for:
+   237→   237→
+   238→   238→Multi-company
+   239→   239→Multi-branch
+   240→   240→Multi-location
+   241→   241→Multi-user
+   242→   242→Multi-warehouse
+   243→   243→Multi-department
+   244→   244→
+   245→   245→Maintain proper entity relationships.
+   246→   246→
+   247→   247→Examples:
+   248→   248→
+   249→   249→Customer
+   250→   250→↓
+   251→   251→Quotation
+   252→   252→↓
+   253→   253→Sales Order
+   254→   254→↓
+   255→   255→Delivery
+   256→   256→↓
+   257→   257→Invoice
+   258→   258→↓
+   259→   259→Payment
+   260→   260→
+   261→   261→Supplier
+   262→   262→↓
+   263→   263→Purchase Request
+   264→   264→↓
+   265→   265→Purchase Order
+   266→   266→↓
+   267→   267→Goods Receipt
+   268→   268→↓
+   269→   269→Supplier Invoice
+   270→   270→↓
+   271→   271→Payment
+   272→   272→
+   273→   273→Product
+   274→   274→↓
+   275→   275→Stock Movement
+   276→   276→↓
+   277→   277→Warehouse
+   278→   278→↓
+   279→   279→Inventory Balance
+   280→   280→
+   281→   281→==================================================
+   282→   282→7. CORE ERP MODULES
+   283→   283→==================================================
+   284→   284→
+   285→   285→Keep all modules already available in the attached ERP.
+   286→   286→
+   287→   287→Also evaluate whether the following modules are required.
+   288→   288→
+   289→   289→------------------------------------------
+   290→   290→A. DASHBOARD
+   291→   291→------------------------------------------
+   292→   292→
+   293→   293→Create a professional ERP dashboard containing relevant KPIs.
+   294→   294→
+   295→   295→Possible cards:
+   296→   296→
+   297→   297→Total Revenue
+   298→   298→Sales
+   299→   299→Purchases
+   300→   300→Expenses
+   301→   301→Outstanding Receivables
+   302→   302→Outstanding Payables
+   303→   303→Inventory Value
+   304→   304→Low Stock Items
+   305→   305→Active Customers
+   306→   306→Active Suppliers
+   307→   307→Employees
+   308→   308→Open Tasks
+   309→   309→Open Work Orders
+   310→   310→
+   311→   311→Charts should use real application data.
+   312→   312→
+   313→   313→Provide:
+   314→   314→
+   315→   315→Date filters
+   316→   316→Branch filters
+   317→   317→Department filters
+   318→   318→Custom date range
+   319→   319→
+   320→   320→Dashboard data must automatically update after transactions.
+   321→   321→
+   322→   322→------------------------------------------
+   323→   323→B. COMPANY MANAGEMENT
+   324→   324→------------------------------------------
+   325→   325→
+   326→   326→Company profile
+   327→   327→
+   328→   328→Company Name
+   329→   329→Logo
+   330→   330→Registration Number
+   331→   331→Tax Number
+   332→   332→Address
+   333→   333→Phone
+   334→   334→Email
+   335→   335→Website
+   336→   336→Currency
+   337→   337→Country
+   338→   338→Timezone
+   339→   339→Fiscal Year
+   340→   340→Invoice Settings
+   341→   341→
+   342→   342→Support future multi-company architecture.
+   343→   343→
+   344→   344→------------------------------------------
+   345→   345→C. BRANCH MANAGEMENT
+   346→   346→------------------------------------------
+   347→   347→
+   348→   348→Branch Name
+   349→   349→Branch Code
+   350→   350→Address
+   351→   351→Manager
+   352→   352→Phone
+   353→   353→Status
+   354→   354→
+   355→   355→Records should be assignable to branches where appropriate.
+   356→   356→
+   357→   357→------------------------------------------
+   358→   358→D. CUSTOMER MANAGEMENT / CRM
+   359→   359→------------------------------------------
+   360→   360→
+   361→   361→Customer Code
+   362→   362→Customer Name
+   363→   363→Company
+   364→   364→Contact Person
+   365→   365→Phone
+   366→   366→Email
+   367→   367→Address
+   368→   368→Country
+   369→   369→Tax Number
+   370→   370→Credit Limit
+   371→   371→Payment Terms
+   372→   372→Opening Balance
+   373→   373→Current Balance
+   374→   374→Status
+   375→   375→Notes
+   376→   376→
+   377→   377→Functions:
+   378→   378→
+   379→   379→Add
+   380→   380→Edit
+   381→   381→Delete / archive
+   382→   382→Search
+   383→   383→Filter
+   384→   384→Sort
+   385→   385→View customer profile
+   386→   386→Customer transaction history
+   387→   387→Customer statement
+   388→   388→Outstanding balance
+   389→   389→Invoices
+   390→   390→Payments
+   391→   391→
+   392→   392→------------------------------------------
+   393→   393→E. SUPPLIER MANAGEMENT
+   394→   394→------------------------------------------
+   395→   395→
+   396→   396→Supplier Code
+   397→   397→Supplier Name
+   398→   398→Company
+   399→   399→Contact
+   400→   400→Phone
+   401→   401→Email
+   402→   402→Address
+   403→   403→Tax Number
+   404→   404→Payment Terms
+   405→   405→Opening Balance
+   406→   406→Outstanding Balance
+   407→   407→Status
+   408→   408→
+   409→   409→Functions:
+   410→   410→
+   411→   411→Add
+   412→   412→Edit
+   413→   413→Archive
+   414→   414→Search
+   415→   415→Supplier history
+   416→   416→Purchase history
+   417→   417→Supplier statement
+   418→   418→Payments
+   419→   419→Outstanding balance
+   420→   420→
+   421→   421→------------------------------------------
+   422→   422→F. PRODUCT / ITEM MANAGEMENT
+   423→   423→------------------------------------------
+   424→   424→
+   425→   425→Item Code
+   426→   426→SKU
+   427→   427→Barcode
+   428→   428→Product Name
+   429→   429→Category
+   430→   430→Subcategory
+   431→   431→Brand
+   432→   432→Unit
+   433→   433→Purchase Price
+   434→   434→Selling Price
+   435→   435→Tax
+   436→   436→Minimum Stock
+   437→   437→Maximum Stock
+   438→   438→Reorder Level
+   439→   439→Warehouse
+   440→   440→Opening Stock
+   441→   441→Current Stock
+   442→   442→Image
+   443→   443→Description
+   444→   444→Status
+   445→   445→
+   446→   446→Functions:
+   447→   447→
+   448→   448→Add
+   449→   449→Edit
+   450→   450→Clone
+   451→   451→Archive
+   452→   452→Search
+   453→   453→Filter
+   454→   454→Import
+   455→   455→Export
+   456→   456→Stock history
+   457→   457→
+   458→   458→------------------------------------------
+   459→   459→G. CATEGORY MANAGEMENT
+   460→   460→------------------------------------------
+   461→   461→
+   462→   462→Product Category
+   463→   463→Subcategory
+   464→   464→Brand
+   465→   465→Unit of Measure
+   466→   466→
+   467→   467→Allow reusable master-data management.
+   468→   468→
+   469→   469→------------------------------------------
+   470→   470→H. INVENTORY MANAGEMENT
+   471→   471→------------------------------------------
+   472→   472→
+   473→   473→Support:
+   474→   474→
+   475→   475→Warehouses
+   476→   476→Stock In
+   477→   477→Stock Out
+   478→   478→Stock Transfer
+   479→   479→Stock Adjustment
+   480→   480→Opening Stock
+   481→   481→Damaged Stock
+   482→   482→Returned Stock
+   483→   483→Reserved Stock
+   484→   484→Available Stock
+   485→   485→
+   486→   486→Create stock ledger.
+   487→   487→
+   488→   488→Every stock transaction should generate a stock movement.
+   489→   489→
+   490→   490→Example:
+   491→   491→
+   492→   492→movementId
+   493→   493→productId
+   494→   494→warehouseId
+   495→   495→movementType
+   496→   496→quantityIn
+   497→   497→quantityOut
+   498→   498→referenceType
+   499→   499→referenceId
+   500→   500→date
+   501→   501→userId
+   502→   502→
+   503→   503→Never directly manipulate stock totals without creating stock movement history.
+   504→   504→
+   505→   505→------------------------------------------
+   506→   506→I. WAREHOUSE MANAGEMENT
+   507→   507→------------------------------------------
+   508→   508→
+   509→   509→Warehouse Code
+   510→   510→Warehouse Name
+   511→   511→Location
+   512→   512→Manager
+   513→   513→Status
+   514→   514→
+   515→   515→Support transfers between warehouses.
+   516→   516→
+   517→   517→------------------------------------------
+   518→   518→J. SALES
+   519→   519→------------------------------------------
+   520→   520→
+   521→   521→Support sales workflow:
+   522→   522→
+   523→   523→Quotation
+   524→   524→↓
+   525→   525→Sales Order
+   526→   526→↓
+   527→   527→Delivery Note
+   528→   528→↓
+   529→   529→Invoice
+   530→   530→↓
+   531→   531→Payment
+   532→   532→
+   533→   533→Allow conversion between documents.
+   534→   534→
+   535→   535→Quotation → Sales Order
+   536→   536→Sales Order → Invoice
+   537→   537→Invoice → Payment
+   538→   538→
+   539→   539→Fields:
+   540→   540→
+   541→   541→Document Number
+   542→   542→Customer
+   543→   543→Date
+   544→   544→Due Date
+   545→   545→Reference
+   546→   546→Salesperson
+   547→   547→Items
+   548→   548→Quantity
+   549→   549→Unit Price
+   550→   550→Discount
+   551→   551→Tax
+   552→   552→Subtotal
+   553→   553→Total
+   554→   554→Paid
+   555→   555→Balance
+   556→   556→Status
+   557→   557→Notes
+   558→   558→
+   559→   559→Statuses:
+   560→   560→
+   561→   561→Draft
+   562→   562→Pending
+   563→   563→Approved
+   564→   564→Partial
+   565→   565→Paid
+   566→   566→Overdue
+   567→   567→Cancelled
+   568→   568→
+   569→   569→------------------------------------------
+   570→   570→K. PURCHASE
+   571→   571→------------------------------------------
+   572→   572→
+   573→   573→Support:
+   574→   574→
+   575→   575→Purchase Request
+   576→   576→Purchase Order
+   577→   577→Goods Receipt
+   578→   578→Supplier Invoice
+   579→   579→Supplier Payment
+   580→   580→
+   581→   581→Fields:
+   582→   582→
+   583→   583→Supplier
+   584→   584→Reference
+   585→   585→Date
+   586→   586→Items
+   587→   587→Quantity
+   588→   588→Unit Cost
+   589→   589→Discount
+   590→   590→Tax
+   591→   591→Subtotal
+   592→   592→Total
+   593→   593→Payment Status
+   594→   594→Purchase Status
+   595→   595→
+   596→   596→Inventory should increase only when the appropriate goods receipt transaction occurs.
+   597→   597→
+   598→   598→------------------------------------------
+   599→   599→L. EXPENSE MANAGEMENT
+   600→   600→------------------------------------------
+   601→   601→
+   602→   602→Expense Number
+   603→   603→Category
+   604→   604→Date
+   605→   605→Vendor
+   606→   606→Description
+   607→   607→Amount
+   608→   608→Tax
+   609→   609→Payment Method
+   610→   610→Reference
+   611→   611→Attachment
+   612→   612→Branch
+   613→   613→Department
+   614→   614→Status
+   615→   615→
+   616→   616→Support expense categories.
+   617→   617→
+   618→   618→------------------------------------------
+   619→   619→M. PAYMENT MANAGEMENT
+   620→   620→------------------------------------------
+   621→   621→
+   622→   622→Support:
+   623→   623→
+   624→   624→Cash
+   625→   625→Bank Transfer
+   626→   626→Card
+   627→   627→Cheque
+   628→   628→Other
+   629→   629→
+   630→   630→Track:
+   631→   631→
+   632→   632→Incoming Payments
+   633→   633→Outgoing Payments
+   634→   634→Customer Payments
+   635→   635→Supplier Payments
+   636→   636→
+   637→   637→Support:
+   638→   638→
+   639→   639→Partial payment
+   640→   640→Full payment
+   641→   641→Multiple payments per invoice
+   642→   642→Outstanding balances
+   643→   643→
+   644→   644→------------------------------------------
+   645→   645→N. ACCOUNTING FOUNDATION
+   646→   646→------------------------------------------
+   647→   647→
+   648→   648→Prepare architecture for:
+   649→   649→
+   650→   650→Chart of Accounts
+   651→   651→Journal Entries
+   652→   652→General Ledger
+   653→   653→Accounts Receivable
+   654→   654→Accounts Payable
+   655→   655→Trial Balance
+   656→   656→Profit & Loss
+   657→   657→Balance Sheet
+   658→   658→Cash Flow
+   659→   659→
+   660→   660→If the attached ERP already includes accounting, preserve and improve it.
+   661→   661→
+   662→   662→Do not fake accounting calculations.
+   663→   663→
+   664→   664→Use double-entry principles if implementing accounting transactions.
+   665→   665→
+   666→   666→------------------------------------------
+   667→   667→O. EMPLOYEE MANAGEMENT
+   668→   668→------------------------------------------
+   669→   669→
+   670→   670→Employee ID
+   671→   671→Name
+   672→   672→Department
+   673→   673→Designation
+   674→   674→Phone
+   675→   675→Email
+   676→   676→Joining Date
+   677→   677→Salary
+   678→   678→Manager
+   679→   679→Status
+   680→   680→Documents
+   681→   681→Notes
+   682→   682→
+   683→   683→Functions:
+   684→   684→
+   685→   685→Add
+   686→   686→Edit
+   687→   687→Archive
+   688→   688→Search
+   689→   689→Filter
+   690→   690→
+   691→   691→------------------------------------------
+   692→   692→P. DEPARTMENT MANAGEMENT
+   693→   693→------------------------------------------
+   694→   694→
+   695→   695→Department
+   696→   696→Manager
+   697→   697→Employees
+   698→   698→Status
+   699→   699→
+   700→   700→------------------------------------------
+   701→   701→Q. ASSET MANAGEMENT
+   702→   702→------------------------------------------
+   703→   703→
+   704→   704→Asset Code
+   705→   705→Asset Name
+   706→   706→Category
+   707→   707→Brand
+   708→   708→Model
+   709→   709→Serial Number
+   710→   710→Purchase Date
+   711→   711→Purchase Cost
+   712→   712→Location
+   713→   713→Department
+   714→   714→Assigned Employee
+   715→   715→Warranty
+   716→   716→Condition
+   717→   717→Status
+   718→   718→
+   719→   719→Maintain asset history.
+   720→   720→
+   721→   721→------------------------------------------
+   722→   722→R. MAINTENANCE / WORK ORDERS
+   723→   723→------------------------------------------
+   724→   724→
+   725→   725→Work Order Number
+   726→   726→Title
+   727→   727→Asset
+   728→   728→Location
+   729→   729→Priority
+   730→   730→Category
+   731→   731→Assigned Technician
+   732→   732→Reported By
+   733→   733→Description
+   734→   734→Status
+   735→   735→Start Date
+   736→   736→Due Date
+   737→   737→Completion Date
+   738→   738→Parts Used
+   739→   739→Labor Hours
+   740→   740→Cost
+   741→   741→Comments
+   742→   742→Attachments
+   743→   743→
+   744→   744→Statuses:
+   745→   745→
+   746→   746→Open
+   747→   747→Assigned
+   748→   748→In Progress
+   749→   749→On Hold
+   750→   750→Completed
+   751→   751→Cancelled
+   752→   752→
+   753→   753→------------------------------------------
+   754→   754→S. PREVENTIVE MAINTENANCE
+   755→   755→------------------------------------------
+   756→   756→
+   757→   757→Support:
+   758→   758→
+   759→   759→Daily
+   760→   760→Weekly
+   761→   761→Monthly
+   762→   762→Quarterly
+   763→   763→Half-Yearly
+   764→   764→Yearly
+   765→   765→Custom schedules
+   766→   766→
+   767→   767→Automatically calculate:
+   768→   768→
+   769→   769→Next Due Date
+   770→   770→
+   771→   771→Maintain maintenance history.
+   772→   772→
+   773→   773→------------------------------------------
+   774→   774→T. TASK MANAGEMENT
+   775→   775→------------------------------------------
+   776→   776→
+   777→   777→Task
+   778→   778→Description
+   779→   779→Assigned User
+   780→   780→Department
+   781→   781→Priority
+   782→   782→Start Date
+   783→   783→Due Date
+   784→   784→Status
+   785→   785→Progress
+   786→   786→Comments
+   787→   787→
+   788→   788→Support:
+   789→   789→
+   790→   790→Kanban view
+   791→   791→List view
+   792→   792→Calendar-ready structure
+   793→   793→
+   794→   794→------------------------------------------
+   795→   795→U. REPORTING
+   796→   796→------------------------------------------
+   797→   797→
+   798→   798→Create a comprehensive report center.
+   799→   799→
+   800→   800→Possible reports:
+   801→   801→
+   802→   802→Sales Report
+   803→   803→Sales by Product
+   804→   804→Sales by Customer
+   805→   805→Purchases
+   806→   806→Purchase by Supplier
+   807→   807→Inventory
+   808→   808→Stock Ledger
+   809→   809→Low Stock
+   810→   810→Stock Valuation
+   811→   811→Expenses
+   812→   812→Profitability
+   813→   813→Customer Balances
+   814→   814→Supplier Balances
+   815→   815→Payments
+   816→   816→Employee Report
+   817→   817→Asset Report
+   818→   818→Maintenance Report
+   819→   819→Work Order Report
+   820→   820→
+   821→   821→Every report should support relevant:
+   822→   822→
+   823→   823→Date Filter
+   824→   824→Search
+   825→   825→Branch
+   826→   826→Status
+   827→   827→Category
+   828→   828→Export
+   829→   829→Print
+   830→   830→
+   831→   831→==================================================
+   832→   832→8. CRUD OPERATIONS
+   833→   833→==================================================
+   834→   834→
+   835→   835→Every master-data and transaction module should support appropriate CRUD operations.
+   836→   836→
+   837→   837→CREATE
+   838→   838→READ
+   839→   839→UPDATE
+   840→   840→DELETE / ARCHIVE
+   841→   841→
+   842→   842→Prefer soft-delete for important ERP records.
+   843→   843→
+   844→   844→Never permanently delete financial or transactional data without safeguards.
+   845→   845→
+   846→   846→==================================================
+   847→   847→9. SEARCH
+   848→   848→==================================================
+   849→   849→
+   850→   850→Implement real-time search where suitable.
+   851→   851→
+   852→   852→Search should support relevant fields such as:
+   853→   853→
+   854→   854→ID
+   855→   855→Code
+   856→   856→Name
+   857→   857→Description
+   858→   858→Phone
+   859→   859→Email
+   860→   860→Reference Number
+   861→   861→Invoice Number
+   862→   862→SKU
+   863→   863→Barcode
+   864→   864→
+   865→   865→==================================================
+   866→   866→10. FILTERING
+   867→   867→==================================================
+   868→   868→
+   869→   869→Provide context-aware filters.
+   870→   870→
+   871→   871→Examples:
+   872→   872→
+   873→   873→Date
+   874→   874→Status
+   875→   875→Category
+   876→   876→Branch
+   877→   877→Department
+   878→   878→Warehouse
+   879→   879→Customer
+   880→   880→Supplier
+   881→   881→Employee
+   882→   882→Priority
+   883→   883→
+   884→   884→Allow multiple filters where practical.
+   885→   885→
+   886→   886→==================================================
+   887→   887→11. SORTING
+   888→   888→==================================================
+   889→   889→
+   890→   890→Tables must support sorting.
+   891→   891→
+   892→   892→Example:
+   893→   893→
+   894→   894→Name
+   895→   895→Date
+   896→   896→Amount
+   897→   897→Status
+   898→   898→Quantity
+   899→   899→Reference Number
+   900→   900→
+   901→   901→==================================================
+   902→   902→12. PAGINATION
+   903→   903→==================================================
+   904→   904→
+   905→   905→Large tables must support pagination.
+   906→   906→
+   907→   907→Examples:
+   908→   908→
+   909→   909→10
+   910→   910→25
+   911→   911→50
+   912→   912→100
+   913→   913→
+   914→   914→records per page.
+   915→   915→
+   916→   916→Do not attempt to render thousands of rows simultaneously.
+   917→   917→
+   918→   918→==================================================
+   919→   919→13. FORMS
+   920→   920→==================================================
+   921→   921→
+   922→   922→Create professional forms.
+   923→   923→
+   924→   924→Requirements:
+   925→   925→
+   926→   926→Clear labels
+   927→   927→Logical sections
+   928→   928→Required field indicator
+   929→   929→Field validation
+   930→   930→Helpful error messages
+   931→   931→Default values
+   932→   932→Dropdowns where appropriate
+   933→   933→Date pickers
+   934→   934→Numeric validation
+   935→   935→Currency formatting
+   936→   936→
+   937→   937→Prevent invalid submissions.
+   938→   938→
+   939→   939→==================================================
+   940→   940→14. VALIDATION
+   941→   941→==================================================
+   942→   942→
+   943→   943→Implement validation for:
+   944→   944→
+   945→   945→Required values
+   946→   946→Email
+   947→   947→Phone
+   948→   948→Numeric values
+   949→   949→Negative values
+   950→   950→Quantities
+   951→   951→Dates
+   952→   952→Duplicate codes
+   953→   953→Duplicate invoice numbers
+   954→   954→Duplicate SKUs
+   955→   955→
+   956→   956→Business validation should also be included.
+   957→   957→
+   958→   958→Example:
+   959→   959→
+   960→   960→Cannot sell more stock than available unless negative inventory is explicitly allowed.
+   961→   961→
+   962→   962→==================================================
+   963→   963→15. DOCUMENT NUMBERING
+   964→   964→==================================================
+   965→   965→
+   966→   966→Create automatic numbering.
+   967→   967→
+   968→   968→Example:
+   969→   969→
+   970→   970→CUS-000001
+   971→   971→SUP-000001
+   972→   972→QUO-2026-000001
+   973→   973→SO-2026-000001
+   974→   974→INV-2026-000001
+   975→   975→PO-2026-000001
+   976→   976→GRN-2026-000001
+   977→   977→WO-2026-000001
+   978→   978→AST-000001
+   979→   979→
+   980→   980→Allow prefixes to be configured in Settings.
+   981→   981→
+   982→   982→==================================================
+   983→   983→16. CALCULATIONS
+   984→   984→==================================================
+   985→   985→
+   986→   986→All calculations must work.
+   987→   987→
+   988→   988→Example:
+   989→   989→
+   990→   990→Quantity × Unit Price = Line Total
+   991→   991→
+   992→   992→Subtotal
+   993→   993→- Discount
+   994→   994→+ Tax
+   995→   995→= Grand Total
+   996→   996→
+   997→   997→Grand Total
+   998→   998→- Payments
+   999→   999→= Balance Due
+  1000→  1000→
+  1001→  1001→Round currency correctly.
+  1002→  1002→
+  1003→  1003→Avoid floating-point calculation errors where possible.
+  1004→  1004→
+  1005→  1005→==================================================
+  1006→  1006→17. AUDIT LOG
+  1007→  1007→==================================================
+  1008→  1008→
+  1009→  1009→Create an audit trail.
+  1010→  1010→
+  1011→  1011→Track:
+  1012→  1012→
+  1013→  1013→User
+  1014→  1014→Action
+  1015→  1015→Module
+  1016→  1016→Record ID
+  1017→  1017→Old Value
+  1018→  1018→New Value
+  1019→  1019→Date
+  1020→  1020→Time
+  1021→  1021→
+  1022→  1022→Actions:
+  1023→  1023→
+  1024→  1024→Created
+  1025→  1025→Updated
+  1026→  1026→Deleted
+  1027→  1027→Approved
+  1028→  1028→Cancelled
+  1029→  1029→Logged In
+  1030→  1030→Exported
+  1031→  1031→Imported
+  1032→  1032→
+  1033→  1033→==================================================
+  1034→  1034→18. USER MANAGEMENT
+  1035→  1035→==================================================
+  1036→  1036→
+  1037→  1037→Prepare structure for multiple users.
+  1038→  1038→
+  1039→  1039→User fields:
+  1040→  1040→
+  1041→  1041→Name
+  1042→  1042→Email
+  1043→  1043→Username
+  1044→  1044→Role
+  1045→  1045→Branch
+  1046→  1046→Department
+  1047→  1047→Status
+  1048→  1048→
+  1049→  1049→Roles may include:
+  1050→  1050→
+  1051→  1051→Super Admin
+  1052→  1052→Administrator
+  1053→  1053→Manager
+  1054→  1054→Accountant
+  1055→  1055→Sales Manager
+  1056→  1056→Sales User
+  1057→  1057→Purchasing
+  1058→  1058→Storekeeper
+  1059→  1059→HR
+  1060→  1060→Technician
+  1061→  1061→Employee
+  1062→  1062→Viewer
+  1063→  1063→
+  1064→  1064→==================================================
+  1065→  1065→19. ROLE BASED ACCESS CONTROL
+  1066→  1066→==================================================
+  1067→  1067→
+  1068→  1068→Design RBAC.
+  1069→  1069→
+  1070→  1070→Permission examples:
+  1071→  1071→
+  1072→  1072→View
+  1073→  1073→Create
+  1074→  1074→Edit
+  1075→  1075→Delete
+  1076→  1076→Approve
+  1077→  1077→Cancel
+  1078→  1078→Print
+  1079→  1079→Export
+  1080→  1080→Import
+  1081→  1081→
+  1082→  1082→Permissions should be configurable per module.
+  1083→  1083→
+  1084→  1084→Example:
+  1085→  1085→
+  1086→  1086→Inventory
+  1087→  1087→View: YES
+  1088→  1088→Create: YES
+  1089→  1089→Edit: YES
+  1090→  1090→Delete: NO
+  1091→  1091→Approve: NO
+  1092→  1092→
+  1093→  1093→Even if authentication is simulated locally initially, architecture should be compatible with server-side RBAC later.
+  1094→  1094→
+  1095→  1095→==================================================
+  1096→  1096→20. LOGIN
+  1097→  1097→==================================================
+  1098→  1098→
+  1099→  1099→Create a professional login screen if required by the attached ERP.
+  1100→  1100→
+  1101→  1101→For offline demonstration, local accounts may be used.
+  1102→  1102→
+  1103→  1103→But clearly separate authentication logic so it can later connect to:
+  1104→  1104→
+  1105→  1105→Supabase Auth
+  1106→  1106→Firebase Auth
+  1107→  1107→Auth0
+  1108→  1108→Custom API
+  1109→  1109→
+  1110→  1110→Never treat frontend-only authentication as production security.
+  1111→  1111→
+  1112→  1112→==================================================
+  1113→  1113→21. UI / UX
+  1114→  1114→==================================================
+  1115→  1115→
+  1116→  1116→Create a premium enterprise interface.
+  1117→  1117→
+  1118→  1118→Style direction:
+  1119→  1119→
+  1120→  1120→Modern
+  1121→  1121→Professional
+  1122→  1122→Minimal
+  1123→  1123→Clean
+  1124→  1124→Corporate
+  1125→  1125→High information density
+  1126→  1126→Easy navigation
+  1127→  1127→
+  1128→  1128→Avoid excessive gradients or childish styling.
+  1129→  1129→
+  1130→  1130→Use:
+  1131→  1131→
+  1132→  1132→Sidebar
+  1133→  1133→Top navigation bar
+  1134→  1134→Breadcrumbs
+  1135→  1135→Dashboard cards
+  1136→  1136→Professional tables
+  1137→  1137→Modals
+  1138→  1138→Drawers
+  1139→  1139→Tooltips
+  1140→  1140→Dropdowns
+  1141→  1141→Tabs
+  1142→  1142→Badges
+  1143→  1143→Notifications
+  1144→  1144→Toast messages
+  1145→  1145→
+  1146→  1146→==================================================
+  1147→  1147→22. SIDEBAR
+  1148→  1148→==================================================
+  1149→  1149→
+  1150→  1150→Sidebar should support:
+  1151→  1151→
+  1152→  1152→Logo
+  1153→  1153→Company Name
+  1154→  1154→Navigation
+  1155→  1155→Expandable modules
+  1156→  1156→Active state
+  1157→  1157→Collapse
+  1158→  1158→Mobile mode
+  1159→  1159→
+  1160→  1160→Possible menu:
+  1161→  1161→
+  1162→  1162→Dashboard
+  1163→  1163→
+  1164→  1164→CRM
+  1165→  1165→  Customers
+  1166→  1166→
+  1167→  1167→Sales
+  1168→  1168→  Quotations
+  1169→  1169→  Sales Orders
+  1170→  1170→  Deliveries
+  1171→  1171→  Invoices
+  1172→  1172→  Payments
+  1173→  1173→
+  1174→  1174→Purchasing
+  1175→  1175→  Suppliers
+  1176→  1176→  Purchase Requests
+  1177→  1177→  Purchase Orders
+  1178→  1178→  Goods Receipts
+  1179→  1179→
+  1180→  1180→Inventory
+  1181→  1181→  Products
+  1182→  1182→  Categories
+  1183→  1183→  Warehouses
+  1184→  1184→  Stock Movements
+  1185→  1185→  Adjustments
+  1186→  1186→
+  1187→  1187→Finance
+  1188→  1188→  Expenses
+  1189→  1189→  Payments
+  1190→  1190→  Accounting
+  1191→  1191→
+  1192→  1192→HR
+  1193→  1193→  Employees
+  1194→  1194→  Departments
+  1195→  1195→
+  1196→  1196→Assets
+  1197→  1197→  Asset Register
+  1198→  1198→  Maintenance
+  1199→  1199→  Work Orders
+  1200→  1200→  Preventive Maintenance
+  1201→  1201→
+  1202→  1202→Tasks
+  1203→  1203→
+  1204→  1204→Reports
+  1205→  1205→
+  1206→  1206→Administration
+  1207→  1207→  Users
+  1208→  1208→  Roles
+  1209→  1209→  Audit Logs
+  1210→  1210→
+  1211→  1211→Settings
+  1212→  1212→
+  1213→  1213→Modify this structure based on the attached ERP.
+  1214→  1214→
+  1215→  1215→==================================================
+  1216→  1216→23. RESPONSIVE DESIGN
+  1217→  1217→==================================================
+  1218→  1218→
+  1219→  1219→Application must work on:
+  1220→  1220→
+  1221→  1221→1920 desktop
+  1222→  1222→1366 laptop
+  1223→  1223→Tablet
+  1224→  1224→Mobile
+  1225→  1225→
+  1226→  1226→No horizontal overflow except where intentionally used for large data tables.
+  1227→  1227→
+  1228→  1228→On mobile:
+  1229→  1229→
+  1230→  1230→Collapse sidebar
+  1231→  1231→Provide mobile navigation
+  1232→  1232→Resize cards
+  1233→  1233→Stack forms
+  1234→  1234→Make tables usable
+  1235→  1235→Keep primary actions accessible
+  1236→  1236→
+  1237→  1237→==================================================
+  1238→  1238→24. THEMES
+  1239→  1239→==================================================
+  1240→  1240→
+  1241→  1241→Support:
+  1242→  1242→
+  1243→  1243→Light Mode
+  1244→  1244→Dark Mode
+  1245→  1245→
+  1246→  1246→Remember user preference.
+  1247→  1247→
+  1248→  1248→==================================================
+  1249→  1249→25. SETTINGS
+  1250→  1250→==================================================
+  1251→  1251→
+  1252→  1252→Create centralized settings.
+  1253→  1253→
+  1254→  1254→Possible sections:
+  1255→  1255→
+  1256→  1256→General
+  1257→  1257→Company
+  1258→  1258→Branches
+  1259→  1259→Currency
+  1260→  1260→Tax
+  1261→  1261→Invoice
+  1262→  1262→Document Numbering
+  1263→  1263→Inventory
+  1264→  1264→Sales
+  1265→  1265→Purchasing
+  1266→  1266→Email
+  1267→  1267→Notifications
+  1268→  1268→Users
+  1269→  1269→Permissions
+  1270→  1270→Backup
+  1271→  1271→Appearance
+  1272→  1272→
+  1273→  1273→==================================================
+  1274→  1274→26. IMPORT
+  1275→  1275→==================================================
+  1276→  1276→
+  1277→  1277→Provide import support where useful.
+  1278→  1278→
+  1279→  1279→CSV import for:
+  1280→  1280→
+  1281→  1281→Products
+  1282→  1282→Customers
+  1283→  1283→Suppliers
+  1284→  1284→Employees
+  1285→  1285→Assets
+  1286→  1286→
+  1287→  1287→Import workflow:
+  1288→  1288→
+  1289→  1289→Select file
+  1290→  1290→Preview data
+  1291→  1291→Map columns
+  1292→  1292→Validate
+  1293→  1293→Show errors
+  1294→  1294→Confirm import
+  1295→  1295→Import valid rows
+  1296→  1296→
+  1297→  1297→Do not blindly import corrupt data.
+  1298→  1298→
+  1299→  1299→==================================================
+  1300→  1300→27. EXPORT
+  1301→  1301→==================================================
+  1302→  1302→
+  1303→  1303→Support:
+  1304→  1304→
+  1305→  1305→CSV
+  1306→  1306→Excel-compatible CSV/XLSX where technically available
+  1307→  1307→JSON
+  1308→  1308→Print
+  1309→  1309→PDF-ready print layout
+  1310→  1310→
+  1311→  1311→Export actual filtered data.
+  1312→  1312→
+  1313→  1313→==================================================
+  1314→  1314→28. PRINTING
+  1315→  1315→==================================================
+  1316→  1316→
+  1317→  1317→Create professional print layouts for:
+  1318→  1318→
+  1319→  1319→Quotation
+  1320→  1320→Sales Order
+  1321→  1321→Invoice
+  1322→  1322→Purchase Order
+  1323→  1323→Delivery Note
+  1324→  1324→Goods Receipt
+  1325→  1325→Customer Statement
+  1326→  1326→Supplier Statement
+  1327→  1327→Work Order
+  1328→  1328→Reports
+  1329→  1329→
+  1330→  1330→Printed documents should contain:
+  1331→  1331→
+  1332→  1332→Logo
+  1333→  1333→Company Information
+  1334→  1334→Document Number
+  1335→  1335→Date
+  1336→  1336→Party Information
+  1337→  1337→Item Table
+  1338→  1338→Totals
+  1339→  1339→Terms
+  1340→  1340→Signature Area
+  1341→  1341→
+  1342→  1342→==================================================
+  1343→  1343→29. BACKUP SYSTEM
+  1344→  1344→==================================================
+  1345→  1345→
+  1346→  1346→Create full database backup.
+  1347→  1347→
+  1348→  1348→Provide:
+  1349→  1349→
+  1350→  1350→Export Backup
+  1351→  1351→
+  1352→  1352→Example:
+  1353→  1353→
+  1354→  1354→erp-backup-YYYY-MM-DD-HHMM.json
+  1355→  1355→
+  1356→  1356→Backup should include all IndexedDB data.
+  1357→  1357→
+  1358→  1358→==================================================
+  1359→  1359→30. RESTORE SYSTEM
+  1360→  1360→==================================================
+  1361→  1361→
+  1362→  1362→Provide:
+  1363→  1363→
+  1364→  1364→Import Backup
+  1365→  1365→Validate Backup
+  1366→  1366→Show summary
+  1367→  1367→Confirm Restore
+  1368→  1368→
+  1369→  1369→Never overwrite current data without confirmation.
+  1370→  1370→
+  1371→  1371→==================================================
+  1372→  1372→31. AUTO SAVE
+  1373→  1373→==================================================
+  1374→  1374→
+  1375→  1375→All committed data must persist automatically in IndexedDB.
+  1376→  1376→
+  1377→  1377→Page refresh must not erase records.
+  1378→  1378→
+  1379→  1379→Closing/reopening the browser must preserve data.
+  1380→  1380→
+  1381→  1381→==================================================
+  1382→  1382→32. SAMPLE DATA
+  1383→  1383→==================================================
+  1384→  1384→
+  1385→  1385→Provide a small sample dataset only for initial demonstration.
+  1386→  1386→
+  1387→  1387→Do NOT depend on sample data for system operation.
+  1388→  1388→
+  1389→  1389→Allow sample data to be removed.
+  1390→  1390→
+  1391→  1391→==================================================
+  1392→  1392→33. NOTIFICATIONS
+  1393→  1393→==================================================
+  1394→  1394→
+  1395→  1395→Create notification architecture.
+  1396→  1396→
+  1397→  1397→Examples:
+  1398→  1398→
+  1399→  1399→Low stock
+  1400→  1400→Overdue invoice
+  1401→  1401→Pending approval
+  1402→  1402→Work order overdue
+  1403→  1403→Maintenance due
+  1404→  1404→Task due
+  1405→  1405→
+  1406→  1406→Notifications should derive from real system data.
+  1407→  1407→
+  1408→  1408→==================================================
+  1409→  1409→34. GLOBAL SEARCH
+  1410→  1410→==================================================
+  1411→  1411→
+  1412→  1412→Implement a global search architecture.
+  1413→  1413→
+  1414→  1414→Possible search entities:
+  1415→  1415→
+  1416→  1416→Customers
+  1417→  1417→Suppliers
+  1418→  1418→Invoices
+  1419→  1419→Products
+  1420→  1420→Purchase Orders
+  1421→  1421→Work Orders
+  1422→  1422→Employees
+  1423→  1423→Assets
+  1424→  1424→
+  1425→  1425→==================================================
+  1426→  1426→35. COMMANDS / QUICK ACTIONS
+  1427→  1427→==================================================
+  1428→  1428→
+  1429→  1429→Provide convenient quick actions such as:
+  1430→  1430→
+  1431→  1431→+ Customer
+  1432→  1432→+ Supplier
+  1433→  1433→+ Product
+  1434→  1434→+ Invoice
+  1435→  1435→+ Purchase Order
+  1436→  1436→+ Expense
+  1437→  1437→+ Employee
+  1438→  1438→+ Work Order
+  1439→  1439→
+  1440→  1440→==================================================
+  1441→  1441→36. ERROR HANDLING
+  1442→  1442→==================================================
+  1443→  1443→
+  1444→  1444→Never allow silent errors.
+  1445→  1445→
+  1446→  1446→Display user-friendly messages.
+  1447→  1447→
+  1448→  1448→Examples:
+  1449→  1449→
+  1450→  1450→Record saved successfully.
+  1451→  1451→
+  1452→  1452→Unable to save record.
+  1453→  1453→
+  1454→  1454→Duplicate SKU detected.
+  1455→  1455→
+  1456→  1456→Insufficient inventory.
+  1457→  1457→
+  1458→  1458→Invalid date range.
+  1459→  1459→
+  1460→  1460→==================================================
+  1461→  1461→37. CONFIRMATION
+  1462→  1462→==================================================
+  1463→  1463→
+  1464→  1464→Require confirmation for important actions:
+  1465→  1465→
+  1466→  1466→Delete
+  1467→  1467→Cancel invoice
+  1468→  1468→Restore backup
+  1469→  1469→Reset application
+  1470→  1470→Stock adjustment
+  1471→  1471→Financial transaction reversal
+  1472→  1472→
+  1473→  1473→==================================================
+  1474→  1474→38. PERFORMANCE
+  1475→  1475→==================================================
+  1476→  1476→
+  1477→  1477→Optimize for large datasets.
+  1478→  1478→
+  1479→  1479→Avoid unnecessary DOM rendering.
+  1480→  1480→
+  1481→  1481→Use:
+  1482→  1482→
+  1483→  1483→Pagination
+  1484→  1484→IndexedDB indexes
+  1485→  1485→Efficient filtering
+  1486→  1486→Reusable UI components
+  1487→  1487→Event delegation where useful
+  1488→  1488→
+  1489→  1489→System should remain responsive with thousands of records.
+  1490→  1490→
+  1491→  1491→==================================================
+  1492→  1492→39. CODE QUALITY
+  1493→  1493→==================================================
+  1494→  1494→
+  1495→  1495→Code must be:
+  1496→  1496→
+  1497→  1497→Readable
+  1498→  1498→Maintainable
+  1499→  1499→Modular
+  1500→  1500→Well structured
+  1501→  1501→Consistently named
+  1502→  1502→Commented where necessary
+  1503→  1503→
+  1504→  1504→Avoid:
+  1505→  1505→
+  1506→  1506→Massive duplicated functions
+  1507→  1507→Inline onclick everywhere
+  1508→  1508→Global variable pollution
+  1509→  1509→Repeated CSS
+  1510→  1510→Spaghetti JavaScript
+  1511→  1511→
+  1512→  1512→==================================================
+  1513→  1513→40. STATE MANAGEMENT
+  1514→  1514→==================================================
+  1515→  1515→
+  1516→  1516→Create centralized application state where appropriate.
+  1517→  1517→
+  1518→  1518→State may contain:
+  1519→  1519→
+  1520→  1520→Current user
+  1521→  1521→Company
+  1522→  1522→Branch
+  1523→  1523→Theme
+  1524→  1524→Current module
+  1525→  1525→Filters
+  1526→  1526→Notifications
+  1527→  1527→
+  1528→  1528→Do not unnecessarily duplicate state.
+  1529→  1529→
+  1530→  1530→==================================================
+  1531→  1531→41. ROUTING
+  1532→  1532→==================================================
+  1533→  1533→
+  1534→  1534→Use SPA-style routing where practical.
+  1535→  1535→
+  1536→  1536→Example:
+  1537→  1537→
+  1538→  1538→#/dashboard
+  1539→  1539→#/customers
+  1540→  1540→#/customers/123
+  1541→  1541→#/sales/invoices
+  1542→  1542→#/inventory/products
+  1543→  1543→#/reports/sales
+  1544→  1544→#/settings
+  1545→  1545→
+  1546→  1546→Browser back/forward should work appropriately.
+  1547→  1547→
+  1548→  1548→==================================================
+  1549→  1549→42. REUSABLE COMPONENTS
+  1550→  1550→==================================================
+  1551→  1551→
+  1552→  1552→Develop reusable components/functions for:
+  1553→  1553→
+  1554→  1554→Tables
+  1555→  1555→Forms
+  1556→  1556→Modal
+  1557→  1557→Dropdown
+  1558→  1558→Badge
+  1559→  1559→Pagination
+  1560→  1560→Search
+  1561→  1561→Filters
+  1562→  1562→Toast
+  1563→  1563→Confirmation
+  1564→  1564→Date picker
+  1565→  1565→Currency input
+  1566→  1566→Print template
+  1567→  1567→
+  1568→  1568→==================================================
+  1569→  1569→43. SaaS READY ARCHITECTURE
+  1570→  1570→==================================================
+  1571→  1571→
+  1572→  1572→Prepare every important record for tenant isolation.
+  1573→  1573→
+  1574→  1574→Example:
+  1575→  1575→
+  1576→  1576→tenantId
+  1577→  1577→companyId
+  1578→  1578→branchId
+  1579→  1579→
+  1580→  1580→Eventually:
+  1581→  1581→
+  1582→  1582→Tenant A must never access Tenant B data.
+  1583→  1583→
+  1584→  1584→Do not rely on frontend filtering for production tenant security.
+  1585→  1585→
+  1586→  1586→The backend/database must enforce tenant boundaries when SaaS migration occurs.
+  1587→  1587→
+  1588→  1588→==================================================
+  1589→  1589→44. FUTURE API LAYER
+  1590→  1590→==================================================
+  1591→  1591→
+  1592→  1592→Create repositories/services such as:
+  1593→  1593→
+  1594→  1594→CustomerService
+  1595→  1595→ProductService
+  1596→  1596→SalesService
+  1597→  1597→PurchaseService
+  1598→  1598→InventoryService
+  1599→  1599→EmployeeService
+  1600→  1600→AssetService
+  1601→  1601→ReportService
+  1602→  1602→
+  1603→  1603→Initial implementation:
+  1604→  1604→
+  1605→  1605→IndexedDBRepository
+  1606→  1606→
+  1607→  1607→Future implementation:
+  1608→  1608→
+  1609→  1609→ApiRepository
+  1610→  1610→
+  1611→  1611→This separation is extremely important.
+  1612→  1612→
+  1613→  1613→==================================================
+  1614→  1614→45. FUTURE CLOUD DATABASE
+  1615→  1615→==================================================
+  1616→  1616→
+  1617→  1617→Architecture should support migration to PostgreSQL.
+  1618→  1618→
+  1619→  1619→Possible future tables:
+  1620→  1620→
+  1621→  1621→tenants
+  1622→  1622→companies
+  1623→  1623→branches
+  1624→  1624→users
+  1625→  1625→roles
+  1626→  1626→permissions
+  1627→  1627→customers
+  1628→  1628→suppliers
+  1629→  1629→products
+  1630→  1630→warehouses
+  1631→  1631→stock_movements
+  1632→  1632→quotations
+  1633→  1633→sales_orders
+  1634→  1634→invoices
+  1635→  1635→invoice_items
+  1636→  1636→payments
+  1637→  1637→purchase_orders
+  1638→  1638→purchase_items
+  1639→  1639→expenses
+  1640→  1640→employees
+  1641→  1641→assets
+  1642→  1642→work_orders
+  1643→  1643→tasks
+  1644→  1644→notifications
+  1645→  1645→audit_logs
+  1646→  1646→settings
+  1647→  1647→
+  1648→  1648→==================================================
+  1649→  1649→46. FUTURE AI CAPABILITY
+  1650→  1650→==================================================
+  1651→  1651→
+  1652→  1652→Prepare architecture for adding an AI Assistant.
+  1653→  1653→
+  1654→  1654→Future AI capabilities may include:
+  1655→  1655→
+  1656→  1656→"Show invoices overdue more than 30 days."
+  1657→  1657→
+  1658→  1658→"Which products are running low?"
+  1659→  1659→
+  1660→  1660→"Generate monthly sales summary."
+  1661→  1661→
+  1662→  1662→"Which customers owe the most?"
+  1663→  1663→
+  1664→  1664→"Show maintenance due this week."
+  1665→  1665→
+  1666→  1666→"Analyze expenses."
+  1667→  1667→
+  1668→  1668→AI must query controlled application APIs/data services rather than directly manipulating core data.
+  1669→  1669→
+  1670→  1670→==================================================
+  1671→  1671→47. SECURITY PRINCIPLES
+  1672→  1672→==================================================
+  1673→  1673→
+  1674→  1674→Even for the initial browser version:
+  1675→  1675→
+  1676→  1676→Sanitize user input.
+  1677→  1677→
+  1678→  1678→Avoid unsafe HTML injection.
+  1679→  1679→
+  1680→  1680→Do not use eval().
+  1681→  1681→
+  1682→  1682→Escape dynamic content.
+  1683→  1683→
+  1684→  1684→Validate imported files.
+  1685→  1685→
+  1686→  1686→Do not expose real production passwords or API keys in HTML.
+  1687→  1687→
+  1688→  1688→Never place database service-role secrets in frontend code.
+  1689→  1689→
+  1690→  1690→==================================================
+  1691→  1691→48. ACCESSIBILITY
+  1692→  1692→==================================================
+  1693→  1693→
+  1694→  1694→Use:
+  1695→  1695→
+  1696→  1696→Semantic HTML
+  1697→  1697→Keyboard navigation
+  1698→  1698→Readable font sizes
+  1699→  1699→Proper labels
+  1700→  1700→Visible focus states
+  1701→  1701→Sufficient contrast
+  1702→  1702→
+  1703→  1703→==================================================
+  1704→  1704→49. PROFESSIONAL EMPTY STATES
+  1705→  1705→==================================================
+  1706→  1706→
+  1707→  1707→When no records exist, show useful messages.
+  1708→  1708→
+  1709→  1709→Example:
+  1710→  1710→
+  1711→  1711→"No customers have been created yet."
+  1712→  1712→
+  1713→  1713→Button:
+  1714→  1714→
+  1715→  1715→+ Add Customer
+  1716→  1716→
+  1717→  1717→Do not display broken empty tables.
+  1718→  1718→
+  1719→  1719→==================================================
+  1720→  1720→50. LOADING STATES
+  1721→  1721→==================================================
+  1722→  1722→
+  1723→  1723→For operations requiring processing, provide loading indicators.
+  1724→  1724→
+  1725→  1725→Prevent duplicate submissions.
+  1726→  1726→
+  1727→  1727→==================================================
+  1728→  1728→51. DATA RELATIONSHIPS
+  1729→  1729→==================================================
+  1730→  1730→
+  1731→  1731→Maintain referential integrity at the application level.
+  1732→  1732→
+  1733→  1733→Example:
+  1734→  1734→
+  1735→  1735→Do not delete a customer that has historical invoices.
+  1736→  1736→
+  1737→  1737→Instead allow:
+  1738→  1738→
+  1739→  1739→Deactivate customer
+  1740→  1740→
+  1741→  1741→Historical transactions must remain intact.
+  1742→  1742→
+  1743→  1743→==================================================
+  1744→  1744→52. TRANSACTION REVERSAL
+  1745→  1745→==================================================
+  1746→  1746→
+  1747→  1747→Financial/stock records should generally be reversed or cancelled instead of simply deleted.
+  1748→  1748→
+  1749→  1749→Example:
+  1750→  1750→
+  1751→  1751→Posted Invoice
+  1752→  1752→→ Cancel Invoice
+  1753→  1753→
+  1754→  1754→Stock Receipt
+  1755→  1755→→ Reversal Entry
+  1756→  1756→
+  1757→  1757→Maintain traceability.
+  1758→  1758→
+  1759→  1759→==================================================
+  1760→  1760→53. DASHBOARD CALCULATIONS
+  1761→  1761→==================================================
+  1762→  1762→
+  1763→  1763→Never hard-code KPI values.
+  1764→  1764→
+  1765→  1765→Example:
+  1766→  1766→
+  1767→  1767→Revenue = sum of applicable invoice/sales transactions.
+  1768→  1768→
+  1769→  1769→Outstanding = Invoice Total - Payments.
+  1770→  1770→
+  1771→  1771→Low Stock = products where available quantity <= reorder level.
+  1772→  1772→
+  1773→  1773→==================================================
+  1774→  1774→54. REPORT ENGINE
+  1775→  1775→==================================================
+  1776→  1776→
+  1777→  1777→Reports should calculate data dynamically from actual records.
+  1778→  1778→
+  1779→  1779→Provide reusable report utilities.
+  1780→  1780→
+  1781→  1781→Reports must react to filters.
+  1782→  1782→
+  1783→  1783→==================================================
+  1784→  1784→55. DATE SYSTEM
+  1785→  1785→==================================================
+  1786→  1786→
+  1787→  1787→Store dates consistently.
+  1788→  1788→
+  1789→  1789→Allow configured display format such as:
+  1790→  1790→
+  1791→  1791→DD/MM/YYYY
+  1792→  1792→MM/DD/YYYY
+  1793→  1793→YYYY-MM-DD
+  1794→  1794→
+  1795→  1795→Use proper date comparison logic.
+  1796→  1796→
+  1797→  1797→==================================================
+  1798→  1798→56. CURRENCY SYSTEM
+  1799→  1799→==================================================
+  1800→  1800→
+  1801→  1801→Support configurable currency.
+  1802→  1802→
+  1803→  1803→Example:
+  1804→  1804→
+  1805→  1805→QAR
+  1806→  1806→USD
+  1807→  1807→EUR
+  1808→  1808→GBP
+  1809→  1809→PKR
+  1810→  1810→AED
+  1811→  1811→SAR
+  1812→  1812→
+  1813→  1813→Currency formatting should come from company settings.
+  1814→  1814→
+  1815→  1815→Prepare architecture for future multi-currency support.
+  1816→  1816→
+  1817→  1817→==================================================
+  1818→  1818→57. TAX SYSTEM
+  1819→  1819→==================================================
+  1820→  1820→
+  1821→  1821→Support configurable taxes.
+  1822→  1822→
+  1823→  1823→Tax may be:
+  1824→  1824→
+  1825→  1825→Inclusive
+  1826→  1826→Exclusive
+  1827→  1827→
+  1828→  1828→Allow zero-tax items.
+  1829→  1829→
+  1830→  1830→Prepare for multiple tax rates.
+  1831→  1831→
+  1832→  1832→==================================================
+  1833→  1833→58. APPROVAL WORKFLOWS
+  1834→  1834→==================================================
+  1835→  1835→
+  1836→  1836→Prepare architecture for approvals.
+  1837→  1837→
+  1838→  1838→Examples:
+  1839→  1839→
+  1840→  1840→Purchase Request
+  1841→  1841→Draft → Submitted → Approved → Rejected
+  1842→  1842→
+  1843→  1843→Purchase Order
+  1844→  1844→Draft → Pending Approval → Approved
+  1845→  1845→
+  1846→  1846→Expense
+  1847→  1847→Draft → Submitted → Approved → Paid
+  1848→  1848→
+  1849→  1849→==================================================
+  1850→  1850→59. ATTACHMENTS
+  1851→  1851→==================================================
+  1852→  1852→
+  1853→  1853→Where practical allow supporting files/images for:
+  1854→  1854→
+  1855→  1855→Customers
+  1856→  1856→Suppliers
+  1857→  1857→Products
+  1858→  1858→Employees
+  1859→  1859→Assets
+  1860→  1860→Expenses
+  1861→  1861→Work Orders
+  1862→  1862→
+  1863→  1863→For the local version, store responsibly.
+  1864→  1864→
+  1865→  1865→For future SaaS, architecture should support external object storage such as:
+  1866→  1866→
+  1867→  1867→Cloudflare R2
+  1868→  1868→AWS S3
+  1869→  1869→Supabase Storage
+  1870→  1870→
+  1871→  1871→Do not store massive binary objects directly inside relational database tables.
+  1872→  1872→
+  1873→  1873→==================================================
+  1874→  1874→60. IMAGE STORAGE ARCHITECTURE
+  1875→  1875→==================================================
+  1876→  1876→
+  1877→  1877→For future cloud deployment:
+  1878→  1878→
+  1879→  1879→Store file/object path in the database.
+  1880→  1880→
+  1881→  1881→Example:
+  1882→  1882→
+  1883→  1883→product.imagePath
+  1884→  1884→
+  1885→  1885→Actual file:
+  1886→  1886→
+  1887→  1887→Cloudflare R2 / Object Storage
+  1888→  1888→
+  1889→  1889→Create a storage abstraction layer if appropriate.
+  1890→  1890→
+  1891→  1891→==================================================
+  1892→  1892→61. DATA BACKUP COMPATIBILITY
+  1893→  1893→==================================================
+  1894→  1894→
+  1895→  1895→Backup files should include a schema version.
+  1896→  1896→
+  1897→  1897→Example:
+  1898→  1898→
+  1899→  1899→{
+  1900→  1900→  "schemaVersion": 1,
+  1901→  1901→  "appVersion": "1.0.0",
+  1902→  1902→  "exportedAt": "...",
+  1903→  1903→  "data": {}
+  1904→  1904→}
+  1905→  1905→
+  1906→  1906→This allows future migrations.
+  1907→  1907→
+  1908→  1908→==================================================
+  1909→  1909→62. VERSIONING
+  1910→  1910→==================================================
+  1911→  1911→
+  1912→  1912→Maintain application version information.
+  1913→  1913→
+  1914→  1914→Example:
+  1915→  1915→
+  1916→  1916→ERP Version 1.0.0
+  1917→  1917→
+  1918→  1918→Prepare data migration utilities when IndexedDB schemas change.
+  1919→  1919→
+  1920→  1920→==================================================
+  1921→  1921→63. SYSTEM HEALTH
+  1922→  1922→==================================================
+  1923→  1923→
+  1924→  1924→Provide optional administrative information:
+  1925→  1925→
+  1926→  1926→Application Version
+  1927→  1927→Database Version
+  1928→  1928→Record Counts
+  1929→  1929→Storage Usage
+  1930→  1930→Last Backup
+  1931→  1931→Environment
+  1932→  1932→
+  1933→  1933→==================================================
+  1934→  1934→64. DEMO VS PRODUCTION
+  1935→  1935→==================================================
+  1936→  1936→
+  1937→  1937→Clearly separate:
+  1938→  1938→
+  1939→  1939→Demo functionality
+  1940→  1940→
+  1941→  1941→from
+  1942→  1942→
+  1943→  1943→Production security requirements.
+  1944→  1944→
+  1945→  1945→Never imply that local browser authentication is secure enough for internet-facing production use.
+  1946→  1946→
+  1947→  1947→==================================================
+  1948→  1948→65. TESTING
+  1949→  1949→==================================================
+  1950→  1950→
+  1951→  1951→Before declaring the ERP complete, test every module.
+  1952→  1952→
+  1953→  1953→Test:
+  1954→  1954→
+  1955→  1955→Create
+  1956→  1956→Edit
+  1957→  1957→Delete/archive
+  1958→  1958→Search
+  1959→  1959→Filter
+  1960→  1960→Sort
+  1961→  1961→Pagination
+  1962→  1962→Calculations
+  1963→  1963→Import
+  1964→  1964→Export
+  1965→  1965→Print
+  1966→  1966→Navigation
+  1967→  1967→Mobile
+  1968→  1968→Dark mode
+  1969→  1969→Backup
+  1970→  1970→Restore
+  1971→  1971→
+  1972→  1972→==================================================
+  1973→  1973→66. WORKFLOW TEST
+  1974→  1974→==================================================
+  1975→  1975→
+  1976→  1976→Test at least one complete workflow.
+  1977→  1977→
+  1978→  1978→Example:
+  1979→  1979→
+  1980→  1980→Create Customer
+  1981→  1981→
+  1982→  1982→→ Create Product
+  1983→  1983→
+  1984→  1984→→ Add Stock
+  1985→  1985→
+  1986→  1986→→ Create Quotation
+  1987→  1987→
+  1988→  1988→→ Convert to Sales Order
+  1989→  1989→
+  1990→  1990→→ Generate Invoice
+  1991→  1991→
+  1992→  1992→→ Receive Partial Payment
+  1993→  1993→
+  1994→  1994→→ Receive Final Payment
+  1995→  1995→
+  1996→  1996→→ Verify Customer Balance
+  1997→  1997→
+  1998→  1998→→ Verify Inventory
+  1999→  1999→
+  2000→  2000→→ Verify Dashboard
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]
