@@ -117,6 +117,23 @@ model SavedView {
   @@index([userId])
 }
 
+// ============================================================
+// USER DASHBOARD PREFERENCES (pin/hide/reorder KPIs & charts)
+// ============================================================
+
+model UserDashboardPref {
+  id          String   @id @default(cuid())
+  userId      String   @unique // one preference row per user
+  pinnedKpis  String   @default("[]") // JSON array of KPI ids to show (empty = all)
+  hiddenKpis  String   @default("[]") // JSON array of KPI ids to hide
+  kpiOrder    String   @default("[]") // JSON array of KPI ids in custom order
+  pinnedCharts String  @default("[]") // JSON array of chart ids to show
+  hiddenCharts String  @default("[]") // JSON array of chart ids to hide
+  chartOrder  String   @default("[]") // JSON array of chart ids in custom order
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   userId      String?

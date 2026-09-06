@@ -1,12 +1,13 @@
 'use client';
 
-// FMCore ERP — Dashboard (with clickable KPIs, quick actions, recent records)
-import { useEffect, useState } from 'react';
-import { dashboardApi, registersApi } from '@/lib/erp/api';
+// FMCore ERP — Dashboard (with clickable KPIs, quick actions, recent records, custom widgets)
+import { useEffect, useState, useMemo } from 'react';
+import { dashboardApi, dashboardPrefsApi, registersApi, type DashboardPrefs } from '@/lib/erp/api';
 import type { DashboardData, Register } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { Sparkline } from './sparkline';
+import { DashboardCustomize } from './dashboard-customize';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import {
@@ -16,30 +17,42 @@ import {
 import {
   TrendingUp, TrendingDown, Activity, Calendar, AlertTriangle,
   Plus, ArrowRight, Zap, FileText, Wrench, ShoppingCart, UserPlus, FileBarChart,
+  Settings2, Pin,
 } from 'lucide-react';
 
 export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [registers, setRegisters] = useState<Register[]>([]);
+  const [prefs, setPrefs] = useState<DashboardPrefs>({
+    pinnedKpis: [], hiddenKpis: [], kpiOrder: [],
+    pinnedCharts: [], hiddenCharts: [], chartOrder: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const { openTab, setBuilderOpen } = useErpStore();
 
+  const loadAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [d, regs, p] = await Promise.all([
+        dashboardApi.get(),
+        registersApi.list(),
+        dashboardPrefsApi.get(),
+      ]);
+      setData(d);
+      setRegisters(regs);
+      setPrefs(p);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [d, regs] = await Promise.all([dashboardApi.get(), registersApi.list()]);
-        if (!cancelled) { setData(d); setRegisters(regs); }
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Failed to load dashboard');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    loadAll();
   }, []);
 
   const openRegisterByCode = (code: string) => {
@@ -48,6 +61,22 @@ export function Dashboard() {
       openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
     }
   };
+
+  // Apply preferences: filter + sort KPIs
+  const visibleKpis = useMemo(() => {
+    if (!data) return [];
+    const filtered = data.kpis.filter((k) => !prefs.hiddenKpis.includes(k.id));
+    // Sort: pinned first, then by original order
+    const pinned = filtered.filter((k) => prefs.pinnedKpis.includes(k.id));
+    const unpinned = filtered.filter((k) => !prefs.pinnedKpis.includes(k.id));
+    return [...pinned, ...unpinned];
+  }, [data, prefs]);
+
+  // Apply preferences: filter charts
+  const visibleCharts = useMemo(() => {
+    if (!data) return [];
+    return data.charts.filter((c) => !prefs.hiddenCharts.includes(c.id));
+  }, [data, prefs]);
 
   if (loading) return <DashboardSkeleton />;
   if (error) {
@@ -88,24 +117,52 @@ export function Dashboard() {
           <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
             <Activity className="w-3 h-3" /> Updated {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
           </span>
+          <button
+            onClick={() => setCustomizeOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--erp-bg-card)] border border-[var(--erp-border)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] hover:text-[var(--erp-accent)] transition-all"
+            title="Customize dashboard"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Customize</span>
+            {(prefs.hiddenKpis.length > 0 || prefs.hiddenCharts.length > 0 || prefs.pinnedKpis.length > 0) && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--erp-accent)]" />
+            )}
+          </button>
         </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-        {data.kpis.map((kpi) => (
-          <KpiCard
-            key={kpi.id}
-            kpi={kpi}
-            onClick={() => {
-              if (kpi.link) {
-                const code = kpi.link.match(/tab=([^&]+)/)?.[1];
-                if (code) openRegisterByCode(code);
-              }
-            }}
-          />
-        ))}
-      </div>
+      {visibleKpis.length === 0 ? (
+        <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-8 text-center">
+          <Settings2 className="w-10 h-10 text-[var(--erp-text-muted)] mx-auto mb-2" />
+          <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">All KPIs are hidden</h3>
+          <p className="text-[12px] text-[var(--erp-text-muted)] mb-3">
+            You've hidden all KPI cards. Click "Customize" to show some.
+          </p>
+          <button
+            onClick={() => setCustomizeOpen(true)}
+            className="text-[12px] text-[var(--erp-accent)] hover:underline"
+          >
+            Open Customize
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          {visibleKpis.map((kpi) => (
+            <KpiCard
+              key={kpi.id}
+              kpi={kpi}
+              isPinned={prefs.pinnedKpis.includes(kpi.id)}
+              onClick={() => {
+                if (kpi.link) {
+                  const code = kpi.link.match(/tab=([^&]+)/)?.[1];
+                  if (code) openRegisterByCode(code);
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Quick Actions strip */}
       <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3">
@@ -141,71 +198,83 @@ export function Dashboard() {
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Records by Category" subtitle="Distribution across ERP modules">
-          <BarChart data={data.charts.find((c) => c.id === 'by-category')?.data || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
-            <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
-              {(data.charts.find((c) => c.id === 'by-category')?.data || []).map((d, i) => (
-                <Cell key={i} fill={d.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('by-category') && (
+          <ChartCard title="Records by Category" subtitle="Distribution across ERP modules">
+            <BarChart data={data.charts.find((c) => c.id === 'by-category')?.data || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
+              <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
+                {(data.charts.find((c) => c.id === 'by-category')?.data || []).map((d, i) => (
+                  <Cell key={i} fill={d.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartCard>
+        )}
 
-        <ChartCard title="Work Orders by Status" subtitle="Current maintenance workload">
-          <DoughnutChart data={data.charts.find((c) => c.id === 'wo-status')?.data || []} />
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('wo-status') && (
+          <ChartCard title="Work Orders by Status" subtitle="Current maintenance workload">
+            <DoughnutChart data={data.charts.find((c) => c.id === 'wo-status')?.data || []} />
+          </ChartCard>
+        )}
       </div>
 
       {/* Charts row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ChartCard title="Records per Register" subtitle="Top 8 registers by record count" className="lg:col-span-2">
-          <BarChart data={data.charts.find((c) => c.id === 'top-registers')?.data || []} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" horizontal={false} />
-            <XAxis type="number" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-            <YAxis type="category" dataKey="label" tick={{ fill: 'var(--erp-text-secondary)', fontSize: 11 }} width={120} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]} animationDuration={600}>
-              {(data.charts.find((c) => c.id === 'top-registers')?.data || []).map((d, i) => (
-                <Cell key={i} fill={d.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('top-registers') && (
+          <ChartCard title="Records per Register" subtitle="Top 8 registers by record count" className="lg:col-span-2">
+            <BarChart data={data.charts.find((c) => c.id === 'top-registers')?.data || []} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" horizontal={false} />
+              <XAxis type="number" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="label" tick={{ fill: 'var(--erp-text-secondary)', fontSize: 11 }} width={120} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} animationDuration={600}>
+                {(data.charts.find((c) => c.id === 'top-registers')?.data || []).map((d, i) => (
+                  <Cell key={i} fill={d.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartCard>
+        )}
 
-        <ChartCard title="Inventory Status" subtitle="Stock level distribution">
-          <DoughnutChart data={data.charts.find((c) => c.id === 'inv-status')?.data || []} />
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('inv-status') && (
+          <ChartCard title="Inventory Status" subtitle="Stock level distribution">
+            <DoughnutChart data={data.charts.find((c) => c.id === 'inv-status')?.data || []} />
+          </ChartCard>
+        )}
       </div>
 
       {/* Charts row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Incidents by Severity" subtitle="Safety incident breakdown">
-          <BarChart data={data.charts.find((c) => c.id === 'incident-severity')?.data || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
-            <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
-              {(data.charts.find((c) => c.id === 'incident-severity')?.data || []).map((d, i) => (
-                <Cell key={i} fill={d.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('incident-severity') && (
+          <ChartCard title="Incidents by Severity" subtitle="Safety incident breakdown">
+            <BarChart data={data.charts.find((c) => c.id === 'incident-severity')?.data || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
+              <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
+                {(data.charts.find((c) => c.id === 'incident-severity')?.data || []).map((d, i) => (
+                  <Cell key={i} fill={d.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartCard>
+        )}
 
-        <ChartCard title="Asset Value by Category" subtitle="Capital distribution (AED)">
-          <BarChart data={data.charts.find((c) => c.id === 'asset-cat')?.data || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
-            <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 10 }} angle={-15} textAnchor="end" height={50} />
-            <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `AED ${Number(v).toLocaleString()}`} cursor={{ fill: 'var(--erp-bg-hover)' }} />
-            <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} animationDuration={600} />
-          </BarChart>
-        </ChartCard>
+        {!prefs.hiddenCharts.includes('asset-cat') && (
+          <ChartCard title="Asset Value by Category" subtitle="Capital distribution (AED)">
+            <BarChart data={data.charts.find((c) => c.id === 'asset-cat')?.data || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 10 }} angle={-15} textAnchor="end" height={50} />
+              <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `AED ${Number(v).toLocaleString()}`} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+              <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} animationDuration={600} />
+            </BarChart>
+          </ChartCard>
+        )}
       </div>
 
       {/* 7-day activity timeline */}
@@ -297,6 +366,13 @@ export function Dashboard() {
           )}
         </Panel>
       </div>
+
+      {/* Customize modal */}
+      <DashboardCustomize
+        open={customizeOpen}
+        onClose={() => setCustomizeOpen(false)}
+        onSaved={() => loadAll()}
+      />
     </div>
   );
 }
@@ -309,17 +385,21 @@ const tooltipStyle: React.CSSProperties = {
   fontSize: '12px',
 };
 
-function KpiCard({ kpi, onClick }: { kpi: DashboardData['kpis'][number]; onClick?: () => void }) {
+function KpiCard({ kpi, onClick, isPinned }: { kpi: DashboardData['kpis'][number]; onClick?: () => void; isPinned?: boolean }) {
   const clickable = !!onClick || !!kpi.link;
   return (
     <button
       onClick={onClick}
       disabled={!clickable}
       className={cn(
-        'group bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3 text-left transition-all',
+        'group relative bg-[var(--erp-bg-card)] border rounded-lg p-3 text-left transition-all',
         clickable ? 'hover:shadow-md hover:border-[var(--erp-accent-border)] hover:-translate-y-0.5 cursor-pointer' : 'cursor-default',
+        isPinned ? 'border-[var(--erp-accent-border)] bg-[var(--erp-accent-dim)]/30' : 'border-[var(--erp-border)]',
       )}
     >
+      {isPinned && (
+        <Pin className="absolute top-1.5 right-1.5 w-2.5 h-2.5 text-[var(--erp-accent)] fill-[var(--erp-accent)]" />
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-medium text-[var(--erp-text-muted)] uppercase tracking-wide truncate">

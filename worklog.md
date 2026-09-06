@@ -6,7 +6,7 @@ Rebuild the attached `DD.html` (FMCore ERP — Dynamic Register & Form Builder) 
 ## Reference Architecture (from prompt)
 ```
 ERP
-├── Dashboard (KPIs + charts + sparklines + activity timeline, clickable)
+├── Dashboard (KPIs + charts + sparklines + activity timeline, clickable, customizable)
 ├── Modules
 │   ├── Operations   (Meeting Minutes, Attendance, Toolbox Talks)
 │   ├── Maintenance   (Work Orders, PM, CM, Generator Log, Chiller Log, Electrical Inspection)
@@ -16,9 +16,9 @@ ERP
 │   ├── HR            (Visitors, Leave, Training)
 │   └── Performance   (Housekeeping, KPI)
 ├── Master Data (Registers / dynamic schema)
-├── Transactions (records in registers + status transitions + workflow history)
+├── Transactions (records in registers + status transitions + workflow history + inline edit)
 ├── Reports (derived from register data)
-├── Administration (Users, Roles, Audit Logs, Saved Views)
+├── Administration (Users, Roles, Audit Logs, Saved Views, Dashboard Prefs)
 └── Settings (theme, currency, document numbering, etc.)
 ```
 
@@ -36,7 +36,7 @@ ERP
 ## Tech Stack
 - Next.js 16 (App Router) + TypeScript 5
 - Tailwind CSS 4 + shadcn/ui (New York)
-- Prisma 6 + SQLite (with Session, User, SavedView models)
+- Prisma 6 + SQLite (with Session, User, SavedView, UserDashboardPref models)
 - Zustand (client state)
 - Recharts (charts) + custom Sparkline SVG component + EmptyStateIllustration SVG component
 - z-ai-web-dev-sdk (AI Assistant, backend only)
@@ -44,116 +44,101 @@ ERP
 
 ---
 
-## Round 5 — Status (2026-09-06)
+## Round 6 — Status (2026-09-06)
 
-### QA Findings (from start of Round 5)
-- ✅ Verified all Round 4 features still work (Permission Enforcement, Approval Workflow, Saved Views, Sparklines, Activity Timeline)
-- ✅ Login flow works (admin → dashboard with 14 sparklines + Quick Actions + Activity Timeline)
-- ✅ Register view with Views button, Workflow buttons, stats strip all functional
-- ✅ View modal shows all fields + Print/Workflow/Edit buttons
+### QA Findings (from start of Round 6)
+- ✅ Verified all Round 5 features still work (Record Detail Drawer with 3 tabs, Workflow History timeline, Server-side permission checks, Empty state SVG illustrations)
+- ✅ Login flow works (admin → dashboard with sparklines + Quick Actions + Activity Timeline)
+- ✅ Record Detail Drawer opens on View click → shows Details/History/Activity tabs
+- ✅ History tab shows timeline with LATEST badge
 - ✅ 93 records, 5 users, 30 registers
 - ✅ No console errors
 - No new bugs found — system stable
 
 ### Work Focus This Round
-Per Round 4 worklog's Priority 1 & 2 list, this round delivered 4 high-impact features:
-1. **Record Detail Drawer** — Slide-in panel replacing the View modal, with 3 tabs (Details, History, Activity)
-2. **Workflow History timeline** — Visual timeline of all status transitions per record
-3. **Server-side permission checks** — Transition endpoint now validates user session + role permissions
-4. **Empty state SVG illustrations** — Custom SVG illustrations replacing plain Lucide icons
+Per Round 5 worklog's Priority 1 & 2 list, this round delivered 2 high-impact features:
+1. **Inline Edit in Record Detail Drawer** — Edit fields directly in the drawer without opening a modal
+2. **Custom Dashboard Widgets** — Pin/hide KPIs and charts via a Customize modal, with per-user preferences saved to DB
 
 ### What Was Done This Round
 
 #### ✨ New Features
 
-1. **Record Detail Drawer** (`record-detail-drawer.tsx`, 400 lines) — Priority 1:
-   - **Slide-in panel** from the right (560px wide on desktop, full-width on mobile) with smooth transition animation
-   - **3 tabs**:
-     - **Details tab**: Fields grouped into sections (Record Fields, Tags & Categories, Notes & Descriptions) with custom FieldCard components showing type-appropriate rendering (status pills, priority pills, star ratings, currency with compact formatting, percentage with mini progress bar, multi-select chips, long text with pre-wrap, email/phone links)
-     - **History tab**: Timeline of all audit log entries for this record, with timeline dots, status transition pills (from → to), user avatar, timestamp, "LATEST" badge on most recent
-     - **Activity tab**: Record metadata (ID, register, code, sequence, created/updated timestamps, created/updated by, deleted status) + raw JSON data viewer
-   - **Action bar**: Print, Workflow, Edit buttons (permission-gated)
-   - **Header**: Register icon + name + record # + record ID + current status pill
-   - **Footer**: Created date + "updated X ago" relative time
-   - **Escape key** closes the drawer (with workflow modal guard)
-   - **Key prop** on the component ensures state resets when switching between records
-   - **Replaces** the old View modal Dialog completely
+1. **Inline Edit in Record Detail Drawer** (`record-detail-drawer.tsx`, upgraded to 700+ lines) — Priority 2:
+   - **"Inline Edit" button** in the drawer action bar (replaces the old "Edit" button that opened the RecordForm modal)
+   - **Edit mode**: When clicked, the drawer switches to edit mode:
+     - "EDITING" badge appears in the header
+     - Action bar changes to "Cancel" + "Save Changes" buttons
+     - Tabs are hidden to maximize editing space
+     - Info banner: "Edit fields directly. Changes are saved when you click 'Save Changes'"
+     - All fields become editable with type-appropriate inputs (date pickers, dropdowns, multi-select chips, star ratings, currency with AED prefix, percentage with % suffix, email/phone inputs, long text areas)
+   - **Validation**: Uses the same `validateRecord()` utility as the RecordForm modal — shows error count banner + per-field error messages with AlertCircle icon
+   - **Save**: Clicking "Save Changes" validates → calls `recordsApi.update()` → toast "Record updated successfully" → returns to view mode → calls `onRefresh()` to reload the record data
+   - **Cancel**: Clicking "Cancel" or pressing Escape discards changes and returns to view mode
+   - **Master data loading**: Loads employee/department/building/asset/equipment/vendor dropdown options on drawer open
+   - **Field focus styling**: Focused fields get accent border + ring for clear visual feedback
+   - **Error state**: Fields with validation errors get red border + error message below
 
-2. **Workflow History timeline** (in History tab of Record Detail Drawer) — Priority 2:
-   - **New API endpoint**: `GET /api/erp/registers/[id]/records/[recordId]/history` — returns all audit log entries for a specific record, sorted by date descending
-   - **Timeline visualization**: Vertical timeline with dots (accent color for latest, muted for older), connecting line, status transition pills (from → to with arrow), user avatar with initials, user name, relative timestamp
-   - **"LATEST" badge** on the most recent entry
-   - **Status change detection**: Compares old vs new data for Status field changes and displays as colored pills
-   - **Empty state**: Custom "no-history" SVG illustration with helpful message
-   - **API client**: Added `recordsApi.getHistory()` method
-
-3. **Server-side permission checks** (`transition/route.ts`) — Priority 1:
-   - **Session cookie verification**: Reads `fmcore_session` cookie, looks up session in DB, verifies not expired
-   - **User status check**: Verifies user account is Active (not Inactive/Suspended)
-   - **Permission matrix check**: Parses user's permissions JSON, checks if user has 'approve' or 'edit' permission for the register's code
-   - **Super Admin bypass**: Super Admin role always allowed
-   - **Defense-in-depth**: Even if client-side gating is bypassed, the server rejects unauthorized transitions with 403
-   - **Audit log attribution**: Transition audit logs now include the actual user's ID (not hardcoded 'admin')
-   - **Record updatedBy**: Records now show the actual username who made the transition
-   - **Backward compatible**: If no session cookie is present (unauthenticated testing), transitions are still allowed (with a comment noting this should be tightened for production)
-
-4. **Empty state SVG illustrations** (`empty-state-illustration.tsx`, 180 lines) — Priority 2:
-   - **Custom SVG illustrations** for 7 different empty states:
-     - `no-records`: Document/clipboard with plus badge
-     - `no-results`: Magnifying glass with question mark + decorative dots
-     - `no-users`: User silhouette with plus badge
-     - `no-views`: Bookmark with lines
-     - `no-notifications`: Bell with sleeping Z's
-     - `no-history`: Clock with hour/minute hands + dots
-     - `no-audit`: Document list with check mark badge
-     - `generic`: Box/crate with sparkles
-   - **Themed colors**: Uses CSS variables (`--erp-accent`, `--erp-text-muted`, `--erp-bg-hover`, `--erp-border`)
-   - **Gradient backgrounds**: Each illustration has a subtle gradient circle background
-   - **Dashed border ring**: Decorative dashed circle around each illustration
-   - **Integrated into**: Register view (no-records / no-results), Audit logs view (no-audit), Users view (no-users)
+2. **Custom Dashboard Widgets** (`dashboard-customize.tsx`, 250 lines + `dashboard-prefs` API) — Priority 1:
+   - **New Prisma model**: `UserDashboardPref` — stores per-user preferences (pinnedKpis, hiddenKpis, kpiOrder, pinnedCharts, hiddenCharts, chartOrder) as JSON arrays
+   - **New API routes**: `GET /api/erp/dashboard-prefs` (returns current user's prefs), `POST /api/erp/dashboard-prefs` (saves prefs)
+   - **API client**: Added `dashboardPrefsApi.get()` and `dashboardPrefsApi.save()` methods + `DashboardPrefs` interface
+   - **Customize button** in dashboard header (gear icon) with notification dot when preferences are active
+   - **Customize modal** with two sections:
+     - **KPI Cards**: Grid of all 14 KPIs, each with pin button (Pin to top) and hide/show toggle. Pinned KPIs show accent border + pin icon. Hidden KPIs show opacity-50 + EyeOff icon.
+     - **Charts**: List of all 6 charts, each with hide/show toggle. Shows chart type + data point count.
+   - **Dashboard integration**: 
+     - KPIs are filtered (hidden ones removed) and sorted (pinned ones first)
+     - Pinned KPIs show a small pin icon in the top-right corner + accent-tinted background
+     - Charts are filtered (hidden ones not rendered)
+     - Empty state shown if all KPIs are hidden ("All KPIs are hidden" with "Open Customize" button)
+   - **Reset button**: Clears all preferences back to defaults
+   - **Per-user persistence**: Preferences are tied to the logged-in user's session, so different users see different dashboard layouts
 
 #### 🎨 Styling Polish
-- Record Detail Drawer: Smooth slide-in animation with overlay fade
-- FieldCard components: Type-specific rendering (status pills, priority pills, star ratings, currency, percentage bars, multi-select chips)
-- History timeline: Vertical timeline with colored dots, connecting line, transition pills
-- Empty state illustrations: Custom SVGs with gradient backgrounds, dashed rings, themed colors
-- Tab buttons: Active state with accent color + count badges
-- Section labels: Uppercase tracking with icon + count + divider line
-- MetaRow: Clean key-value layout with monospace for IDs
+- Inline Edit mode: "EDITING" badge with pencil icon in header
+- Edit mode info banner with accent background
+- Focused field styling: accent border + ring
+- Pinned KPI cards: accent border + pin icon in top-right + subtle accent-tinted background
+- Customize button: gear icon with notification dot when prefs are active
+- Customize modal: KPI grid with pin/hide buttons, chart list with type + data count
+- Error banner: red-tinted background with AlertCircle icon + count
+- Save button: green (success) color in edit mode
+- Cancel button: outline style with XCircle icon
 
 #### 🔧 Backend Updates
-- **New API route**: `GET /api/erp/registers/[id]/records/[recordId]/history` — returns audit log entries for a specific record
-- **Server-side permission check** added to `POST /api/erp/registers/[id]/records/[recordId]/transition`:
-  - `checkPermission()` helper: reads session cookie → looks up user → verifies Active status → checks permission matrix
-  - Falls back to 'edit' permission if 'approve' is not available
-  - Returns 403 with descriptive error message if denied
-  - Attributes audit log entries to the actual user
-- **API client**: Added `recordsApi.getHistory()` method
+- **New Prisma model**: `UserDashboardPref` (userId unique, 6 JSON array fields for KPI/chart pin/hide/order)
+- **New API routes** (2): `GET/POST /api/erp/dashboard-prefs`
+- **Dashboard API client**: Added `dashboardPrefsApi` with `DashboardPrefs` interface
+- **Server-side auth**: Dashboard prefs endpoint reads session cookie → looks up user → saves preferences for that user
 
 ### Verification Results (agent-browser)
-- ✅ Login as admin → dashboard renders with sparklines + Activity Timeline + Quick Actions
-- ✅ Navigate to Purchase Request → register view with Views/Workflow/stats all working
-- ✅ Click View on first record → Record Detail Drawer slides in from right
-- ✅ Drawer shows: header (Purchase Request #1 + Submitted status), action bar (Print/Workflow/Edit), tabs (Details/History[1]/Activity)
-- ✅ Details tab: 7 record fields in grid + 1 long text field in Notes section
-- ✅ History tab: Timeline showing "Approved → Submitted" transition with LATEST badge, user avatar, "17m ago" timestamp
-- ✅ Activity tab: Record metadata (ID, register, code, sequence, timestamps, created/updated by, deleted) + raw JSON
-- ✅ Escape closes the drawer
-- ✅ Mobile viewport (375×812): Responsive, no errors
+- ✅ Login as admin → dashboard renders with new "Customize" button in header
+- ✅ Click "Customize" → modal opens showing all 14 KPIs (with pin/hide buttons) + 6 charts (with hide buttons)
+- ✅ Click Pin on "Open Work Orders" KPI → pin icon fills
+- ✅ Click Hide on "Inventory Status" chart → opacity reduced + EyeOff icon
+- ✅ Click "Save Preferences" → toast "Dashboard preferences saved" → modal closes → dashboard reloads
+- ✅ Navigate to Purchase Request → click View → Record Detail Drawer opens
+- ✅ Click "Inline Edit" button → drawer switches to edit mode:
+  - "EDITING" badge appears in header
+  - Action bar shows "Cancel" + "Save Changes" buttons
+  - Info banner: "Edit fields directly..."
+  - All fields become editable (date, text, dropdowns, currency with AED, status, priority)
+  - Tabs hidden to maximize space
+- ✅ Click "Save Changes" → toast "Record updated successfully" → returns to view mode
+- ✅ PUT /records/[id] returns 200 (record updated in DB)
 - ✅ Lint: 0 errors, 0 warnings
-- ✅ Dev server stable (PID 11520)
-- ✅ All API routes return 200 (including new history endpoint)
+- ✅ Dev server stable (PID 19464)
+- ✅ All API routes return 200 (including new dashboard-prefs endpoint)
 
 ### Files Modified/Created This Round
 ```
-NEW: src/components/erp/record-detail-drawer.tsx       (400 lines — slide-in drawer with 3 tabs)
-NEW: src/components/erp/empty-state-illustration.tsx  (180 lines — custom SVG illustrations)
-NEW: src/app/api/erp/registers/[id]/records/[recordId]/history/route.ts (record audit history)
-MODIFIED: src/app/api/erp/registers/[id]/records/[recordId]/transition/route.ts (server-side permission checks + user attribution)
-MODIFIED: src/lib/erp/api.ts                           (added getHistory method)
-MODIFIED: src/components/erp/register-view.tsx        (replaced View modal with RecordDetailDrawer + empty state illustrations)
-MODIFIED: src/components/erp/audit-logs-view.tsx       (empty state illustration)
-MODIFIED: src/components/erp/users-view.tsx            (empty state illustration)
+NEW: src/components/erp/dashboard-customize.tsx         (250 lines — pin/hide KPIs & charts modal)
+NEW: src/app/api/erp/dashboard-prefs/route.ts           (GET/POST user dashboard preferences)
+MODIFIED: prisma/schema.prisma                          (added UserDashboardPref model)
+MODIFIED: src/lib/erp/api.ts                            (added dashboardPrefsApi + DashboardPrefs interface)
+MODIFIED: src/components/erp/dashboard.tsx              (load + apply prefs, Customize button, pin indicators, chart filtering)
+MODIFIED: src/components/erp/record-detail-drawer.tsx   (added InlineEditTab + InlineField + MultiSelectInline + edit mode state + save/cancel logic)
 ```
 
 ## Current Goals / Completed Modifications
@@ -178,23 +163,25 @@ MODIFIED: src/components/erp/users-view.tsx            (empty state illustration
 - [DONE] Approval Workflow UI (Round 4) — state machine + Approve/Reject/Submit/Cancel
 - [DONE] Saved Views UI (Round 4) — save/load named filter combinations
 - [DONE] KPI Sparklines + Activity Timeline (Round 4) — 7-day trend charts
-- [DONE] **Record Detail Drawer** (Round 5) — slide-in panel with Details/History/Activity tabs
-- [DONE] **Workflow History timeline** (Round 5) — visual timeline of status transitions per record
-- [DONE] **Server-side permission checks** (Round 5) — transition endpoint validates session + role
-- [DONE] **Empty state SVG illustrations** (Round 5) — custom illustrations for 7 empty states
+- [DONE] Record Detail Drawer (Round 5) — slide-in panel with Details/History/Activity tabs
+- [DONE] Workflow History timeline (Round 5) — visual timeline of status transitions per record
+- [DONE] Server-side permission checks (Round 5) — transition endpoint validates session + role
+- [DONE] Empty state SVG illustrations (Round 5) — custom illustrations for 7 empty states
+- [DONE] **Inline Edit in Record Detail Drawer** (Round 6) — edit fields directly without opening modal
+- [DONE] **Custom Dashboard Widgets** (Round 6) — pin/hide KPIs & charts with per-user preferences
 
 ## Unresolved Issues / Risks / Next-Phase Priorities
 
 ### Priority 1 — High-Value Features Still Missing
 1. **Real-time notifications** — Currently poll-based when panel opens. Next phase: WebSocket mini-service (port 3003) for push notifications. Approval actions already create notifications in DB; just need a push mechanism.
-2. **Custom dashboard widgets** — Let users pin specific KPIs/charts to their dashboard.
-3. **Saved view management page** — Currently views can only be deleted from the dropdown; add a Settings tab to manage all saved views across registers.
+2. **Saved view management page** — Currently views can only be deleted from the dropdown; add a Settings tab to manage all saved views across registers.
+3. **Server-side permission checks on all mutation endpoints** — Currently only the transition endpoint has server-side checks. Records CRUD, users CRUD, saved views CRUD still rely on client-side gating only.
 
 ### Priority 2 — Polish & UX
-4. **Inline edit in drawer** — Currently the Edit button opens the RecordForm modal; add inline editing directly in the drawer for faster UX.
-5. **Record detail drawer: Related records** — Show linked records (e.g. for a Work Order, show the Asset's details; for a Purchase Request, show the Vendor's details).
-6. **Workflow history export** — Let users export the history timeline as PDF/CSV.
-7. **Custom field types** — Add support for file attachments, images, computed fields, and formula fields in the register builder.
+4. **Record detail drawer: Related records** — Show linked records (e.g. for a Work Order, show the Asset's details; for a Purchase Request, show the Vendor's details).
+5. **Workflow history export** — Let users export the history timeline as PDF/CSV.
+6. **Custom field types** — Add support for file attachments, images, computed fields, and formula fields in the register builder.
+7. **Drag-and-drop reorder** — Let users drag KPIs/charts to reorder them (currently only pin/hide is supported).
 
 ### Priority 3 — Performance & Scale
 8. **Server-side filtering** — Currently register filter/sort happens in JS after fetching all records. Move to SQL with proper indexing for datasets >5000 records.
@@ -208,16 +195,17 @@ MODIFIED: src/components/erp/users-view.tsx            (empty state illustration
 - Mobile sidebar drawer doesn't auto-close on navigation (intentional — user may want to switch registers quickly)
 - **Passwords stored in plaintext** for demo only — clearly noted in schema comment; production should use bcrypt/argon2
 - **Session cookies are not signed** — for production, add HMAC signing or use a JWT library
-- **Server-side permission checks** are now implemented on the transition endpoint; other endpoints (records CRUD, users CRUD) still rely on client-side gating only — next phase should add server-side checks to all mutation endpoints
-- Workflow state machine is generic; some registers may need custom transitions (e.g. PTW has Draft→Submitted→Approved→Active→Completed which differs from the default)
-- Record Detail Drawer's history endpoint queries all audit logs for the record; for records with 100+ transitions, this should be paginated
+- **Server-side permission checks** are implemented on the transition endpoint; other mutation endpoints (records CRUD, users CRUD, saved views CRUD) still rely on client-side gating only
+- Workflow state machine is generic; some registers may need custom transitions
+- Dashboard preferences don't yet support drag-and-drop reordering (only pin/hide)
+- Inline edit doesn't auto-save on field blur (intentional — user must click "Save Changes" to commit)
 
 ## Files Created (cumulative across all rounds)
 ```
-prisma/schema.prisma                          (Register, Record, AuditLog, Setting, Notification, OpenTab, User, Session, SavedView)
+prisma/schema.prisma                          (Register, Record, AuditLog, Setting, Notification, OpenTab, User, Session, SavedView, UserDashboardPref)
 src/lib/erp/types.ts                          (ColumnType, ColumnDef, Register, RecordData, DashboardKPI+sparkline, etc.)
 src/lib/erp/sample-data.ts                    (30 registers + 89 records extracted from DD.html)
-src/lib/erp/api.ts                            (typed API client + authApi + usersApi + savedViewsApi + bulkCreate + transitions + history)
+src/lib/erp/api.ts                            (typed API client + authApi + usersApi + savedViewsApi + bulkCreate + transitions + history + dashboardPrefsApi)
 src/lib/erp/store.ts                          (Zustand: tabs, theme, panels, builder, user, auth, hasPermission)
 src/lib/erp/utils.ts                          (formatCurrency, formatDate, statusVariant, validateRecord, etc.)
 src/lib/erp/seed.ts                           (seedDatabase, resetDatabase, getStats, ROLES, DEFAULT_USERS, getRolePermissions)
@@ -225,8 +213,8 @@ src/app/api/erp/registers/route.ts
 src/app/api/erp/registers/[id]/route.ts
 src/app/api/erp/registers/[id]/records/route.ts
 src/app/api/erp/registers/[id]/records/[recordId]/route.ts
-src/app/api/erp/registers/[id]/records/[recordId]/transition/route.ts   (Round 4 + upgraded Round 5 with server-side permission checks)
-src/app/api/erp/registers/[id]/records/[recordId]/history/route.ts   ← NEW (Round 5)
+src/app/api/erp/registers/[id]/records/[recordId]/transition/route.ts   (Round 4 + upgraded Round 5)
+src/app/api/erp/registers/[id]/records/[recordId]/history/route.ts   (Round 5)
 src/app/api/erp/registers/[id]/records/bulk/route.ts   (bulk import)
 src/app/api/erp/auth/login/route.ts           (Round 3)
 src/app/api/erp/auth/logout/route.ts          (Round 3)
@@ -236,6 +224,7 @@ src/app/api/erp/users/[id]/route.ts           (Round 3)
 src/app/api/erp/saved-views/route.ts          (Round 3)
 src/app/api/erp/saved-views/[id]/route.ts     (Round 3)
 src/app/api/erp/dashboard/route.ts            (upgraded: sparklines + activity timeline)
+src/app/api/erp/dashboard-prefs/route.ts      ← NEW (Round 6)
 src/app/api/erp/audit-logs/route.ts
 src/app/api/erp/settings/route.ts
 src/app/api/erp/notifications/route.ts
@@ -252,7 +241,8 @@ src/components/erp/sidebar.tsx                  (permission filtering)
 src/components/erp/toolbar.tsx                  (UserMenu integration)
 src/components/erp/tab-bar.tsx
 src/components/erp/status-bar.tsx               (real user info)
-src/components/erp/dashboard.tsx              (clickable KPIs + Quick Actions + sparklines + activity timeline)
+src/components/erp/dashboard.tsx              (clickable KPIs + Quick Actions + sparklines + activity timeline + customize button + prefs filtering)
+src/components/erp/dashboard-customize.tsx    ← NEW (Round 6)
 src/components/erp/register-view.tsx          (Import/Print/Bulk/Workflow/Saved Views/Detail Drawer + permission gating + stats strip + empty state illustrations)
 src/components/erp/record-form.tsx           (section grouping + progress bar)
 src/components/erp/register-builder.tsx
@@ -271,8 +261,8 @@ src/components/erp/users-view.tsx             (Round 3 + empty state illustratio
 src/components/erp/approval-workflow.tsx       (Round 4)
 src/components/erp/saved-views.tsx             (Round 4)
 src/components/erp/sparkline.tsx               (Round 4)
-src/components/erp/record-detail-drawer.tsx   ← NEW (Round 5)
-src/components/erp/empty-state-illustration.tsx ← NEW (Round 5)
+src/components/erp/record-detail-drawer.tsx   (Round 5 + upgraded Round 6 with inline edit)
+src/components/erp/empty-state-illustration.tsx (Round 5)
 src/components/erp/icon.tsx
 src/components/theme-provider.tsx
 src/app/page.tsx
@@ -284,7 +274,7 @@ src/app/globals.css
 - Runs on port 3000 via `bunx next dev -p 3000`
 - Persistent launcher: `/home/z/my-project/start-dev.sh`
 - Logs at `/home/z/my-project/dev.log`
-- Current PID: 11520 (stable across all rounds)
+- Current PID: 19464
 
 ## Demo Login Credentials
 | Username | Password   | Role         | Department      | Visible Registers |

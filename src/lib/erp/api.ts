@@ -96,6 +96,22 @@ export const dashboardApi = {
   get: () => request<DashboardData>(`${BASE}/dashboard`),
 };
 
+// ---------- Dashboard Preferences (pin/hide/reorder KPIs & charts) ----------
+export interface DashboardPrefs {
+  pinnedKpis: string[];
+  hiddenKpis: string[];
+  kpiOrder: string[];
+  pinnedCharts: string[];
+  hiddenCharts: string[];
+  chartOrder: string[];
+}
+
+export const dashboardPrefsApi = {
+  get: () => request<DashboardPrefs>(`${BASE}/dashboard-prefs`),
+  save: (prefs: Partial<DashboardPrefs>) =>
+    request<DashboardPrefs & { ok?: boolean }>(`${BASE}/dashboard-prefs`, { method: 'POST', body: JSON.stringify(prefs) }),
+};
+
 // ---------- Audit logs ----------
 export const auditApi = {
   list: (params: { page?: number; pageSize?: number; module?: string } = {}) => {
