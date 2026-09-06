@@ -24,7 +24,11 @@ export type ColumnType =
   | 'building'
   | 'asset'
   | 'equipment'
-  | 'vendor';
+  | 'vendor'
+  | 'image'
+  | 'url'
+  | 'color'
+  | 'tags';
 
 export interface ColumnDef {
   name: string;

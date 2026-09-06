@@ -330,4 +330,33 @@ export const COLUMN_TYPE_META: Record<ColumnDef['type'], { label: string; icon: 
   asset:          { label: 'Asset',       icon: 'fa-cube',   needsOptions: false },
   equipment:      { label: 'Equipment',   icon: 'fa-gears',  needsOptions: false },
   vendor:         { label: 'Vendor',      icon: 'fa-truck',  needsOptions: false },
+  image:          { label: 'Image',       icon: 'fa-image',  needsOptions: false },
+  url:            { label: 'URL / Link',  icon: 'fa-link',   needsOptions: false },
+  color:          { label: 'Color',       icon: 'fa-palette', needsOptions: false },
+  tags:           { label: 'Tags',        icon: 'fa-tags',   needsOptions: true },
+};
+
+// ---------- Uploads (image attachments) ----------
+export interface UploadResult {
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+}
+
+export const uploadsApi = {
+  upload: async (file: File): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE}/uploads`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+  remove: async (filename: string): Promise<ApiResponse> => {
+    return request<ApiResponse>(`${BASE}/uploads?filename=${encodeURIComponent(filename)}`, { method: 'DELETE' });
+  },
 };

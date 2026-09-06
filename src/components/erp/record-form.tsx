@@ -1,8 +1,8 @@
 'use client';
 
 // FMCore ERP — Record Form Modal (create / edit) with sectioned layout
-import { useEffect, useMemo, useState } from 'react';
-import { recordsApi, masterDataApi } from '@/lib/erp/api';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
 import { validateRecord, defaultValue } from '@/lib/erp/utils';
 import { useErpStore } from '@/lib/erp/store';
@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Save, X, AlertCircle } from 'lucide-react';
+import { Save, X, AlertCircle, Upload, Loader2, Link as LinkIcon, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -51,9 +51,13 @@ const TYPE_META: Record<ColumnType, { icon: string; group: string; label: string
   asset: { icon: 'fa-cube', group: 'Location', label: 'Asset' },
   equipment: { icon: 'fa-gears', group: 'Location', label: 'Equipment' },
   vendor: { icon: 'fa-truck', group: 'Contact', label: 'Vendor' },
+  image: { icon: 'fa-image', group: 'Media', label: 'Image' },
+  url: { icon: 'fa-link', group: 'Contact', label: 'URL' },
+  color: { icon: 'fa-palette', group: 'Details', label: 'Color' },
+  tags: { icon: 'fa-tags', group: 'Classification', label: 'Tags' },
 };
 
-const SECTION_ORDER = ['Identification', 'Details', 'Classification', 'Status', 'Timeline', 'Assignment', 'Location', 'Contact', 'Financials', 'Metrics'];
+const SECTION_ORDER = ['Identification', 'Details', 'Classification', 'Status', 'Timeline', 'Assignment', 'Location', 'Contact', 'Financials', 'Metrics', 'Media'];
 
 const SECTION_ICONS: Record<string, string> = {
   Identification: 'fa-fingerprint',
@@ -66,6 +70,7 @@ const SECTION_ICONS: Record<string, string> = {
   Contact: 'fa-address-book',
   Financials: 'fa-coins',
   Metrics: 'fa-chart-simple',
+  Media: 'fa-image',
 };
 
 export function RecordForm({ open, register, record, onClose, onSaved }: Props) {
@@ -203,7 +208,7 @@ export function RecordForm({ open, register, record, onClose, onSaved }: Props) 
                     error={errors[col.name]}
                     masterData={masterData}
                     onChange={(v) => setField(col.name, v)}
-                    fullWidth={col.type === 'long_text' || col.type === 'multi_select'}
+                    fullWidth={col.type === 'long_text' || col.type === 'multi_select' || col.type === 'tags'}
                     currency={currency}
                   />
                 ))}
@@ -431,6 +436,60 @@ function FieldRenderer({
           {errorEl}
         </div>
       );
+    case 'image':
+      return <ImageField value={value} onChange={onChange} label={label} errorEl={errorEl} />;
+    case 'url':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <div className="relative">
+            <LinkIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)] pointer-events-none" />
+            <Input
+              type="url"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              className="text-[12px] h-9 bg-[var(--erp-bg-input)] pl-8"
+              placeholder="https://example.com"
+            />
+          </div>
+          {errorEl}
+        </div>
+      );
+    case 'color':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <div className="flex items-center gap-2">
+            <Palette className="w-3.5 h-3.5 text-[var(--erp-text-muted)] flex-shrink-0" />
+            <input
+              type="color"
+              value={value || '#000000'}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-9 h-9 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-input)] cursor-pointer"
+            />
+            <Input
+              type="text"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              className="text-[12px] h-9 bg-[var(--erp-bg-input)] font-mono"
+              placeholder="#000000"
+            />
+          </div>
+          {errorEl}
+        </div>
+      );
+    case 'tags':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <MultiSelectField
+            options={col.options || []}
+            value={Array.isArray(value) ? value : (value ? [value] : [])}
+            onChange={onChange}
+          />
+          {errorEl}
+        </div>
+      );
     default:
       return (
         <div className={wrapperClass}>
@@ -500,6 +559,68 @@ function RatingInput({ value, onChange }: { value: number; onChange: (v: number)
         </button>
       ))}
       <span className="ml-2 text-[11px] text-[var(--erp-text-muted)] font-mono">{value}/5</span>
+    </div>
+  );
+}
+
+function ImageField({ value, onChange, label, errorEl }: { value: any; onChange: (v: any) => void; label: ReactNode; errorEl: ReactNode }) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await uploadsApi.upload(file);
+      onChange(result.url);
+      toast.success('Image uploaded');
+    } catch (e: any) {
+      toast.error('Upload failed', { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      {label}
+      <div className="flex items-center gap-3">
+        {value ? (
+          <div className="relative">
+            <img src={value} alt="preview" className="w-16 h-16 object-cover rounded-md border border-[var(--erp-border)]" />
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center text-[10px] hover:scale-110 transition-transform"
+              aria-label="Remove image"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)]">
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="h-8 text-[11px]"
+        >
+          {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...</> : <><Upload className="w-3.5 h-3.5 mr-1" /> {value ? 'Replace' : 'Upload'}</>}
+        </Button>
+      </div>
+      {errorEl}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
   Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock, Pencil,
-  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2,
+  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
+import { ProjectStatusPanel } from './project-status-panel';
 
 export function SettingsView() {
   const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
@@ -177,6 +178,7 @@ export function SettingsView() {
     { id: 'numbering',   label: 'Document #',    icon: <Hash className="w-4 h-4" /> },
     { id: 'saved-views', label: 'Saved Views',   icon: <Bookmark className="w-4 h-4" /> },
     { id: 'backup',      label: 'Backup & Reset', icon: <Database className="w-4 h-4" /> },
+    { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
   ];
 
@@ -545,6 +547,10 @@ export function SettingsView() {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'project' && (
+            <ProjectStatusPanel />
           )}
 
           {activeTab === 'about' && (

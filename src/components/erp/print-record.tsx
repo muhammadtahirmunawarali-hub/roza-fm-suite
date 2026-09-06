@@ -18,7 +18,7 @@ interface PrintData {
   };
 }
 
-export function printRecord(register: Register, record: RecordData, company: PrintData['company']) {
+export function printRecord(register: Register, record: RecordData, company: PrintData['company'], currency = 'AED') {
   const win = window.open('', '_blank', 'width=800,height=900');
   if (!win) {
     alert('Please allow popups to print records');
@@ -44,11 +44,24 @@ export function printRecord(register: Register, record: RecordData, company: Pri
     if (val === undefined || val === null || val === '') return '—';
     if (type === 'date') return formatDate(String(val));
     if (type === 'datetime') return formatDateTime(String(val));
-    if (type === 'currency') return `AED ${Number(val).toLocaleString()}`;
+    if (type === 'currency') return `${currency} ${Number(val).toLocaleString()}`;
     if (type === 'percentage') return `${val}%`;
     if (type === 'multi_select') return Array.isArray(val) ? val.join(', ') : String(val);
     if (type === 'rating') return `${'★'.repeat(Number(val) || 0)}${'☆'.repeat(5 - (Number(val) || 0))}`;
+    if (type === 'url') return String(val);
+    if (type === 'color') return String(val);
+    if (type === 'tags') return Array.isArray(val) ? val.map((v: string) => `#${v}`).join(' ') : String(val);
+    if (type === 'image') return ''; // rendered separately below
     return String(val);
+  };
+
+  // Render image cells as actual <img> tags (not in the formatVal function)
+  const renderField = (c: any): string => {
+    const val = record.data[c.name];
+    if (c.type === 'image' && val) {
+      return `<div class="field"><div class="field-label">${c.name}</div><img src="${val}" alt="${c.name}" style="max-width:200px;max-height:200px;border:1px solid #e2e8f0;border-radius:4px;" /></div>`;
+    }
+    return `<div class="field ${c.type === 'long_text' ? 'long-text-field' : ''}"><div class="field-label">${c.name}</div><div class="field-value">${escapeHtml(formatVal(val, c.type))}</div></div>`;
   };
 
   const html = `<!DOCTYPE html>
@@ -210,20 +223,10 @@ export function printRecord(register: Register, record: RecordData, company: Pri
   <div class="section-title">Record Details</div>
   <div class="fields-grid">
     <div>
-      ${leftCols.map((c) => `
-        <div class="field ${c.type === 'long_text' ? 'long-text-field' : ''}">
-          <div class="field-label">${c.name}</div>
-          <div class="field-value">${escapeHtml(formatVal(record.data[c.name], c.type))}</div>
-        </div>
-      `).join('')}
+      ${leftCols.map((c) => renderField(c)).join('')}
     </div>
     <div>
-      ${rightCols.filter((c) => c.type !== 'long_text').map((c) => `
-        <div class="field">
-          <div class="field-label">${c.name}</div>
-          <div class="field-value">${escapeHtml(formatVal(record.data[c.name], c.type))}</div>
-        </div>
-      `).join('')}
+      ${rightCols.filter((c) => c.type !== 'long_text').map((c) => renderField(c)).join('')}
     </div>
   </div>
 

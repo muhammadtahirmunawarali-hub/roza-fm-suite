@@ -22,7 +22,7 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import { ColumnEditor } from './column-editor';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -228,11 +228,11 @@ export function RegisterView({ registerId }: Props) {
   const handlePrint = (recs: RecordData[]) => {
     if (!register) return;
     if (recs.length === 1) {
-      printRecord(register, recs[0], company);
+      printRecord(register, recs[0], company, currency);
     } else {
       // For multiple, print first one (limitation noted in UI)
       recs.slice(0, 5).forEach((r, i) => {
-        setTimeout(() => printRecord(register, r, company), i * 400);
+        setTimeout(() => printRecord(register, r, company, currency), i * 400);
       });
     }
   };
@@ -578,7 +578,7 @@ export function RegisterView({ registerId }: Props) {
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide sticky right-0 bg-[var(--erp-bg-elevated)] border-l border-[var(--erp-border)] z-20">
+                <th className="px-3 py-2 text-right font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide sticky right-0 bg-[var(--erp-bg-elevated)] border-l border-[var(--erp-border)] z-20 min-w-[200px]">
                   Actions
                 </th>
               </tr>
@@ -608,13 +608,13 @@ export function RegisterView({ registerId }: Props) {
                       </td>
                     ))}
                     <td className="px-3 py-2 text-right sticky right-0 bg-inherit border-l border-[var(--erp-border)] z-10">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <IconBtn title="View" onClick={() => setViewing(rec)}><Eye className="w-3.5 h-3.5" /></IconBtn>
+                      <div className="flex items-center justify-end gap-1">
+                        <ActionBtn title="View record" onClick={() => setViewing(rec)} icon={<Eye className="w-3.5 h-3.5" />} label="View" />
                         {hasStatusCol && (canApprove || canEdit) && (
-                          <IconBtn title="Workflow" onClick={() => setWorkflowTarget(rec)} accent><Workflow className="w-3.5 h-3.5" /></IconBtn>
+                          <ActionBtn title="Workflow" onClick={() => setWorkflowTarget(rec)} icon={<Workflow className="w-3.5 h-3.5" />} label="Flow" accent />
                         )}
                         {canEdit && (
-                          <IconBtn title="Edit" onClick={() => { setEditing(rec); setFormOpen(true); }}><Pencil className="w-3.5 h-3.5" /></IconBtn>
+                          <ActionBtn title="Edit record" onClick={() => { setEditing(rec); setFormOpen(true); }} icon={<Pencil className="w-3.5 h-3.5" />} label="Edit" />
                         )}
                         <IconBtn title="Print" onClick={() => handlePrint([rec])}><Printer className="w-3.5 h-3.5" /></IconBtn>
                         {canDelete && (
@@ -858,6 +858,45 @@ function CellContent({ value, col, sequence, registerCode, expanded, currency = 
       </div>
     );
   }
+  if (col.type === 'image') {
+    const src = String(value);
+    return (
+      <a href={src} target="_blank" rel="noopener noreferrer" className="inline-block">
+        <img src={src} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-[var(--erp-border)] hover:border-[var(--erp-accent)] transition-colors" />
+      </a>
+    );
+  }
+  if (col.type === 'url') {
+    const url = String(value);
+    const display = url.replace(/^https?:\/\//, '').slice(0, 30);
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-[var(--erp-accent)] hover:underline inline-flex items-center gap-1 max-w-[180px]">
+        <LinkIcon className="w-3 h-3 shrink-0" />
+        <span className="truncate">{display}{url.length > 30 ? '…' : ''}</span>
+      </a>
+    );
+  }
+  if (col.type === 'color') {
+    const c = String(value);
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="w-5 h-5 rounded border border-[var(--erp-border)]" style={{ background: c }} />
+        <span className="font-mono text-[10px] text-[var(--erp-text-secondary)]">{c}</span>
+      </span>
+    );
+  }
+  if (col.type === 'tags') {
+    const arr = Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim()).filter(Boolean);
+    return (
+      <div className="flex flex-wrap gap-1">
+        {arr.map((v, i) => (
+          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium border border-[var(--erp-accent-border)]">
+            #{String(v)}
+          </span>
+        ))}
+      </div>
+    );
+  }
   return <span className="text-[var(--erp-text)]">{String(value)}</span>;
 }
 
@@ -923,6 +962,25 @@ function IconBtn({ children, title, onClick, disabled, danger, accent }: { child
       )}
     >
       {children}
+    </button>
+  );
+}
+
+// Action button with icon + explicit text label (View / Edit / Flow)
+function ActionBtn({ title, onClick, icon, label, accent }: { title: string; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] font-medium transition-colors border',
+        accent
+          ? 'border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]'
+          : 'border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] hover:border-[var(--erp-accent-border)]',
+      )}
+    >
+      {icon}
+      <span>{label}</span>
     </button>
   );
 }

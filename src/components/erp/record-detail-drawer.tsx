@@ -3,8 +3,8 @@
 // FMCore ERP — Record Detail Drawer (slide-in panel from right)
 // Replaces the View modal with a richer UX: tabs for Details / History / Activity,
 // inline workflow actions, inline field editing, and a timeline of status transitions.
-import { useEffect, useState, useCallback } from 'react';
-import { recordsApi, masterDataApi } from '@/lib/erp/api';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
 import { FAIcon } from './icon';
@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   X, Printer, Pencil, Workflow as WorkflowIcon, History as HistoryIcon,
   FileText, Activity, Clock, CheckCircle2, ArrowRight, Loader2,
-  Check, XCircle, AlertCircle, Star, Download, Link2,
+  Check, XCircle, AlertCircle, Star, Download, Link2, Upload,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -184,7 +184,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
   const currentStatus = statusCol ? String(record.data[statusCol.name] || '—') : null;
 
   const handlePrint = () => {
-    printRecord(register, record, company);
+    printRecord(register, record, company, currency);
   };
 
   const handleWorkflowClick = () => {
@@ -371,9 +371,10 @@ function InlineEditTab({
   const cols = register.columns.filter((c) => c.type !== 'auto_increment');
 
   // Group columns by type for better layout (same as DetailsTab)
-  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor'].includes(c.type));
+  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor', 'url', 'color'].includes(c.type));
   const longFields = cols.filter((c) => c.type === 'long_text');
-  const multiFields = cols.filter((c) => c.type === 'multi_select');
+  const multiFields = cols.filter((c) => c.type === 'multi_select' || c.type === 'tags');
+  const imageFields = cols.filter((c) => c.type === 'image');
 
   return (
     <div className="p-4 space-y-5">
@@ -381,6 +382,18 @@ function InlineEditTab({
         <Pencil className="w-3.5 h-3.5 shrink-0" />
         <span>Edit fields directly. Changes are saved when you click "Save Changes".</span>
       </div>
+
+      {/* Image gallery (inline-edit) */}
+      {imageFields.length > 0 && (
+        <div>
+          <SectionLabel icon="fa-image" label="Images" count={imageFields.length} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {imageFields.map((col) => (
+              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} currency={currency} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main fields grid */}
       <div>
@@ -638,6 +651,62 @@ function InlineField({
           {errorEl}
         </div>
       );
+    case 'tags':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <MultiSelectInline
+            options={col.options || []}
+            value={Array.isArray(value) ? value : (value ? [value] : [])}
+            onChange={onChange}
+          />
+          {errorEl}
+        </div>
+      );
+    case 'url':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <Input
+            type="url"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+            placeholder="https://example.com"
+          />
+          {errorEl}
+        </div>
+      );
+    case 'color':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={value || '#000000'}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-9 h-9 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-input)] cursor-pointer p-0.5"
+            />
+            <Input
+              type="text"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0 font-mono flex-1"
+              placeholder="#000000"
+            />
+          </div>
+          {errorEl}
+        </div>
+      );
+    case 'image':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <DrawerImageField value={value} onChange={onChange} />
+          {errorEl}
+        </div>
+      );
     default:
       return (
         <div className={wrapperClass}>
@@ -689,17 +758,89 @@ function MultiSelectInline({ options, value, onChange }: { options: string[]; va
   );
 }
 
+// Image upload field for the drawer's inline edit mode
+function DrawerImageField({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await uploadsApi.upload(file);
+      onChange(result.url);
+      toast.success('Image uploaded');
+    } catch (e: any) {
+      toast.error('Upload failed', { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+      />
+      {value ? (
+        <div className="relative">
+          <img src={String(value)} alt="preview" className="w-16 h-16 object-cover rounded-md border border-[var(--erp-border)]" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center hover:scale-110 transition-transform"
+            aria-label="Remove image"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        <div className="w-16 h-16 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)]">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+        </div>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="h-8 text-[11px]"
+      >
+        {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...</> : <><Upload className="w-3.5 h-3.5 mr-1" /> {value ? 'Replace' : 'Upload'}</>}
+      </Button>
+    </div>
+  );
+}
+
 // ---------- Details Tab ----------
 function DetailsTab({ register, record, currency = 'AED' }: { register: Register; record: RecordData; currency?: string }) {
   const cols = register.columns.filter((c) => c.type !== 'auto_increment');
 
   // Group columns by type for better layout
-  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor'].includes(c.type));
+  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor', 'url', 'color'].includes(c.type));
   const longFields = cols.filter((c) => c.type === 'long_text');
-  const multiFields = cols.filter((c) => c.type === 'multi_select');
+  const multiFields = cols.filter((c) => c.type === 'multi_select' || c.type === 'tags');
+  const imageFields = cols.filter((c) => c.type === 'image');
 
   return (
     <div className="p-4 space-y-5">
+      {/* Image gallery (before/after photos, product images) */}
+      {imageFields.length > 0 && (
+        <div>
+          <SectionLabel icon="fa-image" label="Images" count={imageFields.length} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {imageFields.map((col) => (
+              <FieldCard key={col.name} col={col} value={record.data[col.name]} currency={currency} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main fields grid */}
       <div>
         <SectionLabel icon="fa-circle-info" label="Record Fields" count={mainFields.length} />
@@ -772,6 +913,28 @@ function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef
               {String(v)}
             </span>
           ))}
+        </div>
+      ) : col.type === 'tags' ? (
+        <div className="flex flex-wrap gap-1">
+          {(Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim()).filter(Boolean)).map((v, i) => (
+            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium border border-[var(--erp-accent-border)]">
+              #{String(v)}
+            </span>
+          ))}
+        </div>
+      ) : col.type === 'image' ? (
+        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="block group">
+          <img src={String(value)} alt={col.name} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)] group-hover:border-[var(--erp-accent)] transition-colors" />
+          <div className="text-[9px] text-[var(--erp-text-muted)] mt-1 truncate">{col.name}</div>
+        </a>
+      ) : col.type === 'url' ? (
+        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[var(--erp-accent)] hover:underline break-all">
+          {String(value)}
+        </a>
+      ) : col.type === 'color' ? (
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded border border-[var(--erp-border)]" style={{ background: String(value) }} />
+          <span className="font-mono text-[11px] text-[var(--erp-text)]">{String(value)}</span>
         </div>
       ) : col.type === 'long_text' ? (
         <div className="text-[12px] text-[var(--erp-text)] whitespace-pre-wrap leading-relaxed">{String(value)}</div>
@@ -1122,6 +1285,10 @@ function colIconFor(type: string): string {
     case 'asset': return 'fa-cube';
     case 'equipment': return 'fa-gears';
     case 'vendor': return 'fa-truck';
+    case 'image': return 'fa-image';
+    case 'url': return 'fa-link';
+    case 'color': return 'fa-palette';
+    case 'tags': return 'fa-tags';
     default: return 'fa-circle';
   }
 }

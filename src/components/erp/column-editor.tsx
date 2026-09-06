@@ -12,8 +12,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Plus, Trash2, GripVertical, Save, X, Loader2, AlertTriangle, Settings2, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  Plus, Trash2, GripVertical, Save, X, Loader2, AlertTriangle, Settings2,
+  ArrowUp, ArrowDown, HelpCircle, RotateCcw, Inbox,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FAIcon } from './icon';
+
+// Human-readable descriptions shown in the `?` tooltip next to the column type dropdown.
+const COLUMN_DESCRIPTIONS: Record<ColumnType, string> = {
+  auto_increment: 'Auto-incrementing sequence number (read-only)',
+  text: 'Single-line text input',
+  long_text: 'Multi-line textarea for notes/descriptions',
+  number: 'Numeric value (integer or decimal)',
+  currency: 'Monetary value with global currency prefix',
+  percentage: 'Percentage value 0-100',
+  date: 'Date picker (calendar)',
+  datetime: 'Date and time picker',
+  time: 'Time picker (HH:MM)',
+  dropdown: 'Single-select from predefined options',
+  status: 'Workflow status (e.g. Draft, Submitted, Approved)',
+  priority: 'Priority level (e.g. Low, Medium, High, Critical)',
+  multi_select: 'Multi-select from predefined options',
+  email: 'Email address with validation',
+  phone: 'Phone number',
+  rating: '1-5 star rating',
+  employee: 'Linked employee from HR',
+  department: 'Linked department',
+  building: 'Linked building/location',
+  asset: 'Linked asset from Asset Register',
+  equipment: 'Linked equipment',
+  vendor: 'Linked vendor from Vendor Register',
+  image: 'Image upload (before/after photos, product images)',
+  url: 'Web URL / link',
+  color: 'Color picker (hex value)',
+  tags: 'Multi-select tag input',
+};
 
 interface Props {
   open: boolean;
@@ -28,6 +62,7 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
   const [initialized, setInitialized] = useState(false);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [dragPosition, setDragPosition] = useState<'before' | 'after' | null>(null);
 
   // Initialize columns when modal opens
   useCallback(() => {
@@ -76,10 +111,14 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
     setDraggedIdx(idx);
   };
 
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
+  const handleDragOver = (e: React.DragEvent, idx: number, rowEl: HTMLElement) => {
     e.preventDefault();
     if (draggedIdx !== null && draggedIdx !== idx) {
       setDragOverIdx(idx);
+      // Compute whether the cursor is in the top or bottom half of the target row.
+      const rect = rowEl.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      setDragPosition(e.clientY < midpoint ? 'before' : 'after');
     }
   };
 
@@ -87,21 +126,35 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
     if (draggedIdx === null || draggedIdx === idx) {
       setDraggedIdx(null);
       setDragOverIdx(null);
+      setDragPosition(null);
       return;
     }
+    // Compute effective insertion index: when dropping "after" on a later row,
+    // account for the removal of the dragged item shifting indices.
+    let insertAt = idx;
+    if (dragPosition === 'after') insertAt += 1;
+    if (draggedIdx < insertAt) insertAt -= 1;
     setColumns((cols) => {
       const next = [...cols];
       const [moved] = next.splice(draggedIdx, 1);
-      next.splice(idx, 0, moved);
+      next.splice(insertAt, 0, moved);
       return next;
     });
     setDraggedIdx(null);
     setDragOverIdx(null);
+    setDragPosition(null);
   };
 
   const handleDragEnd = () => {
     setDraggedIdx(null);
     setDragOverIdx(null);
+    setDragPosition(null);
+  };
+
+  const resetToOriginal = () => {
+    if (!register) return;
+    setColumns(JSON.parse(JSON.stringify(register.columns)));
+    toast.info('Columns reset to original state');
   };
 
   const handleSave = async () => {
@@ -144,6 +197,9 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
           <DialogTitle className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[var(--erp-accent)]" />
             Edit Columns — {register.name}
+            <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] text-[10px] font-bold">
+              {columns.length}
+            </span>
           </DialogTitle>
           <p className="text-[11px] text-[var(--erp-text-muted)] -mt-1">
             Add, remove, rename, or change the type of columns. Changes apply to all records in this register.
@@ -163,9 +219,22 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
             <Label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--erp-text-muted)]">
               Columns ({columns.length})
             </Label>
-            <Button type="button" variant="outline" size="sm" onClick={addColumn} className="h-7 text-[11px]">
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add Column
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={resetToOriginal}
+                disabled={saving}
+                className="h-7 text-[11px] text-[var(--erp-text-muted)] hover:text-[var(--erp-text)]"
+                title="Restore columns to the register's original state"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset to Original
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addColumn} className="h-7 text-[11px]">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Column
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
@@ -174,7 +243,7 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
                 key={idx}
                 draggable
                 onDragStart={() => handleDragStart(idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx, e.currentTarget as HTMLElement)}
                 onDrop={() => handleDrop(idx)}
                 onDragEnd={handleDragEnd}
                 className={cn(
@@ -182,7 +251,11 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
                   draggedIdx === idx
                     ? 'opacity-50 border-[var(--erp-accent)]'
                     : dragOverIdx === idx
-                    ? 'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
+                    ? cn(
+                        'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)]',
+                        dragPosition === 'before' && 'border-t-[3px] border-t-[var(--erp-accent)]',
+                        dragPosition === 'after' && 'border-b-[3px] border-b-[var(--erp-accent)]',
+                      )
                     : 'border-[var(--erp-border)] bg-[var(--erp-bg-card)]',
                 )}
               >
@@ -220,7 +293,7 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
                 </div>
 
                 {/* Column type */}
-                <div className="col-span-3">
+                <div className="col-span-3 flex items-center gap-1">
                   <select
                     value={col.type}
                     onChange={(e) => updateColumn(idx, { type: e.target.value as ColumnType })}
@@ -230,6 +303,13 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
                       <option key={t} value={t}>{meta.label}</option>
                     ))}
                   </select>
+                  <span
+                    title={COLUMN_DESCRIPTIONS[col.type]}
+                    className="shrink-0 cursor-help text-[var(--erp-text-muted)] hover:text-[var(--erp-text)] transition-colors"
+                    aria-label={`Description of ${col.type} column type: ${COLUMN_DESCRIPTIONS[col.type]}`}
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </span>
                 </div>
 
                 {/* Options or width */}
@@ -276,14 +356,37 @@ export function ColumnEditor({ open, register, onClose, onSaved }: Props) {
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
+                {/* Column preview line — ghost view of how the column appears in the grid */}
+                <div className="col-span-12 -mt-1 mb-1 flex items-center gap-1.5 text-[10px] text-[var(--erp-text-muted)] pl-1">
+                  <FAIcon name={COLUMN_TYPE_META[col.type].icon} className="text-[8px]" />
+                  <span className="truncate max-w-[200px]">{col.name || 'unnamed'}</span>
+                  <span className="opacity-60">· {col.width || 120}px · {col.required ? 'required' : 'optional'}</span>
+                </div>
               </div>
             ))}
             {columns.length === 0 && (
-              <div className="text-center py-6 text-[var(--erp-text-muted)] text-[12px]">
-                No columns. Click "Add Column" to start.
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                <div className="w-12 h-12 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center">
+                  <Inbox className="w-6 h-6 text-[var(--erp-text-muted)]" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-medium text-[var(--erp-text)]">No columns yet</p>
+                  <p className="text-[11px] text-[var(--erp-text-muted)]">
+                    Start building your register by adding the first column.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addColumn} className="h-8 text-[12px]">
+                  <Plus className="w-4 h-4 mr-1" /> Add First Column
+                </Button>
               </div>
             )}
           </div>
+
+          {/* Keyboard shortcuts hint */}
+          <p className="text-[10px] text-[var(--erp-text-muted)] pl-1 pt-1">
+            Tip: Drag the grip handle to reorder. Use ↑↓ arrows for precise moves. Press * to toggle required.
+          </p>
         </div>
 
         <DialogFooter className="border-t border-[var(--erp-border)] pt-3">
