@@ -58,6 +58,8 @@ export const recordsApi = {
     request<RecordData>(`${BASE}/registers/${registerId}/records/${recordId}`, { method: 'PUT', body: JSON.stringify({ data }) }),
   remove: (registerId: string, recordId: string) =>
     request<ApiResponse>(`${BASE}/registers/${registerId}/records/${recordId}`, { method: 'DELETE' }),
+  bulkCreate: (registerId: string, records: Record<string, any>[]) =>
+    request<{ ok: boolean; imported: number; failed: number; errors: { row: number; error: string }[] }>(`${BASE}/registers/${registerId}/records/bulk`, { method: 'POST', body: JSON.stringify({ records }) }),
 };
 
 // ---------- Dashboard ----------

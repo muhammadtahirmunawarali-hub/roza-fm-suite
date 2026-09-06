@@ -1,22 +1,28 @@
 'use client';
 
-// FMCore ERP — Dashboard
+// FMCore ERP — Dashboard (with clickable KPIs, quick actions, recent records)
 import { useEffect, useState } from 'react';
-import { dashboardApi } from '@/lib/erp/api';
-import type { DashboardData } from '@/lib/erp/types';
+import { dashboardApi, registersApi } from '@/lib/erp/api';
+import type { DashboardData, Register } from '@/lib/erp/types';
+import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import {
   BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer,
-  XAxis, YAxis, Tooltip, CartesianGrid, Legend, Doughnut
+  XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, Calendar, AlertTriangle } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, Activity, Calendar, AlertTriangle,
+  Plus, ArrowRight, Zap, FileText, Wrench, ShoppingCart, UserPlus, FileBarChart,
+} from 'lucide-react';
 
 export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [registers, setRegisters] = useState<Register[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { openTab, setBuilderOpen } = useErpStore();
 
   useEffect(() => {
     let cancelled = false;
@@ -24,8 +30,8 @@ export function Dashboard() {
       setLoading(true);
       setError(null);
       try {
-        const d = await dashboardApi.get();
-        if (!cancelled) setData(d);
+        const [d, regs] = await Promise.all([dashboardApi.get(), registersApi.list()]);
+        if (!cancelled) { setData(d); setRegisters(regs); }
       } catch (e: any) {
         if (!cancelled) setError(e.message || 'Failed to load dashboard');
       } finally {
@@ -34,6 +40,13 @@ export function Dashboard() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const openRegisterByCode = (code: string) => {
+    const reg = registers.find((r) => r.code === code);
+    if (reg) {
+      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+    }
+  };
 
   if (loading) return <DashboardSkeleton />;
   if (error) {
@@ -47,6 +60,16 @@ export function Dashboard() {
     );
   }
   if (!data) return null;
+
+  // Top 3 quick action targets
+  const quickActions = [
+    { code: 'workorders', label: 'New Work Order', icon: 'fa-wrench', color: '#F59E0B' },
+    { code: 'pur_req', label: 'New Purchase Request', icon: 'fa-cart-shopping', color: '#10B981' },
+    { code: 'incidents', label: 'Report Incident', icon: 'fa-burst', color: '#EF4444' },
+    { code: 'ptw', label: 'Issue Permit', icon: 'fa-file-signature', color: '#EF4444' },
+    { code: 'vendors', label: 'Add Vendor', icon: 'fa-truck-field', color: '#10B981' },
+    { code: 'visitors', label: 'Log Visitor', icon: 'fa-id-card', color: '#EC4899' },
+  ].filter((qa) => registers.some((r) => r.code === qa.code));
 
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-[1600px] mx-auto">
@@ -70,8 +93,49 @@ export function Dashboard() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {data.kpis.map((kpi) => (
-          <KpiCard key={kpi.id} kpi={kpi} />
+          <KpiCard
+            key={kpi.id}
+            kpi={kpi}
+            onClick={() => {
+              if (kpi.link) {
+                const code = kpi.link.match(/tab=([^&]+)/)?.[1];
+                if (code) openRegisterByCode(code);
+              }
+            }}
+          />
         ))}
+      </div>
+
+      {/* Quick Actions strip */}
+      <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-[12px] text-[var(--erp-text)] flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-[var(--erp-accent)]" /> Quick Actions
+          </h3>
+          <button
+            onClick={() => setBuilderOpen(true)}
+            className="text-[11px] text-[var(--erp-accent)] hover:underline flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> New Register
+          </button>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {quickActions.map((qa) => (
+            <button
+              key={qa.code}
+              onClick={() => openRegisterByCode(qa.code)}
+              className="group flex items-center gap-2 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] transition-all"
+            >
+              <div
+                className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"
+                style={{ background: qa.color + '20', color: qa.color }}
+              >
+                <FAIcon name={qa.icon} className="text-[11px]" />
+              </div>
+              <span className="text-[11px] text-[var(--erp-text-secondary)] group-hover:text-[var(--erp-text)] truncate">{qa.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Charts row 1 */}
@@ -81,8 +145,8 @@ export function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
             <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
             <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
               {(data.charts.find((c) => c.id === 'by-category')?.data || []).map((d, i) => (
                 <Cell key={i} fill={d.color} />
               ))}
@@ -102,8 +166,8 @@ export function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" horizontal={false} />
             <XAxis type="number" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
             <YAxis type="category" dataKey="label" tick={{ fill: 'var(--erp-text-secondary)', fontSize: 11 }} width={120} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} animationDuration={600}>
               {(data.charts.find((c) => c.id === 'top-registers')?.data || []).map((d, i) => (
                 <Cell key={i} fill={d.color} />
               ))}
@@ -123,8 +187,8 @@ export function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
             <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
             <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={600}>
               {(data.charts.find((c) => c.id === 'incident-severity')?.data || []).map((d, i) => (
                 <Cell key={i} fill={d.color} />
               ))}
@@ -137,91 +201,84 @@ export function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
             <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 10 }} angle={-15} textAnchor="end" height={50} />
             <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `AED ${Number(v).toLocaleString()}`} />
-            <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `AED ${Number(v).toLocaleString()}`} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+            <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} animationDuration={600} />
           </BarChart>
         </ChartCard>
       </div>
 
       {/* Recent activity + Upcoming items */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-[var(--erp-border)] flex items-center justify-between">
-            <h3 className="font-semibold text-[13px] text-[var(--erp-text)] flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[var(--erp-accent)]" /> Recent Activity
-            </h3>
-            <span className="text-[10px] text-[var(--erp-text-muted)]">{data.recentActivity.length} events</span>
-          </div>
-          <div className="divide-y divide-[var(--erp-border)] max-h-[360px] overflow-y-auto">
-            {data.recentActivity.length === 0 ? (
-              <div className="p-6 text-center text-[var(--erp-text-muted)] text-[12px]">No recent activity</div>
-            ) : (
-              data.recentActivity.map((log) => (
-                <div key={log.id} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)]">
-                  <div
-                    className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold"
-                    style={{
-                      background: actionColor(log.action) + '20',
-                      color: actionColor(log.action),
-                    }}
-                  >
-                    {log.action[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12px] text-[var(--erp-text)] truncate">{log.summary}</div>
-                    <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
-                      <span className="font-medium">{log.userName || 'System'}</span>
-                      <span>·</span>
-                      <span>{log.module}</span>
-                      <span>·</span>
-                      <span>{formatTimeAgo(log.createdAt)}</span>
-                    </div>
+        <Panel
+          title="Recent Activity"
+          icon={<Activity className="w-4 h-4 text-[var(--erp-accent)]" />}
+          count={data.recentActivity.length}
+          onViewAll={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
+        >
+          {data.recentActivity.length === 0 ? (
+            <EmptyPanel text="No recent activity" />
+          ) : (
+            data.recentActivity.map((log) => (
+              <div key={log.id} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)] transition-colors">
+                <div
+                  className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold"
+                  style={{
+                    background: actionColor(log.action) + '20',
+                    color: actionColor(log.action),
+                  }}
+                >
+                  {log.action[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] text-[var(--erp-text)] truncate">{log.summary}</div>
+                  <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
+                    <span className="font-medium">{log.userName || 'System'}</span>
+                    <span>·</span>
+                    <span>{log.module}</span>
+                    <span>·</span>
+                    <span>{formatTimeAgo(log.createdAt)}</span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
+              </div>
+            ))
+          )}
+        </Panel>
 
-        <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-[var(--erp-border)] flex items-center justify-between">
-            <h3 className="font-semibold text-[13px] text-[var(--erp-text)] flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[var(--erp-accent)]" /> Upcoming & Overdue
-            </h3>
-            <span className="text-[10px] text-[var(--erp-text-muted)]">{data.upcomingItems.length} items</span>
-          </div>
-          <div className="divide-y divide-[var(--erp-border)] max-h-[360px] overflow-y-auto">
-            {data.upcomingItems.length === 0 ? (
-              <div className="p-6 text-center text-[var(--erp-text-muted)] text-[12px]">No upcoming items</div>
-            ) : (
-              data.upcomingItems.map((item, i) => (
-                <div key={i} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)]">
-                  <div
-                    className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                    style={{
-                      background: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12px] text-[var(--erp-text)] truncate">{item.label}</div>
-                    <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">
-                      {item.register} · due {item.date}
-                    </div>
+        <Panel
+          title="Upcoming & Overdue"
+          icon={<Calendar className="w-4 h-4 text-[var(--erp-accent)]" />}
+          count={data.upcomingItems.length}
+        >
+          {data.upcomingItems.length === 0 ? (
+            <EmptyPanel text="No upcoming items" />
+          ) : (
+            data.upcomingItems.map((item, i) => (
+              <div key={i} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)] transition-colors">
+                <div
+                  className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                  style={{
+                    background: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] text-[var(--erp-text)] truncate">{item.label}</div>
+                  <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">
+                    {item.register} · due {item.date}
                   </div>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
-                    style={{
-                      background: item.severity === 'critical' ? 'rgba(239,68,68,0.15)' : item.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(6,182,212,0.15)',
-                      color: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
-                    }}
-                  >
-                    {item.severity}
-                  </span>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
+                  style={{
+                    background: item.severity === 'critical' ? 'rgba(239,68,68,0.15)' : item.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(6,182,212,0.15)',
+                    color: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
+                  }}
+                >
+                  {item.severity}
+                </span>
+              </div>
+            ))
+          )}
+        </Panel>
       </div>
     </div>
   );
@@ -235,9 +292,17 @@ const tooltipStyle: React.CSSProperties = {
   fontSize: '12px',
 };
 
-function KpiCard({ kpi }: { kpi: DashboardData['kpis'][number] }) {
+function KpiCard({ kpi, onClick }: { kpi: DashboardData['kpis'][number]; onClick?: () => void }) {
+  const clickable = !!onClick || !!kpi.link;
   return (
-    <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3 hover:shadow-md transition-shadow">
+    <button
+      onClick={onClick}
+      disabled={!clickable}
+      className={cn(
+        'group bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3 text-left transition-all',
+        clickable ? 'hover:shadow-md hover:border-[var(--erp-accent-border)] hover:-translate-y-0.5 cursor-pointer' : 'cursor-default',
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-medium text-[var(--erp-text-muted)] uppercase tracking-wide truncate">
@@ -248,14 +313,48 @@ function KpiCard({ kpi }: { kpi: DashboardData['kpis'][number] }) {
           </div>
         </div>
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"
           style={{ background: kpi.color + '20', color: kpi.color }}
         >
           <FAIcon name={kpi.icon} className="text-[14px]" />
         </div>
       </div>
+      {clickable && (
+        <div className="mt-1.5 text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          Open <ArrowRight className="w-3 h-3" />
+        </div>
+      )}
+    </button>
+  );
+}
+
+function Panel({
+  title, icon, count, onViewAll, children,
+}: { title: string; icon: React.ReactNode; count: number; onViewAll?: () => void; children: React.ReactNode }) {
+  return (
+    <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg overflow-hidden flex flex-col">
+      <div className="px-4 py-3 border-b border-[var(--erp-border)] flex items-center justify-between">
+        <h3 className="font-semibold text-[13px] text-[var(--erp-text)] flex items-center gap-2">
+          {icon} {title}
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[var(--erp-text-muted)]">{count} item{count === 1 ? '' : 's'}</span>
+          {onViewAll && (
+            <button onClick={onViewAll} className="text-[10px] text-[var(--erp-accent)] hover:underline">
+              View all →
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="divide-y divide-[var(--erp-border)] max-h-[360px] overflow-y-auto flex-1">
+        {children}
+      </div>
     </div>
   );
+}
+
+function EmptyPanel({ text }: { text: string }) {
+  return <div className="p-6 text-center text-[var(--erp-text-muted)] text-[12px]">{text}</div>;
 }
 
 function ChartCard({ title, subtitle, children, className }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
@@ -287,6 +386,7 @@ function DoughnutChart({ data }: { data: { label: string; value: number; color?:
         innerRadius={55}
         outerRadius={85}
         paddingAngle={2}
+        animationDuration={600}
       >
         {data.map((d, i) => (
           <Cell key={i} fill={d.color || '#94A3B8'} />
@@ -315,9 +415,10 @@ function DashboardSkeleton() {
       <div className="h-8 w-48 bg-[var(--erp-bg-hover)] rounded animate-pulse" />
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
         {Array.from({ length: 14 }).map((_, i) => (
-          <div key={i} className="h-[84px] bg-[var(--erp-bg-hover)] rounded-lg animate-pulse" />
+          <div key={i} className="h-[84px] bg-[var(--erp-bg-hover)] rounded-lg animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
         ))}
       </div>
+      <div className="h-[60px] bg-[var(--erp-bg-hover)] rounded-lg animate-pulse" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="h-[300px] bg-[var(--erp-bg-hover)] rounded-lg animate-pulse" />
         <div className="h-[300px] bg-[var(--erp-bg-hover)] rounded-lg animate-pulse" />
