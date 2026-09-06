@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { recordsApi, masterDataApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
 import { validateRecord, defaultValue } from '@/lib/erp/utils';
+import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -68,6 +69,7 @@ const SECTION_ICONS: Record<string, string> = {
 };
 
 export function RecordForm({ open, register, record, onClose, onSaved }: Props) {
+  const { currency } = useErpStore();
   const [data, setData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -370,7 +372,7 @@ function FieldRenderer({
           {label}
           <div className="relative">
             {col.type === 'currency' && (
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--erp-text-muted)] pointer-events-none">AED</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--erp-text-muted)] pointer-events-none">{currency}</span>
             )}
             <Input
               type="number"

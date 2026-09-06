@@ -32,7 +32,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const { openTab, setBuilderOpen } = useErpStore();
+  const { openTab, setBuilderOpen, currency } = useErpStore();
 
   const loadAll = async () => {
     setLoading(true);
@@ -270,12 +270,12 @@ export function Dashboard() {
         )}
 
         {!prefs.hiddenCharts.includes('asset-cat') && (
-          <ChartCard title="Asset Value by Category" subtitle="Capital distribution (AED)">
+          <ChartCard title="Asset Value by Category" subtitle={`Capital distribution (${currency})`}>
             <BarChart data={data.charts.find((c) => c.id === 'asset-cat')?.data || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
               <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 10 }} angle={-15} textAnchor="end" height={50} />
               <YAxis tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `AED ${Number(v).toLocaleString()}`} cursor={{ fill: 'var(--erp-bg-hover)' }} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `${currency} ${Number(v).toLocaleString()}`} cursor={{ fill: 'var(--erp-bg-hover)' }} />
               <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} animationDuration={600} />
             </BarChart>
           </ChartCard>
