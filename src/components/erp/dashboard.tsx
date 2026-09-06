@@ -8,6 +8,7 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { Sparkline } from './sparkline';
 import { DashboardCustomize } from './dashboard-customize';
+import { SystemOverviewWidget } from './system-overview-widget';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import {
@@ -195,6 +196,9 @@ export function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* System Overview Widget */}
+      <SystemOverviewWidget />
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

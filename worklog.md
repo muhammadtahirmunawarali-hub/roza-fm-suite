@@ -6,7 +6,7 @@ Rebuild the attached `DD.html` (FMCore ERP — Dynamic Register & Form Builder) 
 ## Reference Architecture (from prompt)
 ```
 ERP
-├── Dashboard (KPIs + charts + sparklines + activity timeline, clickable, customizable)
+├── Dashboard (KPIs + charts + sparklines + activity timeline + system overview, clickable, customizable)
 ├── Modules
 │   ├── Operations   (Meeting Minutes, Attendance, Toolbox Talks)
 │   ├── Maintenance   (Work Orders, PM, CM, Generator Log, Chiller Log, Electrical Inspection)
@@ -16,9 +16,9 @@ ERP
 │   ├── HR            (Visitors, Leave, Training)
 │   └── Performance   (Housekeeping, KPI)
 ├── Master Data (Registers / dynamic schema)
-├── Transactions (records in registers + status transitions + workflow history + inline edit + CSV export + related records)
+├── Transactions (records in registers + status transitions + workflow history + inline edit + CSV/JSON export + related records)
 ├── Reports (derived from register data)
-├── Administration (Users, Roles, Audit Logs, Saved Views Management + Editing, Dashboard Prefs, System Stats)
+├── Administration (Users, Roles, Audit Logs, Saved Views Management + Editing, Dashboard Prefs, System Stats, Keyboard Shortcuts)
 └── Settings (theme, currency, document numbering, saved views, system stats, backup/reset)
 ```
 
@@ -38,82 +38,79 @@ ERP
 - Tailwind CSS 4 + shadcn/ui (New York)
 - Prisma 6 + SQLite (with Session, User, SavedView, UserDashboardPref models)
 - Zustand (client state)
-- Recharts (charts) + custom Sparkline SVG component + EmptyStateIllustration SVG component
+- Recharts (charts) + custom Sparkline SVG component + EmptyStateIllustration SVG component + SystemOverviewWidget
 - z-ai-web-dev-sdk (AI Assistant, backend only)
 - Lucide icons + Font Awesome 6.5 (CDN) for register icons
 
 ---
 
-## Round 9 — Status (2026-09-06)
+## Round 10 — Status (2026-09-06)
 
-### QA Findings (from start of Round 9)
-- ✅ Verified all Round 8 features still work (Saved View editing with "Critical PRs Renamed", server-side permission checks on users CRUD)
+### QA Findings (from start of Round 10)
+- ✅ Verified all Round 9 features still work (Related Records tab showing 5 linked records, System Statistics grid in About tab)
 - ✅ Login flow works (admin → dashboard)
-- ✅ Settings → Saved Views tab shows 1 view with rename/delete buttons
 - ✅ No console errors
 - No new bugs found — system stable
 
 ### Work Focus This Round
-Per Round 8 worklog's Priority 2 list, this round delivered 2 high-impact features:
-1. **Related Records panel** — New "Related" tab in Record Detail Drawer showing linked records from other registers
-2. **System Statistics widget** — Global stats grid in Settings → About tab
+This round delivered 3 high-impact features:
+1. **JSON Export** — Export register data as JSON alongside existing CSV export
+2. **Keyboard Shortcuts Help Modal** — Document all shortcuts, accessible via Ctrl+/
+3. **System Overview Widget** — Live stats card on the dashboard showing registers, records, users, sessions, alerts, audit logs
 
 ### What Was Done This Round
 
 #### ✨ New Features
 
-1. **Related Records panel** (in `record-detail-drawer.tsx`) — Priority 2:
-   - **New "Related" tab** (4th tab after Details, History, Activity) in the Record Detail Drawer
-   - **New API endpoint**: `GET /api/erp/registers/[id]/records/[recordId]/related`
-     - Extracts reference values (employee, building, asset, equipment, vendor, department) from the current record
-     - Searches all other registers for records that contain the same reference values
-     - Returns grouped results by register with matched column + value info
-   - **RelatedTab component**: Shows grouped results with:
-     - Register header (colored icon + name + matching record count)
-     - Each matching record: #sequence, first non-empty field value, "Matched: column = value" badge, relative timestamp
-     - Total count: "N linked records in M registers"
-   - **Empty state**: Custom SVG illustration when no related records found
-   - **API client**: Added `recordsApi.getRelated()` method
-   - **Verified**: PR #1 (John Smith, Administration) found 5 related records across 5 registers (Meeting Minutes, PTW, Contracts, SIV, Leave) — all matched on "John Smith" or "Administration"
+1. **JSON Export from register view** (`register-view.tsx`):
+   - **Export dropdown** (hover-to-show) replaces the single "Export" button
+   - Two options: "Export as CSV" (existing) and "Export as JSON" (new)
+   - **JSON format**: Includes register metadata (name, code, category, columns) + export timestamp + record count + full record data (id, sequence, data, timestamps, createdBy/updatedBy)
+   - **Download**: `.json` file with pretty-printed JSON
+   - **Toast confirmation**: "Exported N records to JSON"
+   - Uses `Braces` icon (lucide) for the JSON option
 
-2. **System Statistics widget** (in `settings-view.tsx` About tab) — Priority 2:
-   - **New API endpoint**: `GET /api/erp/stats` — returns 12 global statistics in a single request
-   - **Stats grid** in the About tab with 12 colored stat cards:
-     - Registers (30), Records (93), Users (5), Active Users (5)
-     - Audit Logs (27), Notifications (6), Unread Notifs (6), Saved Views (1)
-     - Active Sessions (13), Settings (13), Dashboard Prefs (1), Inactive Users (0)
-   - **StatCard component**: Colored icon + large bold number + uppercase label
-   - **API client**: Added `statsApi.get()` method + `SystemStats` interface
+2. **Keyboard Shortcuts Help Modal** (`keyboard-shortcuts.tsx`, 90 lines):
+   - **New component**: Modal dialog documenting all keyboard shortcuts
+   - **Trigger**: Ctrl+/ (or Cmd+/ on Mac) — registered as a global keyboard event listener in `erp-shell.tsx`
+   - **5 categories**: Navigation, Toolbar Actions, Register View, Record Detail Drawer, Forms
+   - **Each shortcut**: Icon + description + `<kbd>` key badges
+   - **Shortcuts documented**: Ctrl+K (command palette), Esc (close), Click actions (AI, notifications, theme, customize), column sorting, search, row selection, tab switching, form submission
+
+3. **System Overview Widget** (`system-overview-widget.tsx`, 70 lines):
+   - **New dashboard widget**: Compact card showing 6 key system metrics
+   - **Live indicator**: Green pulsing dot with "Live" text
+   - **6 stat cards in responsive grid** (3 cols on mobile, 6 cols on desktop):
+     - Registers (30), Records (93), Users (5), Sessions (15), Alerts (unread notifications), Audit Logs
+   - **Color-coded icons**: Each stat has its own colored icon
+   - **Placement**: Between Quick Actions panel and Charts row 1 on the dashboard
+   - Uses existing `/api/erp/stats` endpoint from Round 9
 
 #### 🎨 Styling Polish
-- Related tab: Link2 icon for the tab button
-- Related records: Register-colored icons, matched-column badge with accent background
-- System stats: 12 colored stat cards in responsive grid (2/3/4 columns)
-- StatCard: Hover effect with accent border transition
+- Export dropdown: Clean hover-to-show dropdown with border separator between CSV and JSON options
+- Keyboard shortcuts: `<kbd>` badges with monospace font, category headers with divider lines
+- System overview: Live pulse animation, color-coded stat icons, hover effect on stat cards
+- Dashboard layout: System Overview widget adds a quick-glance stats row between Quick Actions and Charts
 
 #### 🔧 Backend Updates
-- **New API routes** (2):
-  - `GET /api/erp/registers/[id]/records/[recordId]/related` — finds related records across other registers
-  - `GET /api/erp/stats` — returns 12 global system statistics
-- **API client**: Added `recordsApi.getRelated()` + `statsApi.get()` + `SystemStats` interface
+- No new API routes (uses existing `/api/erp/stats` endpoint from Round 9)
+- **API client**: Added `exportJson()` function in `register-view.tsx` (client-side blob generation)
 
 ### Verification Results (agent-browser)
-- ✅ Login as admin → Purchase Request → View first record → "Related" tab visible (4th tab)
-- ✅ Click "Related" → shows "LINKED RECORDS (5 IN 5 REGISTERS)" with 5 register groups
-- ✅ Each group shows register icon + name + matched record # + "Matched: column = value" badge + timestamp
-- ✅ Navigate to Settings → About tab → "System Statistics" grid shows 12 stat cards
-- ✅ Stats show: 30 Registers, 93 Records, 5 Users, 27 Audit Logs, 13 Active Sessions, etc.
-- ✅ `/api/erp/related` returns 200; `/api/erp/stats` returns 200
+- ✅ Login as admin → Dashboard shows "SYSTEM OVERVIEW / Live" with 6 stat cards (30 REGISTERS, 93 RECORDS, 5 USERS, 15 SESSIONS, Alerts, Audit)
+- ✅ Press Ctrl+/ → Keyboard Shortcuts modal opens with 5 categories and kbd badges
+- ✅ Navigate to Purchase Request → Export button shows dropdown with "Export as CSV" + "Export as JSON"
+- ✅ `/api/erp/stats` returns 200 with all 12 system statistics
 - ✅ Lint: 0 errors, 0 warnings
-- ✅ Dev server stable (PID 25586)
+- ✅ Dev server stable (PID 27748)
 
 ### Files Modified/Created This Round
 ```
-NEW: src/app/api/erp/registers/[id]/records/[recordId]/related/route.ts (related records search)
-NEW: src/app/api/erp/stats/route.ts                              (global system statistics)
-MODIFIED: src/lib/erp/api.ts                                      (added getRelated + statsApi + SystemStats)
-MODIFIED: src/components/erp/record-detail-drawer.tsx             (added Related tab + RelatedTab component + Link2 import)
-MODIFIED: src/components/erp/settings-view.tsx                    (added System Statistics grid in About tab + StatCard component)
+NEW: src/components/erp/keyboard-shortcuts.tsx        (90 lines — shortcuts help modal)
+NEW: src/components/erp/system-overview-widget.tsx    (70 lines — live stats card on dashboard)
+MODIFIED: src/components/erp/register-view.tsx        (added exportJson + Export dropdown with CSV/JSON options + ChevronDown + Braces imports)
+MODIFIED: src/components/erp/dashboard.tsx             (added SystemOverviewWidget between Quick Actions and Charts)
+MODIFIED: src/components/erp/erp-shell.tsx             (added KeyboardShortcuts modal + Ctrl+/ handler + useState import)
 ```
 
 ## Current Goals / Completed Modifications
@@ -134,23 +131,26 @@ MODIFIED: src/components/erp/settings-view.tsx                    (added System 
 - [DONE] User Menu dropdown (Round 3)
 - [DONE] 5 demo users seeded (Round 3)
 - [DONE] Status bar shows real user info (Round 3)
-- [DONE] Permission Enforcement in UI (Round 4) — sidebar + action buttons gated by role
-- [DONE] Approval Workflow UI (Round 4) — state machine + Approve/Reject/Submit/Cancel
-- [DONE] Saved Views UI (Round 4) — save/load named filter combinations
-- [DONE] KPI Sparklines + Activity Timeline (Round 4) — 7-day trend charts
-- [DONE] Record Detail Drawer (Round 5) — slide-in panel with Details/History/Activity tabs
-- [DONE] Workflow History timeline (Round 5) — visual timeline of status transitions per record
-- [DONE] Server-side permission checks (Round 5) — transition endpoint validates session + role
-- [DONE] Empty state SVG illustrations (Round 5) — custom illustrations for 7 empty states
-- [DONE] Inline Edit in Record Detail Drawer (Round 6) — edit fields directly without opening modal
-- [DONE] Custom Dashboard Widgets (Round 6) — pin/hide KPIs & charts with per-user preferences
-- [DONE] Saved Views Management page (Round 7) — Settings tab to view/delete all saved views
-- [DONE] Server-side permission checks on records CRUD (Round 7) — all mutation endpoints validate session + role
-- [DONE] Workflow History CSV export (Round 7) — export history timeline as CSV
-- [DONE] Server-side permission checks on users CRUD (Round 8) — all user mutation endpoints validate session + role
-- [DONE] Saved View editing (Round 8) — rename/update existing saved views
-- [DONE] **Related Records panel** (Round 9) — shows linked records from other registers in the drawer
-- [DONE] **System Statistics widget** (Round 9) — 12 global stats in Settings → About tab
+- [DONE] Permission Enforcement in UI (Round 4)
+- [DONE] Approval Workflow UI (Round 4)
+- [DONE] Saved Views UI (Round 4)
+- [DONE] KPI Sparklines + Activity Timeline (Round 4)
+- [DONE] Record Detail Drawer (Round 5)
+- [DONE] Workflow History timeline (Round 5)
+- [DONE] Server-side permission checks (Round 5)
+- [DONE] Empty state SVG illustrations (Round 5)
+- [DONE] Inline Edit in Record Detail Drawer (Round 6)
+- [DONE] Custom Dashboard Widgets (Round 6)
+- [DONE] Saved Views Management page (Round 7)
+- [DONE] Server-side permission checks on records CRUD (Round 7)
+- [DONE] Workflow History CSV export (Round 7)
+- [DONE] Server-side permission checks on users CRUD (Round 8)
+- [DONE] Saved View editing (Round 8)
+- [DONE] Related Records panel (Round 9)
+- [DONE] System Statistics widget (Round 9)
+- [DONE] **JSON Export from register view** (Round 10) — data portability alongside CSV
+- [DONE] **Keyboard Shortcuts Help Modal** (Round 10) — Ctrl+/ shows all shortcuts
+- [DONE] **System Overview Widget** (Round 10) — live stats card on dashboard
 
 ## Unresolved Issues / Risks / Next-Phase Priorities
 
@@ -176,9 +176,9 @@ MODIFIED: src/components/erp/settings-view.tsx                    (added System 
 - **Session cookies are not signed**; production should add HMAC signing or JWT
 - **Server-side permission checks** implemented on ALL mutation endpoints
 - Dashboard preferences don't yet support drag-and-drop reordering (only pin/hide)
-- Inline edit doesn't auto-save on field blur (intentional — user must click "Save Changes")
-- Saved view editing currently only supports renaming and toggling shared/private
+- Inline edit doesn't auto-save on field blur (intentional)
 - Related records search is text-based (exact match); fuzzy matching would improve results
+- Export dropdown uses CSS hover (group-hover) — not accessible via keyboard (future: convert to proper dropdown menu)
 
 ## Files Created (cumulative across all rounds)
 ```
@@ -196,7 +196,7 @@ src/app/api/erp/registers/[id]/records/route.ts
 src/app/api/erp/registers/[id]/records/[recordId]/route.ts
 src/app/api/erp/registers/[id]/records/[recordId]/transition/route.ts
 src/app/api/erp/registers/[id]/records/[recordId]/history/route.ts
-src/app/api/erp/registers/[id]/records/[recordId]/related/route.ts   ← NEW (Round 9)
+src/app/api/erp/registers/[id]/records/[recordId]/related/route.ts   (Round 9)
 src/app/api/erp/registers/[id]/records/bulk/route.ts
 src/app/api/erp/auth/login/route.ts
 src/app/api/erp/auth/logout/route.ts
@@ -210,7 +210,7 @@ src/app/api/erp/dashboard/route.ts
 src/app/api/erp/dashboard-prefs/route.ts
 src/app/api/erp/audit-logs/route.ts
 src/app/api/erp/settings/route.ts
-src/app/api/erp/stats/route.ts                 ← NEW (Round 9)
+src/app/api/erp/stats/route.ts                 (Round 9)
 src/app/api/erp/notifications/route.ts
 src/app/api/erp/notifications/[id]/read/route.ts
 src/app/api/erp/notifications/read-all/route.ts
@@ -220,22 +220,24 @@ src/app/api/erp/master-data/route.ts
 src/app/api/erp/backup/route.ts
 src/app/api/erp/seed/route.ts
 src/app/api/erp/reset/route.ts
-src/components/erp/erp-shell.tsx
+src/components/erp/erp-shell.tsx               (upgraded Round 10: shortcuts modal + Ctrl+/)
 src/components/erp/sidebar.tsx
 src/components/erp/toolbar.tsx
 src/components/erp/tab-bar.tsx
 src/components/erp/status-bar.tsx
-src/components/erp/dashboard.tsx
+src/components/erp/dashboard.tsx              (upgraded Round 10: System Overview Widget)
 src/components/erp/dashboard-customize.tsx
-src/components/erp/register-view.tsx
+src/components/erp/system-overview-widget.tsx  ← NEW (Round 10)
+src/components/erp/register-view.tsx          (upgraded Round 10: JSON export + dropdown)
 src/components/erp/record-form.tsx
 src/components/erp/register-builder.tsx
 src/components/erp/ai-assistant.tsx
 src/components/erp/notifications-panel.tsx
 src/components/erp/command-palette.tsx
+src/components/erp/keyboard-shortcuts.tsx      ← NEW (Round 10)
 src/components/erp/reports-view.tsx
 src/components/erp/audit-logs-view.tsx
-src/components/erp/settings-view.tsx            (upgraded Round 9: System Stats)
+src/components/erp/settings-view.tsx
 src/components/erp/csv-import.tsx
 src/components/erp/bulk-actions.tsx
 src/components/erp/print-record.tsx
@@ -245,7 +247,7 @@ src/components/erp/users-view.tsx
 src/components/erp/approval-workflow.tsx
 src/components/erp/saved-views.tsx
 src/components/erp/sparkline.tsx
-src/components/erp/record-detail-drawer.tsx    (upgraded Round 9: Related tab)
+src/components/erp/record-detail-drawer.tsx
 src/components/erp/empty-state-illustration.tsx
 src/components/erp/icon.tsx
 src/components/theme-provider.tsx
@@ -258,7 +260,7 @@ src/app/globals.css
 - Runs on port 3000 via `bunx next dev -p 3000`
 - Persistent launcher: `/home/z/my-project/start-dev.sh`
 - Logs at `/home/z/my-project/dev.log`
-- Current PID: 25586
+- Current PID: 27748
 
 ## Demo Login Credentials
 | Username | Password   | Role         | Department      | Visible Registers |

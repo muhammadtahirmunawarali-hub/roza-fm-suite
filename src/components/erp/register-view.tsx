@@ -21,7 +21,7 @@ import { RecordDetailDrawer } from './record-detail-drawer';
 import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -175,6 +175,37 @@ export function RegisterView({ registerId }: Props) {
     toast.success(`Exported ${records.length} records to CSV`);
   };
 
+  const exportJson = () => {
+    if (!register || records.length === 0) return;
+    const exportData = {
+      register: {
+        name: register.name,
+        code: register.code,
+        category: register.category,
+        columns: register.columns,
+      },
+      exportedAt: new Date().toISOString(),
+      recordCount: records.length,
+      records: records.map((r) => ({
+        id: r.id,
+        sequence: r.sequence,
+        data: r.data,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${register.code}_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${records.length} records to JSON`);
+  };
+
   const handlePrint = (recs: RecordData[]) => {
     if (!register) return;
     if (recs.length === 1) {
@@ -295,9 +326,20 @@ export function RegisterView({ registerId }: Props) {
               </Button>
             )}
             {canExport && (
-              <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 text-[12px]">
-                <Download className="w-3.5 h-3.5 mr-1" /> Export
-              </Button>
+              <div className="relative group">
+                <Button variant="outline" size="sm" className="h-8 text-[12px]">
+                  <Download className="w-3.5 h-3.5 mr-1" /> Export
+                  <ChevronDown className="w-3 h-3 ml-0.5" />
+                </Button>
+                <div className="absolute top-full right-0 mt-1 w-40 bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md shadow-lg z-30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                  <button onClick={exportCsv} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors border-b border-[var(--erp-border)]">
+                    <FileText className="w-3 h-3" /> Export as CSV
+                  </button>
+                  <button onClick={exportJson} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors">
+                    <Braces className="w-3 h-3" /> Export as JSON
+                  </button>
+                </div>
+              </div>
             )}
             {canCreate && (
               <Button

@@ -1,9 +1,9 @@
 'use client';
 
 // FMCore ERP — Main Shell
-// Composes: Sidebar + (Toolbar + TabBar + Content + StatusBar) + AI panel + Notifications + Command Palette + Builder
+// Composes: Sidebar + (Toolbar + TabBar + Content + StatusBar) + AI panel + Notifications + Command Palette + Builder + Shortcuts
 // Handles auth gating — shows LoginScreen if user not authenticated.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { authApi } from '@/lib/erp/api';
 import { Sidebar } from './sidebar';
@@ -21,6 +21,7 @@ import { AuditLogsView } from './audit-logs-view';
 import { SettingsView } from './settings-view';
 import { UsersView } from './users-view';
 import { LoginScreen } from './login-screen';
+import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { registersApi } from '@/lib/erp/api';
 
 export function ErpShell() {
@@ -28,6 +29,7 @@ export function ErpShell() {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
   } = useErpStore();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
   // Apply theme to <html> element
@@ -75,6 +77,18 @@ export function ErpShell() {
     return () => window.removeEventListener('fmcore:open-by-code', handler as EventListener);
   }, []);
 
+  // Keyboard shortcut: Ctrl+/ to open shortcuts help
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   // Show nothing while auth is checking (prevents flash of login screen)
   if (authLoading && !authChecked) {
     return (
@@ -116,6 +130,7 @@ export function ErpShell() {
       <NotificationsPanel />
       <CommandPalette />
       <RegisterBuilder open={builderOpen} onClose={() => setBuilderOpen(false)} />
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }
