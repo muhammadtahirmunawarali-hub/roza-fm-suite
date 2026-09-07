@@ -4,7 +4,7 @@
 // Opens a print-friendly view of any record (in a new window) with company header,
 // document number, all fields, and signature area.
 import type { Register, RecordData } from '@/lib/erp/types';
-import { formatDocNumber, formatDate, formatDateTime } from '@/lib/erp/utils';
+import { formatDocNumber, formatDate, formatDateTime, displayColumnName } from '@/lib/erp/utils';
 
 interface PrintData {
   register: Register;
@@ -58,10 +58,11 @@ export function printRecord(register: Register, record: RecordData, company: Pri
   // Render image cells as actual <img> tags (not in the formatVal function)
   const renderField = (c: any): string => {
     const val = record.data[c.name];
+    const label = displayColumnName(c.name, currency);
     if (c.type === 'image' && val) {
-      return `<div class="field"><div class="field-label">${c.name}</div><img src="${val}" alt="${c.name}" style="max-width:200px;max-height:200px;border:1px solid #e2e8f0;border-radius:4px;" /></div>`;
+      return `<div class="field"><div class="field-label">${label}</div><img src="${val}" alt="${label}" style="max-width:200px;max-height:200px;border:1px solid #e2e8f0;border-radius:4px;" /></div>`;
     }
-    return `<div class="field ${c.type === 'long_text' ? 'long-text-field' : ''}"><div class="field-label">${c.name}</div><div class="field-value">${escapeHtml(formatVal(val, c.type))}</div></div>`;
+    return `<div class="field ${c.type === 'long_text' ? 'long-text-field' : ''}"><div class="field-label">${label}</div><div class="field-value">${escapeHtml(formatVal(val, c.type))}</div></div>`;
   };
 
   const html = `<!DOCTYPE html>

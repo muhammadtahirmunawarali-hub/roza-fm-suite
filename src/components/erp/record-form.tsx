@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
-import { validateRecord, defaultValue } from '@/lib/erp/utils';
+import { validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import {
@@ -251,7 +251,7 @@ function FieldRenderer({
   const label = (
     <Label className="text-[11px] font-medium text-[var(--erp-text-secondary)] flex items-center gap-1.5 mb-1">
       <FAIcon name={meta?.icon || 'fa-circle'} className="text-[10px] text-[var(--erp-text-muted)]" />
-      <span>{col.name}</span>
+      <span>{displayColumnName(col.name, currency)}</span>
       {col.required && <span className="text-[var(--erp-danger)]">*</span>}
     </Label>
   );

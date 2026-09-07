@@ -9,7 +9,7 @@ import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import {
   formatDocNumber, statusVariant, priorityVariant,
-  formatDate, formatTimeAgo, type BadgeVariant,
+  formatDate, formatTimeAgo, type BadgeVariant, displayColumnName,
 } from '@/lib/erp/utils';
 import { RecordForm } from './record-form';
 import { CsvImport } from './csv-import';
@@ -276,7 +276,7 @@ export function RegisterView({ registerId }: Props) {
     }
     if (currencyCol) {
       const sum = records.reduce((s, r) => s + (Number(r.data[currencyCol.name]) || 0), 0);
-      out.push({ label: currencyCol.name + ' (Σ)', value: formatCurrencyCompact(sum, currency), color: 'var(--erp-accent)' });
+      out.push({ label: displayColumnName(currencyCol.name, currency) + ' (Σ)', value: formatCurrencyCompact(sum, currency), color: 'var(--erp-accent)' });
     }
     return out.slice(0, 6);
   }, [register, records, total]);
@@ -358,7 +358,7 @@ export function RegisterView({ registerId }: Props) {
                         checked={!hiddenColumns.has(col.name)}
                         onCheckedChange={() => toggleColumn(col.name)}
                       />
-                      <span className="text-[var(--erp-text-secondary)] flex-1 truncate">{col.name}</span>
+                      <span className="text-[var(--erp-text-secondary)] flex-1 truncate">{displayColumnName(col.name, currency)}</span>
                       <span className="text-[9px] text-[var(--erp-text-muted)]">{col.type.replace('_', ' ')}</span>
                     </label>
                   ))}
@@ -509,7 +509,7 @@ export function RegisterView({ registerId }: Props) {
                   }}
                   className="text-[11px] py-1 px-2 rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)]"
                 >
-                  <option value="">{col.name}: All</option>
+                  <option value="">{displayColumnName(col.name, currency)}: All</option>
                   {col.options?.map((o) => (
                     <option key={o} value={o}>{o}</option>
                   ))}
@@ -569,7 +569,7 @@ export function RegisterView({ registerId }: Props) {
                     style={{ minWidth: col.width || 120 }}
                   >
                     <div className="flex items-center gap-1">
-                      <span>{col.name}</span>
+                      <span>{displayColumnName(col.name, currency)}</span>
                       {sortField === col.name ? (
                         sortDir === 'asc' ? <ArrowUp className="w-3 h-3 text-[var(--erp-accent)]" /> : <ArrowDown className="w-3 h-3 text-[var(--erp-accent)]" />
                       ) : (

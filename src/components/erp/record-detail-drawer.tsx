@@ -12,7 +12,7 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import { ApprovalWorkflow } from './approval-workflow';
 import { printRecord } from './print-record';
 import { cn } from '@/lib/utils';
-import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue } from '@/lib/erp/utils';
+import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -446,7 +446,7 @@ function InlineField({
   const label = (
     <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-1 flex items-center gap-1">
       <FAIcon name={colIconFor(col.type)} className="text-[8px]" />
-      <span>{col.name}</span>
+      <span>{displayColumnName(col.name, currency)}</span>
       {col.required && <span className="text-[var(--erp-danger)]">*</span>}
     </div>
   );
@@ -885,7 +885,7 @@ function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef
     <div className={cn('border border-[var(--erp-border)] rounded-md p-2.5 bg-[var(--erp-bg-card)]', fullWidth && 'col-span-2')}>
       <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-1 flex items-center gap-1">
         <FAIcon name={colIconFor(col.type)} className="text-[8px]" />
-        {col.name}
+        {displayColumnName(col.name, currency)}
       </div>
       {isEmpty ? (
         <span className="text-[12px] text-[var(--erp-text-muted)] italic">—</span>

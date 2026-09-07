@@ -72,6 +72,24 @@ export function formatCurrencyCompact(n: number, currency = 'AED'): string {
 // Backwards-compatible alias — now uses global currency from store
 export const formatCurrencyDisplay = (n: number, currency = 'AED') => formatCurrencyCompact(n, currency);
 
+// ---------- Column name display (dynamic currency in column names) ----------
+// Some legacy columns in the seed data are named "Value (AED)" or "Cost (AED)".
+// When the user changes the global currency, we want these labels to reflect the
+// current currency code rather than the hardcoded "AED". This function replaces
+// any "(AED)" suffix (case-insensitive) with the current currency code.
+// It also handles "(USD)", "(EUR)", etc. so migrations between currencies work.
+const CURRENCY_PATTERN = /\s*\(([A-Z]{3})\)\s*$/;
+
+export function displayColumnName(name: string, currency: string = 'AED'): string {
+  if (!name) return name;
+  const match = name.match(CURRENCY_PATTERN);
+  if (match) {
+    // Replace the trailing "(XXX)" with the current currency code
+    return name.replace(CURRENCY_PATTERN, ` (${currency.toUpperCase()})`);
+  }
+  return name;
+}
+
 export function formatNumber(value: number | string | undefined, decimals = 0): string {
   if (value === undefined || value === null || value === '') return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;

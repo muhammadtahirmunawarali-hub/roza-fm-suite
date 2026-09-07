@@ -358,3 +358,91 @@ CREATED: public/uploads/                                    (directory for uploa
 - Logs at `/home/z/my-project/dev.log`
 - Persistent launcher: `/home/z/my-project/start-dev.sh`
 
+
+---
+
+## Round 17 — Status (2026-09-07)
+
+### Task ID: R17 (Main Agent)
+Agent: Z.ai Code (Main Orchestrator)
+Task: Review the current codebase and implementation, troubleshoot potential issues, continue improving engineering details
+
+### Work Log
+- Read worklog (R16) to understand current state — image attachments, project status panel, drag indicators, View/Edit text buttons were all added in R16.
+- Verified dev server was running (PID 1089, stable on port 3000, ~1GB memory).
+- Performed full agent-browser QA:
+  - ✅ Login flow works (admin/admin123)
+  - ✅ Sidebar navigation works (Asset Register, Contract Register, Settings, Dashboard)
+  - ✅ Command palette works (Ctrl+K, search registers, navigate)
+  - ✅ Tab bar works (Dashboard ↔ Asset Register switching)
+  - ✅ View/Flow/Edit text buttons render correctly in actions column
+  - ✅ Edit button opens Record Form without errors (no client-side crash)
+  - ✅ Add Record button opens the form with all sections (Details, Classification, Status, Timeline, Location, Financials)
+  - ✅ Currency prefix shows correctly in form inputs
+  - ✅ Project Status panel renders (WebApp 82%, SaaS 64%, 18-module table, recommendations)
+  - ✅ Column Editor shows all 26 column types (including new Image, URL/Link, Color, Tags)
+  - ✅ All 26 column types available in the dropdown when adding/editing columns
+  - ✅ Keyboard shortcuts hint visible
+  - ✅ Per-row ghost preview line ("Asset Name · 160px · optional")
+
+### Bug Found & Fixed This Round
+**Bug: Column header "Value (AED)" hardcoded despite currency change**
+- Symptom: When user changed currency from AED to "QAD" (custom) in Settings, the column header in the register grid still showed "Value (AED)" even though cell values showed "QAD 850.0K". The stats summary also showed "Value (AED) (Σ): QAD 1.46M" — inconsistent.
+- Root cause: The seed data (`src/lib/erp/sample-data.ts`) defines column names like `"Value (AED)"` and `"Estimated Cost"` literally. These names are stored in the DB and rendered as-is in column headers, form labels, print layouts, etc.
+- Fix: Created a new `displayColumnName(name, currency)` utility in `src/lib/erp/utils.ts` that detects a trailing `(XXX)` pattern (where XXX is any 3-letter currency code) and replaces it with the current global currency code. Applied this utility in 6 rendering locations:
+  1. `register-view.tsx` — Column header `<th>` rendering
+  2. `register-view.tsx` — Column toggle dropdown labels
+  3. `register-view.tsx` — Filter dropdown labels
+  4. `register-view.tsx` — Stats summary label (`currencyCol.name + ' (Σ)'`)
+  5. `record-form.tsx` — FieldRenderer label
+  6. `record-detail-drawer.tsx` — InlineField label + FieldCard label
+  7. `print-record.tsx` — Field label in print HTML
+- Result: After changing currency to "QAR", the column header now shows "Value (QAR)", stats summary shows "Value (QAR) (Σ): QAR 1.46M", form labels show "Value (QAR)", and print labels show "Value (QAR)".
+
+### Improvement: Enhanced Currency Selector in Settings
+- Added 4 new Gulf currencies to the dropdown: **KWD** (Kuwaiti Dinar), **BHD** (Bahraini Dinar), **OMR** (Omani Rial) — alongside the existing QAR, SAR, AED.
+- Added an "Active: XXX" badge with a colored dot indicator showing the currently-active currency code.
+- Added a helpful hint below the selector: "Applies to all currency fields across registers, dashboards, forms, and printed documents."
+- Added a conditional tip when "Custom" is selected: "Tip: Common Gulf currencies (QAR, KWD, BHD, OMR) are now in the dropdown."
+- Made the custom currency input `uppercase` and `font-mono` for better readability.
+- Made the row `flex-wrap` so it doesn't overflow on mobile.
+
+### Image Upload API — End-to-End Verification
+- Tested the `/api/erp/uploads` endpoint via curl with a real PNG file:
+  - POST with multipart/form-data returns: `{"ok":true,"url":"/uploads/20260907_4db8a480.png","filename":"20260907_4db8a480.png","originalName":"test.png","size":70,"mimeType":"image/png"}`
+  - File saved to `/home/z/my-project/public/uploads/20260907_4db8a480.png`
+- The URL is now usable in any `image` column type via the `ImageField` component in the record form.
+
+### Verification Results (agent-browser)
+- ✅ Login → Dashboard → Asset Register → Edit Record form — all work without errors
+- ✅ Currency "QAR" propagates: Settings → Dashboard KPIs → Register column headers → Form labels → Stats summary → Chart subtitle
+- ✅ Column Editor: all 26 column types in dropdown (verified Image, URL/Link, Color, Tags are present)
+- ✅ Project Status panel: WebApp 82%, SaaS 64%, 18-module table, 3-column recommendations, image management box
+- ✅ No console errors or runtime errors in dev.log
+- ✅ All APIs return 200 (home, auth, registers, dashboard, settings, notifications)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Image upload API verified via curl (file saved, URL returned)
+
+### Files Modified This Round
+```
+MODIFIED: src/lib/erp/utils.ts                              (+displayColumnName utility function)
+MODIFIED: src/components/erp/register-view.tsx              (4 places: column header, toggle, filter, stats label — all use displayColumnName)
+MODIFIED: src/components/erp/record-form.tsx                 (FieldRenderer label uses displayColumnName)
+MODIFIED: src/components/erp/record-detail-drawer.tsx        (InlineField + FieldCard labels use displayColumnName)
+MODIFIED: src/components/erp/print-record.tsx                (renderField uses displayColumnName for field labels)
+MODIFIED: src/components/erp/settings-view.tsx               (+4 Gulf currencies, +Active badge, +helpful hints, +flex-wrap)
+```
+
+### Stage Summary
+Round 17 focused on **polishing the currency experience** and **verifying all R16 features work end-to-end**:
+1. Fixed the last remaining "AED" hardcoding issue — column names now dynamically reflect the global currency.
+2. Enhanced the Settings → Currency selector with more Gulf currencies and helpful UX hints.
+3. Verified via agent-browser that all R16 features (image attachments, project status panel, drag indicators, View/Edit text buttons) work correctly.
+4. Verified the image upload API works end-to-end via curl.
+
+### Dev Server
+- Runs on port 3000 via `bunx next dev -p 3000`
+- Memory: ~1GB used (stable, no OOM)
+- Logs at `/home/z/my-project/dev.log`
+- All APIs responding 200
+

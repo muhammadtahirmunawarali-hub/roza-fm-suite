@@ -251,11 +251,11 @@ export function SettingsView() {
                 <Field label="Fiscal Year" value={settings['company.fiscal_year'] || ''} onChange={(v) => update('company.fiscal_year', v)} />
                 <div>
                   <Label className="text-[11px] mb-1">Currency</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Select value={settings['company.currency'] || currency} onValueChange={(v) => { update('company.currency', v); update('currency', v); setCurrency(v); }}>
-                      <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[100px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[110px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR', 'INR', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'Custom'].map((c) => (
+                        {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'INR', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'Custom'].map((c) => (
                           <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
                         ))}
                       </SelectContent>
@@ -264,15 +264,20 @@ export function SettingsView() {
                       <Input
                         value={settings['company.currency_custom'] || ''}
                         onChange={(e) => { update('company.currency_custom', e.target.value.toUpperCase()); setCurrency(e.target.value.toUpperCase()); }}
-                        className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[80px]"
+                        className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[80px] uppercase font-mono"
                         placeholder="e.g. BHD"
                         maxLength={5}
                       />
                     )}
-                    <span className="text-[10px] text-[var(--erp-text-muted)]">
-                      Symbol: {settings['company.currency'] === 'Custom' ? (settings['company.currency_custom'] || '—') : (settings['company.currency'] || currency)}
+                    <span className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 rounded-full border border-[var(--erp-border)]" style={{ background: 'var(--erp-accent)' }} />
+                      Active: <span className="font-mono font-semibold text-[var(--erp-text)]">{settings['company.currency'] === 'Custom' ? (settings['company.currency_custom'] || '—') : (settings['company.currency'] || currency)}</span>
                     </span>
                   </div>
+                  <p className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
+                    Applies to all currency fields across registers, dashboards, forms, and printed documents.
+                    {settings['company.currency'] === 'Custom' && ' Tip: Common Gulf currencies (QAR, KWD, BHD, OMR) are now in the dropdown.'}
+                  </p>
                 </div>
               </div>
             </div>
