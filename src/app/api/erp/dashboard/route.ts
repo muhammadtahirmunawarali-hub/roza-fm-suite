@@ -5,8 +5,9 @@ import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
 import { REGISTER_CATEGORIES } from '@/lib/erp/types';
 import type { DashboardData, DashboardKPI, DashboardChart } from '@/lib/erp/types';
+import { apiHandler } from '@/lib/erp/api-helpers';
 
-export async function GET() {
+export const GET = apiHandler(async () => {
   await seedDatabase(false);
 
   // Load currency from settings
@@ -336,7 +337,7 @@ export async function GET() {
 
   const data: DashboardData = { kpis, charts, recentActivity, upcomingItems: upcomingItems.slice(0, 10), activityByDay };
   return NextResponse.json(data);
-}
+});
 
 function formatAED(n: number, currency = 'AED'): string {
   if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;

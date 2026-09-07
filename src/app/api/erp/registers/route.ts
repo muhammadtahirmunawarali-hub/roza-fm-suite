@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Register, ColumnDef, RegisterCategory } from '@/lib/erp/types';
 import { seedDatabase } from '@/lib/erp/seed';
+import { apiHandler, badRequest } from '@/lib/erp/api-helpers';
 
-export async function GET() {
+export const GET = apiHandler(async () => {
   // Ensure DB is seeded at least once
   await seedDatabase(false);
 
@@ -32,15 +33,15 @@ export async function GET() {
   }));
 
   return NextResponse.json(registers);
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req: NextRequest) => {
   const body = await req.json();
   const { name, icon, category, color, description, columns } = body;
 
-  if (!name) return NextResponse.json({ ok: false, error: 'Name is required' }, { status: 400 });
+  if (!name) return badRequest('Name is required');
   if (!columns || !Array.isArray(columns) || columns.length === 0) {
-    return NextResponse.json({ ok: false, error: 'At least one column is required' }, { status: 400 });
+    return badRequest('At least one column is required');
   }
 
   const code = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
@@ -49,28 +50,32 @@ export async function POST(req: NextRequest) {
 
   const order = await db.register.count({ where: { category } });
 
-  const reg = await db.register.create({
-    data: {
-      code: finalCode,
-      name,
-      icon: icon || 'fa-table',
-      category: category || 'operations',
-      color: color || '#00D4AA',
-      description: description || null,
-      columns: JSON.stringify(columns),
-      isSystem: false,
-      order: order + 1,
-    },
-  });
+  const reg = await db.$transaction(async (tx) => {
+    const newReg = await tx.register.create({
+      data: {
+        code: finalCode,
+        name,
+        icon: icon || 'fa-table',
+        category: category || 'operations',
+        color: color || '#00D4AA',
+        description: description || null,
+        columns: JSON.stringify(columns),
+        isSystem: false,
+        order: order + 1,
+      },
+    });
 
-  await db.auditLog.create({
-    data: {
-      action: 'Created',
-      module: name,
-      registerId: reg.id,
-      summary: `Created register "${name}" with ${columns.length} columns`,
-      newValue: JSON.stringify({ name, columns }),
-    },
+    await tx.auditLog.create({
+      data: {
+        action: 'Created',
+        module: name,
+        registerId: newReg.id,
+        summary: `Created register "${name}" with ${columns.length} columns`,
+        newValue: JSON.stringify({ name, columns }),
+      },
+    });
+
+    return newReg;
   });
 
   return NextResponse.json({
@@ -88,4 +93,4 @@ export async function POST(req: NextRequest) {
     createdAt: reg.createdAt.toISOString(),
     updatedAt: reg.updatedAt.toISOString(),
   } satisfies Register);
-}
+});

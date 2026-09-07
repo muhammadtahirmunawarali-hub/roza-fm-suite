@@ -1,13 +1,16 @@
 // FMCore ERP — Users API (admin management)
 // GET  /api/erp/users           → list all users
 // POST /api/erp/users           → create a new user (requires 'create' permission on 'users' module)
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getRolePermissions } from '@/lib/erp/seed';
+import { getRolePermissions, ROLES } from '@/lib/erp/seed';
 import type { User } from '@/lib/erp/types';
-import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
+import { apiHandler, requirePermission, badRequest, isValidEmail } from '@/lib/erp/api-helpers';
 
-export async function GET() {
+// The 11 valid roles defined in the seed matrix
+const VALID_ROLES = ROLES.map((r) => r.id);
+
+export const GET = apiHandler(async (req) => {
   const rows = await db.user.findMany({
     orderBy: { createdAt: 'desc' },
   });
@@ -29,34 +32,44 @@ export async function GET() {
   }));
 
   return NextResponse.json(users);
-}
+});
 
-export async function POST(req: NextRequest) {
-  // Server-side permission check
-  const currentUser = await getCurrentUser(req);
-  if (currentUser && !hasPermission(currentUser, 'users', 'create')) {
-    return NextResponse.json({ ok: false, error: "You don't have permission to create users" }, { status: 403 });
-  }
+export const POST = apiHandler(async (req) => {
+  // Server-side permission check (auth + permission)
+  const [currentUser, permError] = await requirePermission(req, 'users', 'create');
+  if (permError) return permError;
 
   const body = await req.json();
   const { name, email, username, password, role, department, branch, status } = body;
 
+  // Validate required fields
   if (!name || !email || !username || !password) {
-    return NextResponse.json({ ok: false, error: 'Name, email, username and password are required' }, { status: 400 });
+    return badRequest('Name, email, username and password are required');
+  }
+  if (!isValidEmail(email)) {
+    return badRequest('Email must be a valid format');
+  }
+  if (password.length < 6) {
+    return badRequest('Password must be at least 6 characters');
+  }
+
+  // Validate role (defaults to Viewer if not provided)
+  const finalRole = role || 'Viewer';
+  if (!VALID_ROLES.includes(finalRole)) {
+    return badRequest(`Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`);
   }
 
   // Check for duplicates
   const existingEmail = await db.user.findUnique({ where: { email } });
   if (existingEmail) {
-    return NextResponse.json({ ok: false, error: 'Email already in use' }, { status: 400 });
+    return badRequest('Email already in use');
   }
   const existingUsername = await db.user.findUnique({ where: { username: String(username).toLowerCase() } });
   if (existingUsername) {
-    return NextResponse.json({ ok: false, error: 'Username already taken' }, { status: 400 });
+    return badRequest('Username already taken');
   }
 
   const initials = String(name).split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-  const finalRole = role || 'Viewer';
 
   const user = await db.user.create({
     data: {
@@ -98,4 +111,4 @@ export async function POST(req: NextRequest) {
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   } satisfies User);
-}
+});

@@ -1,10 +1,12 @@
 // FMCore ERP — Auth: Logout
 // POST /api/erp/auth/logout
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { apiHandler } from '@/lib/erp/api-helpers';
 
-export async function POST(req: NextRequest) {
-  const token = req.cookies.get('fmcore_session')?.value;
+export const POST = apiHandler(async (req) => {
+  const nreq = req as NextRequest;
+  const token = nreq.cookies.get('fmcore_session')?.value;
   if (token) {
     // Delete session from DB
     try {
@@ -17,7 +19,7 @@ export async function POST(req: NextRequest) {
             action: 'Deleted',
             module: 'Auth',
             summary: `User logged out`,
-            ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+            ip: nreq.headers.get('x-forwarded-for') || nreq.headers.get('x-real-ip') || 'unknown',
           },
         });
       }
@@ -26,4 +28,4 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
   res.cookies.delete('fmcore_session');
   return res;
-}
+});

@@ -1,12 +1,13 @@
 // FMCore ERP — Auth: Login
 // POST /api/erp/auth/login  { username, password }
 // Sets a session cookie (fmcore_session) and returns the user
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
 import crypto from 'crypto';
+import { apiHandler, badRequest, unauthorized, forbidden } from '@/lib/erp/api-helpers';
 
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req) => {
   // Make sure users are seeded
   await seedDatabase(false);
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   const { username, password } = body;
 
   if (!username || !password) {
-    return NextResponse.json({ ok: false, error: 'Username and password are required' }, { status: 400 });
+    return badRequest('Username and password are required');
   }
 
   const user = await db.user.findUnique({
@@ -30,11 +31,11 @@ export async function POST(req: NextRequest) {
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
       },
     });
-    return NextResponse.json({ ok: false, error: 'Invalid username or password' }, { status: 401 });
+    return unauthorized('Invalid username or password');
   }
 
   if (user.status !== 'Active') {
-    return NextResponse.json({ ok: false, error: `Account is ${user.status}. Contact your administrator.` }, { status: 403 });
+    return forbidden(`Account is ${user.status}. Contact your administrator.`);
   }
 
   // Create session
@@ -91,4 +92,4 @@ export async function POST(req: NextRequest) {
   });
 
   return res;
-}
+});

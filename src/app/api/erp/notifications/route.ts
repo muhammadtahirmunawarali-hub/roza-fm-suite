@@ -2,8 +2,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
+import { apiHandler } from '@/lib/erp/api-helpers';
 
-export async function GET() {
+export const GET = apiHandler(async () => {
   await seedDatabase(false);
   const rows = await db.notification.findMany({
     orderBy: { createdAt: 'desc' },
@@ -20,4 +21,4 @@ export async function GET() {
     createdAt: n.createdAt.toISOString(),
     readAt: n.readAt?.toISOString() || null,
   })));
-}
+});

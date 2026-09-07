@@ -1,12 +1,14 @@
 // FMCore ERP — Auth: Current user (GET /api/erp/auth/me)
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
+import { apiHandler } from '@/lib/erp/api-helpers';
 
-export async function GET(req: NextRequest) {
+export const GET = apiHandler(async (req) => {
   await seedDatabase(false);
 
-  const token = req.cookies.get('fmcore_session')?.value;
+  const nreq = req as NextRequest;
+  const token = nreq.cookies.get('fmcore_session')?.value;
   if (!token) {
     return NextResponse.json({ ok: false, authenticated: false, reason: 'no_session' });
   }
@@ -41,4 +43,4 @@ export async function GET(req: NextRequest) {
       lastLoginAt: session.user.lastLoginAt?.toISOString() || null,
     },
   });
-}
+});

@@ -5,7 +5,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { RecordData, ColumnDef } from '@/lib/erp/types';
-import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
+import {
+  apiHandler,
+  requirePermission,
+  validateRecordData,
+  badRequest,
+  notFound,
+} from '@/lib/erp/api-helpers';
 
 function serialize(r: any): RecordData {
   return {
@@ -21,14 +27,15 @@ function serialize(r: any): RecordData {
   };
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = apiHandler(async (req, { params }) => {
   const { id } = await params;
   const register = await db.register.findUnique({ where: { id } });
   if (!register || register.isDeleted) {
-    return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
+    return notFound('Register not found');
   }
 
-  const url = req.nextUrl;
+  const nextReq = req as NextRequest;
+  const url = nextReq.nextUrl;
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
   const pageSize = Math.min(500, Math.max(5, parseInt(url.searchParams.get('pageSize') || '25')));
   const search = url.searchParams.get('search') || '';
@@ -106,23 +113,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     pageSize,
     totalPages,
   });
-}
+});
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = apiHandler(async (req, { params }) => {
   const { id } = await params;
   const register = await db.register.findUnique({ where: { id } });
   if (!register || register.isDeleted) {
-    return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
+    return notFound('Register not found');
   }
 
   // Server-side permission check
-  const user = await getCurrentUser(req);
-  if (user && !hasPermission(user, register.code, 'create')) {
-    return NextResponse.json({ ok: false, error: "You don't have 'create' permission for this register" }, { status: 403 });
-  }
+  const [user, permError] = await requirePermission(req, register.code, 'create');
+  if (permError) return permError;
 
   const body = await req.json();
   const data: Record<string, any> = body.data || {};
+
+  // Validate the data against the register's columns
+  const columns = JSON.parse(register.columns) as ColumnDef[];
+  const validationErrors = validateRecordData(data, columns);
+  if (validationErrors.length > 0) {
+    return badRequest('Validation failed', validationErrors);
+  }
 
   // Auto-assign sequence
   const lastRecord = await db.record.findFirst({
@@ -132,33 +144,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const sequence = (lastRecord?.sequence || 0) + 1;
 
   // Auto-fill auto_increment columns with formatted number
-  const columns = JSON.parse(register.columns) as ColumnDef[];
   columns.forEach((col) => {
     if (col.type === 'auto_increment' && !data[col.name]) {
       data[col.name] = sequence;
     }
   });
 
-  const r = await db.record.create({
-    data: {
-      registerId: id,
-      sequence,
-      data: JSON.stringify(data),
-      createdBy: user?.username || 'system',
-    },
-  });
-
-  await db.auditLog.create({
-    data: {
-      userId: user?.id || null,
-      action: 'Created',
-      module: register.name,
-      registerId: id,
-      recordId: r.id,
-      summary: `Created record #${sequence} in "${register.name}"`,
-      newValue: JSON.stringify(data),
-    },
+  // Create record + audit log atomically (transaction)
+  const r = await db.$transaction(async (tx) => {
+    const newRecord = await tx.record.create({
+      data: {
+        registerId: id,
+        sequence,
+        data: JSON.stringify(data),
+        createdBy: user?.username || 'system',
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: user?.id || null,
+        action: 'Created',
+        module: register.name,
+        registerId: id,
+        recordId: newRecord.id,
+        summary: `Created record #${sequence} in "${register.name}"`,
+        newValue: JSON.stringify(data),
+      },
+    });
+    return newRecord;
   });
 
   return NextResponse.json(serialize(r));
-}
+});

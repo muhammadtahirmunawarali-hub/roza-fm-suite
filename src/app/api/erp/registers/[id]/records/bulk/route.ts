@@ -1,19 +1,20 @@
 // FMCore ERP — Bulk record creation (for CSV import)
 // POST /api/erp/registers/[id]/records/bulk  { records: [{...}, {...}] }
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { ColumnDef } from '@/lib/erp/types';
+import { apiHandler, badRequest, notFound } from '@/lib/erp/api-helpers';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = apiHandler(async (req, { params }) => {
   const { id } = await params;
   const register = await db.register.findUnique({ where: { id } });
   if (!register || register.isDeleted) {
-    return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
+    return notFound('Register not found');
   }
   const body = await req.json();
   const records: Record<string, any>[] = body.records || [];
   if (!Array.isArray(records) || records.length === 0) {
-    return NextResponse.json({ ok: false, error: 'No records to import' }, { status: 400 });
+    return badRequest('No records to import');
   }
 
   const columns = JSON.parse(register.columns) as ColumnDef[];
@@ -65,4 +66,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     failed: errors.length,
     errors: errors.slice(0, 20),
   });
-}
+});

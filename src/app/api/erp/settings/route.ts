@@ -4,16 +4,17 @@
 // PUT  /api/erp/settings         → bulk set [{ key, value, category? }]
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { apiHandler, badRequest } from '@/lib/erp/api-helpers';
 
-export async function GET() {
+export const GET = apiHandler(async () => {
   const rows = await db.setting.findMany({ orderBy: { category: 'asc' } });
   return NextResponse.json(rows.map((s) => ({ ...s, updatedAt: s.updatedAt.toISOString() })));
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = apiHandler(async (req: NextRequest) => {
   const body = await req.json();
   const { key, value, category = 'general' } = body;
-  if (!key) return NextResponse.json({ ok: false, error: 'Key is required' }, { status: 400 });
+  if (!key) return badRequest('Key is required');
 
   const s = await db.setting.upsert({
     where: { key },
@@ -29,12 +30,30 @@ export async function POST(req: NextRequest) {
     },
   });
   return NextResponse.json({ ...s, updatedAt: s.updatedAt.toISOString() });
-}
+});
 
-export async function PUT(req: NextRequest) {
+export const PUT = apiHandler(async (req) => {
   const body = await req.json();
-  const items: { key: string; value: string; category?: string }[] = body.items;
-  if (!Array.isArray(items)) return NextResponse.json({ ok: false, error: 'items array required' }, { status: 400 });
+  const items: { key: string; value: string; category?: string }[] = body?.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    return badRequest('items array (non-empty) is required');
+  }
+
+  // Validate the request body structure: each item must have a non-empty key and value
+  for (const item of items) {
+    if (!item || typeof item !== 'object') {
+      return badRequest('Each item must be an object');
+    }
+    if (!item.key || typeof item.key !== 'string') {
+      return badRequest('Each item must have a non-empty key');
+    }
+    if (item.value === undefined || item.value === null) {
+      return badRequest(`Item "${item.key}" must have a value`);
+    }
+    if (item.category !== undefined && typeof item.category !== 'string') {
+      return badRequest(`Item "${item.key}" category must be a string`);
+    }
+  }
 
   for (const item of items) {
     await db.setting.upsert({
@@ -51,4 +70,4 @@ export async function PUT(req: NextRequest) {
     },
   });
   return NextResponse.json({ ok: true, count: items.length });
-}
+});
