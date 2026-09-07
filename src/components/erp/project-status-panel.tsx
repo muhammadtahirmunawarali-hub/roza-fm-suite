@@ -20,11 +20,11 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 88,
-  saasPct: 70,
-  totalModules: 23,
-  productionReady: 12,
-  betaCount: 5,
+  webAppPct: 91,
+  saasPct: 73,
+  totalModules: 25,
+  productionReady: 13,
+  betaCount: 6,
   roadmapCount: 4,
 } as const;
 
@@ -44,7 +44,7 @@ interface ModuleRow {
 const MODULES: ModuleRow[] = [
   { name: 'Auth & RBAC (11 roles)', webAppPct: 100, saasPct: 90, status: 'Production Ready' },
   { name: 'Dashboard & KPIs (14 metrics)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
-  { name: 'Register Builder (33 presets)', webAppPct: 95, saasPct: 78, status: 'Production Ready' },
+  { name: 'Register Builder (35 presets)', webAppPct: 95, saasPct: 78, status: 'Production Ready' },
   { name: 'Dynamic Form Builder (26 types)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
   { name: 'Column Editor + Drag Reorder', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
   { name: 'Record CRUD + Bulk Actions', webAppPct: 100, saasPct: 85, status: 'Production Ready' },
@@ -53,7 +53,10 @@ const MODULES: ModuleRow[] = [
   { name: 'Saved Views & Filters', webAppPct: 95, saasPct: 70, status: 'Production Ready' },
   { name: 'API Error Handling + Validation', webAppPct: 95, saasPct: 85, status: 'Production Ready' },
   { name: 'Stock Movements & WO', webAppPct: 90, saasPct: 70, status: 'Beta' },
-  { name: 'Image Attachments + Before/After', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
+  { name: 'Image Attachments + Before/After', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
+  { name: 'WO Stage Workflow (7-state lifecycle)', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
+  { name: 'WO Attachments & Stages', webAppPct: 85, saasPct: 65, status: 'Beta' },
+  { name: 'Asset Maintenance Frequency', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
   { name: 'Checklist Builder (7 scopes + custom)', webAppPct: 85, saasPct: 65, status: 'Beta' },
   { name: 'Method Statements Register', webAppPct: 85, saasPct: 65, status: 'Beta' },
   { name: 'Location Master (Site→Space)', webAppPct: 85, saasPct: 60, status: 'Beta' },

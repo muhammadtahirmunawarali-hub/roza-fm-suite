@@ -136,12 +136,21 @@ export function RegisterView({ registerId }: Props) {
       });
       setRecords(res.data);
       setTotal(res.total);
+      // If a record is currently being viewed or edited, update it with the fresh data
+      if (viewing) {
+        const updated = res.data.find((r) => r.id === viewing.id);
+        if (updated) setViewing(updated);
+      }
+      if (editing) {
+        const updated = res.data.find((r) => r.id === editing.id);
+        if (updated) setEditing(updated);
+      }
     } catch (e: any) {
       toast.error('Failed to load records', { description: e.message });
     } finally {
       setLoading(false);
     }
-  }, [register, registerId, page, pageSize, debouncedSearch, sortField, sortDir, filters]);
+  }, [register, registerId, page, pageSize, debouncedSearch, sortField, sortDir, filters, viewing, editing]);
 
   useEffect(() => { loadRecords(); }, [loadRecords]);
 

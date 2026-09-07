@@ -238,7 +238,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
 
   const MODULES = [
     'dashboard', 'meetings', 'attendance', 'toolbox',
-    'workorders', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp',
+    'workorders', 'wo_attachments', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp',
     'safety_insp', 'risk_assess', 'ptw', 'incidents', 'accident', 'fire_equip',
     'assets', 'equipment', 'buildings', 'calibration',
     'vendors', 'contracts', 'mat_req', 'pur_req', 'inventory', 'siv',
@@ -269,7 +269,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
       return ['dashboard', 'attendance', 'visitors', 'leave', 'training', 'reports']
         .map((m) => ({ module: m, actions: STANDARD_PLUS_APPROVE }));
     case 'Technician':
-      return ['dashboard', 'workorders', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp', 'checklists', 'method_stmt', 'locations']
+      return ['dashboard', 'workorders', 'wo_attachments', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp', 'checklists', 'method_stmt', 'locations']
         .map((m) => ({ module: m, actions: STANDARD }));
     case 'Employee':
       return ['dashboard', 'attendance', 'leave', 'training']

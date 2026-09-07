@@ -11,6 +11,7 @@ import { FAIcon } from './icon';
 import { EmptyStateIllustration } from './empty-state-illustration';
 import { ApprovalWorkflow } from './approval-workflow';
 import { printRecord } from './print-record';
+import { WOStageWorkflow } from './wo-stage-workflow';
 import { cn } from '@/lib/utils';
 import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
 import { toast } from 'sonner';
@@ -320,7 +321,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
           ) : (
             <>
               {tab === 'details' && (
-                <DetailsTab register={register} record={record} currency={currency} />
+                <DetailsTab register={register} record={record} currency={currency} onRefresh={onRefresh} />
               )}
               {tab === 'history' && (
                 <HistoryTab history={history} loading={historyLoading} hasStatusCol={!!hasStatusCol} />
@@ -818,8 +819,13 @@ function DrawerImageField({ value, onChange }: { value: any; onChange: (v: any) 
 }
 
 // ---------- Details Tab ----------
-function DetailsTab({ register, record, currency = 'AED' }: { register: Register; record: RecordData; currency?: string }) {
+function DetailsTab({ register, record, currency = 'AED', onRefresh }: { register: Register; record: RecordData; currency?: string; onRefresh?: () => void }) {
   const cols = register.columns.filter((c) => c.type !== 'auto_increment');
+
+  // Detect if this register supports the WO Stage workflow
+  const hasWOStage = register.columns.some((c) => c.name === 'WO Stage')
+    || ['workorders', 'pm', 'cm', 'wo_attachments'].includes(register.code);
+  const isMaintenanceRegister = ['workorders', 'pm', 'cm'].includes(register.code);
 
   // Group columns by type for better layout
   const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor', 'url', 'color'].includes(c.type));
@@ -829,6 +835,11 @@ function DetailsTab({ register, record, currency = 'AED' }: { register: Register
 
   return (
     <div className="p-4 space-y-5">
+      {/* WO Stage Workflow (only for maintenance registers) */}
+      {hasWOStage && isMaintenanceRegister && (
+        <WOStageWorkflow register={register} record={record} onUpdated={onRefresh} />
+      )}
+
       {/* Image gallery (before/after photos, product images) */}
       {imageFields.length > 0 && (
         <div>
