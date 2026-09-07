@@ -862,3 +862,196 @@
    862→- All APIs responding 200
    863→
    864→
+   865→---
+   866→Task ID: SEED-2
+   867→Agent: WO Workflow + Asset Frequency Seed Update
+   868→Task: Add WO status workflow columns, time tracking, completion notes, asset frequency/checklist, PPM register
+   869→
+   870→Work Log:
+   871→- Read worklog (R15 / SEED-1 baseline) and inspected `sample-data.ts` + `seed.ts` structure
+   872→- Task 1: Work Orders register (`workorders`) — appended 13 new columns AFTER `After Image`:
+   873→  `WO Stage` (full lifecycle: Open/Assigned/In Progress/On Hold/Completion/Closed/Cancelled),
+   874→  `Assigned At`, `Started At`, `Completed At`, `Closed At`, `On Hold Reason`,
+   875→  `Completion Notes`, `Completion Image`, `Assigned By`, `Assignment Notes`,
+   876→  `Linked Checklist`, `Checklist Pass %`.
+   877→  Existing `Status` column untouched (migration is additive only).
+   878→  Updated 3 existing WO records:
+   879→  - WO-0001 (In Progress): added WO Stage + assignment timestamps + Assigned By + Assignment Notes
+   880→  - WO-0002 (Open): added WO Stage = 'Open'
+   881→  - WO-0003 (Completed): added WO Stage = 'Closed' + full stage timestamps + Completion Notes
+   882→- Task 2: Preventive Maintenance register (`pm`) — appended 11 columns:
+   883→  `WO Stage`, `Assigned To`, `Assigned At`, `Started At`, `Completed At`, `Closed At`,
+   884→  `Completion Notes`, `Linked Checklist`, `Checklist Pass %`, `Before Image`, `After Image`.
+   885→  (Existing 8 cols untouched; 3 PM records kept as-is — empty values default to blank.)
+   886→- Task 3: Asset Register (`assets`) — appended 7 columns after `Product Image`:
+   887→  `Maintenance Frequency` (Daily/Weekly/Monthly/Quarterly/Bi-Annual/Annual/On Demand/None),
+   888→  `Default Checklist`, `Last Maintenance Date`, `Next Maintenance Due`, `Maintenance Notes`,
+   889→  `Warranty Expiry`, `Criticality` (Critical/High/Medium/Low).
+   890→  Updated 3 records (Chiller CH-01 Monthly+Critical, Elevator EL-01 Monthly+Critical, FAP-01 Quarterly+Critical).
+   891→- Task 4: Added NEW `wo_attachments` register to end of REGISTER_SEEDS array:
+   892→  category=maintenance, color=#F59E0B, icon=fa-paperclip.
+   893→  10 columns: Attachment ID, WO Number, Stage, Attachment Type, File, Document URL, Notes,
+   894→  Uploaded By, Uploaded At, Stage Timestamp.
+   895→  4 sample records spanning stages (Assigned/In Progress/Completion/Closed) for WO-0001 + WO-0003.
+   896→- Task 5: Updated permissions in `seed.ts`:
+   897→  - Added `'wo_attachments'` to `MODULES` array (after `'workorders'`) so Super Admin / Administrator /
+   898→    Manager / Viewer roles inherit access automatically.
+   899→  - Added `'wo_attachments'` to `Technician` role's module list (between `'workorders'` and `'pm'`).
+   900→- Ran `bun run lint` → exit code 0 (0 errors, 0 warnings).
+   901→- Verified `bunx tsc --noEmit` produces NO errors in `sample-data.ts` or `seed.ts`
+   902→  (only pre-existing errors in other unrelated files: route handlers, widgets).
+   903→- Verified REGISTER_SEEDS array integrity: 34 register seeds total (was 33 + new wo_attachments).
+   904→- Migration function `migrateRegisterColumns()` will automatically:
+   905→  (a) add the new columns to existing workorders/pm/assets registers on next API call,
+   906→  (b) create the new wo_attachments register + its 4 sample records.
+   907→
+   908→Stage Summary:
+   909→- 3 registers extended with WO workflow / asset frequency / checklist columns
+   910→  (workorders +13 cols, pm +11 cols, assets +7 cols = +31 columns total)
+   911→- 1 new register added (`wo_attachments`) with 10 columns and 4 sample records
+   912→- 6 existing records enriched (3 WOs + 3 assets) with maintenance / workflow data
+   913→- Permissions updated: MODULES array + Technician role now include `wo_attachments`
+   914→- Lint: clean (0 errors). TypeScript: no new errors introduced in edited files.
+   915→- Ready for next agent to wire UI (WO Stage transitions, Checklist Pass % progress bar,
+   916→  Asset Maintenance Frequency → auto-generate PM tasks, WO Attachments timeline view).
+   917→
+   918→---
+   919→
+   920→## Round 20 — Status (2026-09-07)
+   921→
+   922→### Task ID: R20 (Main Agent)
+   923→Agent: Z.ai Code (Main Orchestrator)
+   924→Task: Update SaaS/WebApp %, add completion notes + attachment stages, PPM/WO status workflow (Open → Assigned → In Progress → Completion → Close + On Hold), time/date tracking, asset maintenance frequency + linked checklist, assign employee option
+   925→
+   926→### Work Log
+   927→- Read worklog (R19) — checklist builder, method statements, location master were complete.
+   928→- Verified dev server running (PID 1126, stable).
+   929→- Dispatched subagent SEED-2 to update sample-data.ts with:
+   930→  - WO Stage column (7-state lifecycle: Open, Assigned, In Progress, On Hold, Completion, Closed, Cancelled)
+   931→  - Time/date tracking columns (Assigned At, Started At, Completed At, Closed At, On Hold Reason)
+   932→  - Completion Notes + Completion Image columns
+   933→  - Assigned By + Assignment Notes columns
+   934→  - Linked Checklist + Checklist Pass % columns
+   935→  - Asset Maintenance Frequency + Default Checklist + Last/Next Maintenance Date + Warranty Expiry + Criticality
+   936→  - New "WO Attachments & Stages" register (10 cols, 4 records)
+   937→  - Updated permissions (MODULES array + Technician role)
+   938→- Created new `/home/z/my-project/src/components/erp/wo-stage-workflow.tsx` component (340 lines):
+   939→  - Visual 7-stage pipeline: Open → Assigned → In Progress → On Hold → Completion → Closed (+ Cancelled side branch)
+   940→  - Each stage has an icon, color, description, and optional timestamp field
+   941→  - Quick transition buttons showing only valid next stages
+   942→  - Auto-stamps timestamps when transitioning (Assigned At, Started At, Completed At, Closed At)
+   943→  - On Hold requires a reason (modal dialog)
+   944→  - Displays completion notes when stage is Completion/Closed
+   945→  - Displays linked checklist with pass % progress bar
+   946→  - Color-coded: Open=slate, Assigned=blue, In Progress=amber, On Hold=purple, Completion=emerald, Closed=dark-green, Cancelled=red
+   947→- Wired WOStageWorkflow into record-detail-drawer.tsx DetailsTab:
+   948→  - Added import for WOStageWorkflow
+   949→  - Updated DetailsTab to accept `onRefresh` prop
+   950→  - Renders WOStageWorkflow at the TOP of the Details tab when register is workorders/pm/cm
+   951→  - Passes `onRefresh` callback so stage transitions trigger a record reload
+   952→- Updated register-view.tsx loadRecords to refresh the `viewing` and `editing` state when records are reloaded:
+   953→  - After `setRecords(res.data)`, if `viewing` is set, find the updated record in the new data and call `setViewing(updated)`
+   954→  - Same for `editing`
+   955→  - Added `viewing` and `editing` to the useCallback dependencies
+   956→- Updated project-status-panel.tsx:
+   957→  - WebApp: 88% → 91% (+3%)
+   958→  - SaaS: 70% → 73% (+3%)
+   959→  - Total modules: 23 → 26 (+3 new: WO Stage Workflow, WO Attachments & Stages, Asset Maintenance Frequency)
+   960→  - Production ready: 12 → 13 (+WO Stage Workflow promoted)
+   961→  - Beta: 5 → 6 (+WO Attachments & Stages)
+   962→  - Image Attachments promoted from 90%/70% to 95%/75%
+   963→
+   964→### Key Features Delivered
+   965→
+   966→#### 1. WO Stage Workflow (7-State Lifecycle)
+   967→- **Open** → Work order created, awaiting assignment
+   968→- **Assigned** → Technician assigned, work scheduled (auto-stamps `Assigned At`)
+   969→- **In Progress** → Technician on site, work underway (auto-stamps `Started At`)
+   970→- **On Hold** → Work paused (requires reason, stored in `On Hold Reason`)
+   971→- **Completion** → Work completed, awaiting verification (auto-stamps `Completed At`)
+   972→- **Closed** → Verified and closed (auto-stamps `Closed At`)
+   973→- **Cancelled** → Work order cancelled (side branch from Open/Assigned/In Progress)
+   974→
+   975→Valid transitions enforced:
+   976→- Open → Assigned, Cancelled
+   977→- Assigned → In Progress, On Hold, Cancelled
+   978→- In Progress → On Hold, Completion, Cancelled
+   979→- On Hold → In Progress, Cancelled
+   980→- Completion → Closed, In Progress (reopen)
+   981→- Closed → (terminal)
+   982→- Cancelled → (terminal)
+   983→
+   984→#### 2. Completion Notes + Attachment Stages
+   985→- `Completion Notes` (long_text) — recorded when stage reaches Completion/Closed
+   986→- `Completion Image` (image) — photo proof of completion
+   987→- New "WO Attachments & Stages" register — stage-by-stage attachments with:
+   988→  - Stage (Open/Assigned/In Progress/On Hold/Completion/Closed)
+   989→  - Attachment Type (Photo/Document/Report/Signature/Invoice/Other)
+   990→  - File (image upload) + Document URL
+   991→  - Notes, Uploaded By, Uploaded At, Stage Timestamp
+   992→
+   993→#### 3. Time/Date Tracking
+   994→- `Assigned At` — when technician was assigned
+   995→- `Started At` — when work began
+   996→- `Completed At` — when work was completed
+   997→- `Closed At` — when WO was closed
+   998→- `On Hold Reason` — why work was paused
+   999→- All auto-stamped by the WOStageWorkflow component on stage transitions
+  1000→
+  1001→#### 4. Asset Maintenance Frequency + Linked Checklist
+  1002→- `Maintenance Frequency` (dropdown: Daily/Weekly/Monthly/Quarterly/Bi-Annual/Annual/On Demand/None)
+  1003→- `Default Checklist` (text — e.g. "MEP Daily Plant Room Inspection", "AC Checklist")
+  1004→- `Last Maintenance Date` + `Next Maintenance Due`
+  1005→- `Maintenance Notes` (long_text)
+  1006→- `Warranty Expiry` (date)
+  1007→- `Criticality` (priority: Critical/High/Medium/Low)
+  1008→- Sample data: Chiller CH-01 (Monthly/Critical), Elevator EL-01 (Monthly/Critical), Fire Alarm Panel FAP-01 (Quarterly/Critical)
+  1009→
+  1010→#### 5. Assign Employee Option
+  1011→- `Assigned To` (employee) — the technician assigned to the WO
+  1012→- `Assigned By` (employee) — who made the assignment
+  1013→- `Assignment Notes` (text) — context for the assignment
+  1014→- All visible in the WO form and drawer
+  1015→
+  1016→### Verification Results (agent-browser)
+  1017→- ✅ WO Attachments & Stages register appears in sidebar (Maintenance category, 7 registers)
+  1018→- ✅ Work Orders Add Record form shows new fields: WO Stage, Assigned At, Completion Notes, etc.
+  1019→- ✅ Asset Register Add Record form shows: Maintenance Frequency, Default Checklist, Criticality, etc.
+  1020→- ✅ WO Stage Workflow component renders in the drawer's Details tab for WO/PM/CM registers
+  1021→- ✅ Visual pipeline shows: Open → Assigned → In Progress → On Hold → Completion → Closed
+  1022→- ✅ Quick transition buttons show only valid next stages
+  1023→- ✅ Clicking "In Progress" transition: WO Stage changed from "Assigned" to "In Progress", Started At auto-stamped
+  1024→- ✅ Timestamps display in a grid (Assigned At, Started At, Completed At, Closed At)
+  1025→- ✅ Project Status panel shows 91%/73%, 26 modules, 13 prod / 6 beta / 4 roadmap
+  1026→- ✅ Lint: 0 errors, 0 warnings
+  1027→- ✅ No runtime errors in dev.log
+  1028→
+  1029→### Files Modified This Round
+  1030→```
+  1031→MODIFIED: src/lib/erp/sample-data.ts                    (+WO Stage cols, +time tracking, +completion notes, +asset frequency, +WO Attachments register) [via SEED-2]
+  1032→MODIFIED: src/lib/erp/seed.ts                           (+wo_attachments module in permissions) [via SEED-2]
+  1033→CREATED:  src/components/erp/wo-stage-workflow.tsx       (340-line visual lifecycle component)
+  1034→MODIFIED: src/components/erp/record-detail-drawer.tsx   (+WOStageWorkflow in DetailsTab + onRefresh prop)
+  1035→MODIFIED: src/components/erp/register-view.tsx          (+viewing/editing state refresh on loadRecords)
+  1036→MODIFIED: src/components/erp/project-status-panel.tsx   (updated % to 91/73, +3 new modules)
+  1037→```
+  1038→
+  1039→### SaaS Product Status — Updated Percentages
+  1040→- **WebApp Completion: 91%** (up from 88%)
+  1041→  - +WO Stage Workflow (7-state lifecycle with auto-timestamps)
+  1042→  - +WO Attachments & Stages register
+  1043→  - +Asset Maintenance Frequency + Default Checklist
+  1044→  - +Completion notes + images
+  1045→- **SaaS Product Readiness: 73%** (up from 70%)
+  1046→  - +Production-grade WO lifecycle tracking
+  1047→  - +Stage-based attachment system
+  1048→  - +Asset maintenance scheduling foundation
+  1049→  - Still missing: multi-tenant isolation, billing, public API, webhooks
+  1050→
+  1051→### Dev Server
+  1052→- Runs on port 3000 via `bunx next dev -p 3000`
+  1053→- Memory: ~1.4GB used (stable)
+  1054→- Total registers: 35 (was 34)
+  1055→- All APIs responding 200
+  1056→
+  1057→

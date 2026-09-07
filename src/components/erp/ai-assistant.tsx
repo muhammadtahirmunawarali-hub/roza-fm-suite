@@ -13,17 +13,18 @@ import { toast } from 'sonner';
 interface Msg { role: 'user' | 'assistant'; content: string; action?: { type: string; payload?: any } }
 
 const SUGGESTIONS = [
-  'Show me overdue maintenance',
-  'Which products are running low?',
   'How many open work orders?',
-  'Create a register for vehicle inspection',
-  'Open the inventory register',
+  'Create a work order for Pump-05 leakage',
+  'How do I change the currency?',
+  'Show overdue maintenance',
+  'Update WO-0001 status to Completed',
+  'How do I add a new asset?',
 ];
 
 export function AiAssistant() {
   const { aiPanelOpen, setAiPanel, openTab, setBuilderOpen } = useErpStore();
   const [messages, setMessages] = useState<Msg[]>([
-    { role: 'assistant', content: "Hello! I'm your FMCore ERP AI Assistant. I can help you analyze data, find records, or create new registers. Try asking:\n\n• \"Show overdue maintenance\"\n• \"How many open work orders?\"\n• \"Create a register for vehicle inspection\"" },
+    { role: 'assistant', content: "Hello! I'm your FMCore ERP AI Assistant with full CRUD capabilities. I can:\n\n📊 **Answer questions** — \"How many open work orders?\"\n✨ **Create records** — \"Create a work order for Pump-05 leakage\"\n✏️ **Update records** — \"Update WO-0001 status to Completed\"\n🗑️ **Delete records** — \"Delete WO-0003\"\n📖 **Guide you** — \"How do I change the currency?\"\n\nTry asking me anything!" },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,27 @@ export function AiAssistant() {
       setAiPanel(false);
       setBuilderOpen(true);
       toast.info('Opening Register Builder' + (action.payload?.name ? ` for "${action.payload.name}"` : ''));
+    } else if (action.type === 'create_record') {
+      // Record was already created by the API; just open the register to show it
+      const reg = registers.find((r) => r.code === action.payload?.code);
+      if (reg) {
+        openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+        toast.success(`Record created in ${reg.name}`);
+      } else {
+        toast.success('Record created');
+      }
+      // Refresh registers list to get the updated record count
+      registersApi.list().then(setRegisters).catch(() => {});
+    } else if (action.type === 'update_record') {
+      toast.success(`Record #${action.payload?.sequence} updated in ${action.payload?.code}`);
+      // Refresh registers to reflect the change
+      registersApi.list().then(setRegisters).catch(() => {});
+    } else if (action.type === 'delete_record') {
+      toast.success(`Record #${action.payload?.sequence} deleted from ${action.payload?.code}`);
+      registersApi.list().then(setRegisters).catch(() => {});
+    } else if (action.type === 'guide') {
+      // No action needed — the reply text already contains the step-by-step guide
+      toast.info(`Guide: ${action.payload?.topic?.replace(/_/g, ' ') || 'instructions'}`);
     }
   };
 

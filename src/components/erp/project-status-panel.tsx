@@ -20,11 +20,12 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 91,
-  saasPct: 73,
-  totalModules: 25,
-  productionReady: 13,
-  betaCount: 6,
+  webAppPct: 93,
+  saasPct: 76,
+  aiAgentPct: 78,
+  totalModules: 27,
+  productionReady: 14,
+  betaCount: 7,
   roadmapCount: 4,
 } as const;
 
@@ -61,6 +62,9 @@ const MODULES: ModuleRow[] = [
   { name: 'Method Statements Register', webAppPct: 85, saasPct: 65, status: 'Beta' },
   { name: 'Location Master (Site→Space)', webAppPct: 85, saasPct: 60, status: 'Beta' },
   { name: 'Risk Assessment Matrix', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
+  { name: 'AI Assistant — Chat & Q&A', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
+  { name: 'AI Assistant — CRUD Actions', webAppPct: 85, saasPct: 65, status: 'Beta' },
+  { name: 'AI Assistant — Guided Help', webAppPct: 80, saasPct: 60, status: 'Beta' },
   { name: 'Multi-Tenant Isolation', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
   { name: 'Billing & Subscriptions', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
   { name: 'API Rate Limiting', webAppPct: 0, saasPct: 20, status: 'Roadmap' },
@@ -310,6 +314,33 @@ function ImageRecItem({
   );
 }
 
+// ---------- AI Capability Row ----------
+function AICapability({ label, pct, status, color, description }: { label: string; pct: number; status: string; color: string; description: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-44 shrink-0">
+        <div className="text-[11px] font-medium text-[var(--erp-text)]">{label}</div>
+        <div className="text-[9px] text-[var(--erp-text-muted)] leading-tight">{description}</div>
+      </div>
+      <div className="flex-1 h-2 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+      <div className="w-10 text-right text-[11px] font-mono font-semibold" style={{ color }}>
+        {pct}%
+      </div>
+      <div
+        className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap"
+        style={{ background: color + '20', color }}
+      >
+        {status}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -393,7 +424,7 @@ export function ProjectStatusPanel() {
             <SectionTitle icon={<TrendingUp className="w-3 h-3" />} color="var(--erp-accent)">
               Overall Completion
             </SectionTitle>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <BigCard
                 title="WebApp Completion"
                 pct={PROJECT_STATUS_SUMMARY.webAppPct}
@@ -407,6 +438,13 @@ export function ProjectStatusPanel() {
                 color="#F59E0B"
                 statusLabel="In Progress"
                 description="Multi-tenant isolation, billing, public API, and white-labeling are still in progress before commercial launch."
+              />
+              <BigCard
+                title="AI Agent Strength"
+                pct={PROJECT_STATUS_SUMMARY.aiAgentPct}
+                color="#8B5CF6"
+                statusLabel="Live + Capable"
+                description="Real LLM integration (z-ai-web-dev-sdk) with full CRUD, guided help, and context awareness. Can create, update, delete records."
               />
             </div>
           </section>
@@ -552,6 +590,114 @@ export function ProjectStatusPanel() {
                   annotation (markup tools for inspection photos). Add EXIF metadata extraction
                   (date, GPS, camera) for compliance auditing.
                 </ImageRecItem>
+              </div>
+            </div>
+          </section>
+
+          {/* ----------------------------------------------------------------- */}
+          {/* Section 5: AI Agent Assessment */}
+          {/* ----------------------------------------------------------------- */}
+          <section>
+            <div
+              className="rounded-lg bg-[var(--erp-bg-card)] p-4"
+              style={{
+                border: '1px solid var(--erp-border)',
+                borderLeft: '4px solid #8B5CF6',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Lightbulb className="w-4 h-4 text-[#8B5CF6]" />
+                <h2 className="text-[13px] font-semibold text-[var(--erp-text)]">
+                  🤖 AI Agent — Live Integration Assessment
+                </h2>
+                <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">
+                  78% Ready
+                </span>
+              </div>
+
+              {/* AI Overall Progress */}
+              <div className="mb-4 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-semibold text-[var(--erp-text)]">AI Agent Strength</span>
+                  <span className="text-[14px] font-bold text-[#8B5CF6]">78%</span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: '78%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
+                  />
+                </div>
+                <div className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
+                  Powered by <code className="text-[#8B5CF6]">z-ai-web-dev-sdk</code> (live LLM) with full CRUD + guided help
+                </div>
+              </div>
+
+              {/* AI Capability Breakdown */}
+              <div className="space-y-2.5">
+                <div className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] font-semibold">Capability Breakdown</div>
+
+                <AICapability label="Live LLM Integration" pct={100} status="Production" color="#10B981" description="Real z-ai-web-dev-sdk chat completions with context-aware system prompts" />
+                <AICapability label="Context Awareness" pct={90} status="Production" color="#10B981" description="Sees all 35 registers, their columns, and 2 sample records each" />
+                <AICapability label="Answer Questions" pct={95} status="Production" color="#10B981" description="Counts, statuses, overdue items, low stock, summaries" />
+                <AICapability label="Open Registers" pct={100} status="Production" color="#10B981" description="Navigates to any register via ACTION tokens" />
+                <AICapability label="Create Records" pct={85} status="Beta" color="#F59E0B" description="Actually creates records in DB with auto-increment + audit log" />
+                <AICapability label="Update Records" pct={85} status="Beta" color="#F59E0B" description="Updates fields, merges with existing data, audit log written" />
+                <AICapability label="Delete Records" pct={80} status="Beta" color="#F59E0B" description="Soft-deletes records with confirmation + audit trail" />
+                <AICapability label="Guided Help" pct={80} status="Beta" color="#F59E0B" description="Step-by-step instructions for app tasks" />
+                <AICapability label="Suggest Register Creation" pct={90} status="Production" color="#10B981" description="Suggests fields for new registers, opens builder" />
+                <AICapability label="Fallback Responses" pct={95} status="Production" color="#10B981" description="Pattern-matched replies if LLM fails" />
+                <AICapability label="Multi-turn Context" pct={75} status="Beta" color="#F59E0B" description="Maintains 6-message history for conversation flow" />
+                <AICapability label="Error Recovery" pct={70} status="Partial" color="#F97316" description="Graceful fallback, but limited retry logic" />
+                <AICapability label="Voice Input" pct={0} status="Roadmap" color="#64748B" description="Speech-to-text for hands-free operation" />
+                <AICapability label="Predictive Insights" pct={20} status="Roadmap" color="#64748B" description="ML-based anomaly detection, predictive maintenance" />
+                <AICapability label="Natural Language Queries" pct={40} status="Partial" color="#F97316" description="Convert natural language to Prisma queries" />
+              </div>
+
+              {/* What the AI CAN do right now */}
+              <div className="mt-4 p-3 rounded-md border border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.05)]">
+                <div className="text-[11px] font-semibold text-[#10B981] mb-2 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> What the AI Can Do RIGHT NOW
+                </div>
+                <ul className="text-[10px] text-[var(--erp-text-secondary)] space-y-1 ml-5 list-disc">
+                  <li><strong>Answer:</strong> "How many open work orders?" → "There are 4 open work orders..."</li>
+                  <li><strong>Create:</strong> "Create a work order for Pump-05 leakage, priority High" → Actually creates WO-0007 with all fields</li>
+                  <li><strong>Update:</strong> "Update WO-0001 status to Completed" → Updates the record + audit log</li>
+                  <li><strong>Delete:</strong> "Delete WO-0003" → Asks confirmation, then soft-deletes</li>
+                  <li><strong>Guide:</strong> "How do I change currency?" → 5-step numbered guide</li>
+                  <li><strong>Navigate:</strong> "Open the inventory register" → Opens it automatically</li>
+                  <li><strong>Suggest:</strong> "Create a register for vehicle inspection" → Suggests fields + opens builder</li>
+                </ul>
+              </div>
+
+              {/* What the AI CANNOT do yet */}
+              <div className="mt-2 p-3 rounded-md border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]">
+                <div className="text-[11px] font-semibold text-[#EF4444] mb-2 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> Limitations & Future Enhancements
+                </div>
+                <ul className="text-[10px] text-[var(--erp-text-secondary)] space-y-1 ml-5 list-disc">
+                  <li>Cannot generate reports or charts (planned)</li>
+                  <li>Cannot send email notifications (planned)</li>
+                  <li>Cannot run complex SQL-style joins across registers (planned)</li>
+                  <li>No voice input (planned via ASR skill)</li>
+                  <li>No predictive insights / ML-based recommendations (planned)</li>
+                  <li>Limited to 6-message conversation history (can be increased)</li>
+                  <li>Cannot modify register schema (add/remove columns) — use the Column Editor</li>
+                  <li>Cannot upload images directly — but can guide users to the image field</li>
+                </ul>
+              </div>
+
+              {/* Integration Architecture */}
+              <div className="mt-2 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+                <div className="text-[11px] font-semibold text-[var(--erp-text)] mb-1.5">Integration Architecture</div>
+                <div className="text-[10px] text-[var(--erp-text-muted)] font-mono space-y-0.5">
+                  <div>User message → POST /api/erp/ai</div>
+                  <div>→ Build context (35 registers + columns + samples)</div>
+                  <div>→ System prompt + history + message → z-ai-web-dev-sdk</div>
+                  <div>→ LLM reply (with ACTION tokens)</div>
+                  <div>→ Parse ACTION: create_record / update_record / delete_record / guide</div>
+                  <div>→ Execute DB operation (transactional + audit log)</div>
+                  <div>→ Return reply + action → Frontend auto-executes</div>
+                </div>
               </div>
             </div>
           </section>
