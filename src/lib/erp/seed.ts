@@ -28,10 +28,72 @@ export const DEFAULT_USERS = [
   { name: 'Priya Sharma',          email: 'priya@fmcore.ae', username: 'priya',     password: 'priya123',     role: 'Accountant',    department: 'Operations',    status: 'Active' },
 ];
 
+/**
+ * Migrate existing registers: add new columns from seed data without removing existing ones.
+ * This is idempotent — only adds columns that don't exist yet.
+ */
+async function migrateRegisterColumns() {
+  for (const seed of REGISTER_SEEDS) {
+    const reg = await db.register.findFirst({ where: { code: seed.code } });
+    if (!reg) continue;
+    const existingCols = JSON.parse(reg.columns) as ColumnDef[];
+    const existingNames = new Set(existingCols.map((c) => c.name));
+    const newCols = seed.columns.filter((c) => !existingNames.has(c.name));
+    if (newCols.length === 0) continue;
+    const merged = [...existingCols, ...newCols];
+    await db.register.update({
+      where: { id: reg.id },
+      data: { columns: JSON.stringify(merged) },
+    });
+    await db.auditLog.create({
+      data: {
+        action: 'Updated',
+        module: reg.name,
+        registerId: reg.id,
+        summary: `Schema migration: added ${newCols.length} column(s) (${newCols.map((c) => c.name).join(', ')})`,
+        oldValue: reg.columns,
+        newValue: JSON.stringify(merged),
+      },
+    }).catch(() => {});
+  }
+
+  // Also create any NEW registers from the seed that don't exist yet
+  for (const seed of REGISTER_SEEDS) {
+    const exists = await db.register.findFirst({ where: { code: seed.code } });
+    if (exists) continue;
+    const order = await db.register.count({ where: { category: seed.category } });
+    const reg = await db.register.create({
+      data: {
+        code: seed.code,
+        name: seed.name,
+        icon: seed.icon,
+        category: seed.category,
+        color: seed.color,
+        description: seed.description || null,
+        columns: JSON.stringify(seed.columns),
+        isSystem: true,
+        order: order + 1,
+      },
+    });
+    for (let r = 0; r < seed.records.length; r++) {
+      await db.record.create({
+        data: {
+          registerId: reg.id,
+          sequence: r + 1,
+          data: JSON.stringify(seed.records[r]),
+          createdBy: 'system',
+        },
+      });
+    }
+  }
+}
+
 export async function seedDatabase(force = false) {
   // Check if already seeded
   const existing = await db.register.count();
   if (existing > 0 && !force) {
+    // ---- Schema Migration: add new columns to existing registers ----
+    await migrateRegisterColumns();
     // Even on already-seeded, ensure users exist
     await ensureDefaultUsers();
     return { seeded: false, reason: 'already_seeded', count: existing };
@@ -181,7 +243,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
     'assets', 'equipment', 'buildings', 'calibration',
     'vendors', 'contracts', 'mat_req', 'pur_req', 'inventory', 'siv',
     'visitors', 'leave', 'training',
-    'housekeeping', 'kpi',
+    'housekeeping', 'kpi', 'checklists', 'method_stmt', 'locations',
     'reports', 'audit', 'settings', 'users',
   ];
 
@@ -207,7 +269,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
       return ['dashboard', 'attendance', 'visitors', 'leave', 'training', 'reports']
         .map((m) => ({ module: m, actions: STANDARD_PLUS_APPROVE }));
     case 'Technician':
-      return ['dashboard', 'workorders', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp']
+      return ['dashboard', 'workorders', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp', 'checklists', 'method_stmt', 'locations']
         .map((m) => ({ module: m, actions: STANDARD }));
     case 'Employee':
       return ['dashboard', 'attendance', 'leave', 'training']

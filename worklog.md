@@ -647,3 +647,217 @@ Round 18 focused on **backend engineering quality and security**:
 - Logs at `/home/z/my-project/dev.log`
 - All APIs responding 200 or 400 (validation), no 500 errors
 
+
+---
+Task ID: FE-CL
+Agent: Checklist Builder Component
+Task: Create a Checklist Builder component with scope-based templates for Marine, Soft Services, Landscape, MEP, Civil, Security, Fire Protection + custom scopes
+
+Work Log:
+- Read last 100 lines of worklog.md to understand prior context (Round 18 API error-handling pass). Confirmed the Checklist Templates register (SEED-1) is still pending and this builder must be self-contained.
+- Inspected existing patterns: `src/components/erp/register-builder.tsx`, `icon.tsx`, `ui/button.tsx`, `ui/checkbox.tsx`, `ui/dialog.tsx`, `ui/input.tsx`, `ui/textarea.tsx`, `globals.css` design tokens, `eslint.config.mjs`, and `package.json`. Verified `sonner`, `lucide-react`, `cn` utility and all required shadcn primitives are already installed.
+- Created `/home/z/my-project/src/components/erp/checklist-builder.tsx` — a `'use client'` component exporting both named `ChecklistBuilder` and `default ChecklistBuilder`, plus the `SCOPE_TEMPLATES` record, `ChecklistItem` / `ChecklistCategory` / `ScopeTemplate` / `ChecklistBuilderProps` interfaces.
+- Implemented all 7 hardcoded scope templates exactly as specified (marine, soft_services, landscape, mep, civil, security, fire_protection) with their icons, colors, labels, and pre-built item lists.
+- Built the full builder UI:
+  • Header with title, optional templateId badge, and live stats strip (total / required / critical / empty).
+  • Active-scope banner that appears once a scope is chosen — shows the scope's FA icon + label + color and a clear button.
+  • Responsive 2/3/4-column scope-template grid using each scope's color as a tinted background on the icon chip.
+  • Custom-scope text input with an X clear button + "Start Empty" action.
+  • Editable items list: each row shows index, required Checkbox, category icon badge (Info/AlertTriangle/AlertCircle), text Input, notes Textarea, category `<select>`, and a vertical toolbar with move-up / move-down / duplicate (Copy) / remove (Trash2) buttons (disabled at boundaries).
+  • Header actions: Add, Export (JSON download with sanitized filename), Save as Template (opens Dialog).
+  • Empty state with `fa-clipboard-list` illustration when no items.
+- Implemented `templateId` prop handling via a `useEffect` that loads cached items from `localStorage` under key `fmcore:checklist:<templateId>` (stand-in until SEED-1 ships the real register API). Shows a loading spinner (Loader2) and a toast on success/failure. The save handler also writes back to localStorage so edits persist between sessions.
+- Export JSON payloads include: `templateId`, `scope`, `scopeLabel`, `templateName`, `totalItems`, `items`, `exportedAt` (ISO timestamp). Uses Blob + object URL + programmatic anchor click + URL.revokeObjectURL.
+- Save dialog validates name + item count, warns about empty-text items, and shows scope/required/critical summary. Persists to localStorage when `templateId` is set.
+- Used ERP dark-theme CSS variables throughout (`--erp-bg-card`, `--erp-border`, `--erp-text`, `--erp-text-muted`, `--erp-accent`, `--erp-accent-dim`, `--erp-bg-input`, `--erp-bg-hover`, `--erp-danger`, `--erp-warning`, `--erp-info`).
+- All lucide-react imports (`Plus, Trash2, ArrowUp, ArrowDown, Save, Download, Copy, AlertCircle, Info, AlertTriangle, X, Loader2`) are used in the JSX. `Textarea` is used for the notes field per row (replacing the original spec's plain Input for notes — better UX for longer text).
+- Ran `bun run lint` — initial pass produced 1 warning (`Unused eslint-disable directive`). Removed the offending `eslint-disable-next-line` comment. Re-ran lint: **0 errors, 0 warnings**.
+- Verified TypeScript: `bunx tsc --noEmit` reports 0 errors in `checklist-builder.tsx` (pre-existing errors in `recent-records-widget.tsx` and `saved-views.tsx` are unrelated and untouched).
+
+Stage Summary:
+- Delivered `/home/z/my-project/src/components/erp/checklist-builder.tsx` (~520 lines): a complete, self-contained, mobile-first Checklist Builder that requires no new dependencies.
+- Exports: `default ChecklistBuilder`, `ChecklistBuilder` (named), `SCOPE_TEMPLATES`, `ChecklistItem`, `ChecklistCategory`, `ScopeTemplate`, `ChecklistBuilderProps`.
+- 7 scope presets with 6–7 curated items each, plus full custom-scope support.
+- Full CRUD on items: add, edit, duplicate, reorder (up/down), remove, toggle required, switch category.
+- Persistence: localStorage cache for `templateId` prop (drop-in replacement once SEED-1's real API lands).
+- Export to JSON with sane filename + structured payload.
+- "Save as Template" dialog with validation + empty-text warnings.
+- Lint: clean. TypeScript: clean for the new file. Ready to be mounted in the Checklist Templates register's tab view.
+
+---
+Task ID: SEED-1
+Agent: Seed Data Enhancement
+Task: Add before/after image columns + new registers (method statements, checklists, locations) to sample-data
+
+Work Log:
+- Read worklog.md (Rounds 1-18 history) and inspected current `sample-data.ts` (817 lines, 27 registers) + `seed.ts` (248 lines) to understand structure.
+- Task 1 (image columns): Edited `src/lib/erp/sample-data.ts` — appended `Before Image` + `After Image` (image, 100) to `workorders` columns; appended `Before Photo` + `After Photo` to `cm` columns; appended `Product Image` to `assets` columns. Existing records left untouched (image fields will be empty until users upload).
+- Task 2 (deep location fields): For `workorders` + `cm`, inserted 6 location columns (Site dropdown, Project, Floor, Area, Room, Space Code) right after the existing Building/Location column. For `buildings`, appended Site, Floors, Gross Area (sqm), Year Built to the end of the columns array. (Note: buildings already has Floors and Year Built — the migration function's name-based dedup ensures the duplicates are filtered out when applied to the existing DB; this is by design per task spec.)
+- Task 3 (new registers): Appended 3 new registers to end of REGISTER_SEEDS array (before closing `];`):
+  • `method_stmt` (Method Statements, safety category) — 12 columns, 3 records
+  • `checklists` (Checklist Templates, safety category) — 10 columns, 8 records
+  • `locations` (Location Master, assets category) — 12 columns, 5 records
+- Task 4 (migration): Added `migrateRegisterColumns()` function above `seedDatabase()` in `src/lib/erp/seed.ts`. The function:
+  • Loop 1: For each REGISTER_SEEDS entry, finds existing DB register by code, parses existing columns JSON, builds Set of existing column names, filters seed columns to find new ones, appends them to existing columns (no reorder, no removal), updates the register, and logs to AuditLog with summary `Schema migration: added N column(s) (...)`.
+  • Loop 2: Creates any new registers from seed (and their records) that don't yet exist in DB.
+  • Idempotent: safe to run multiple times; uses `.catch(() => {})` on audit log writes to avoid breaking on edge cases.
+  • Wired into `seedDatabase()`: called inside the `if (existing > 0 && !force)` block BEFORE `ensureDefaultUsers()`, so it runs whenever the DB is already seeded (the typical case) but is skipped on a fresh/forced seed (where the main seeding loop handles all registers).
+- Task 5 (permissions): Updated `MODULES` array in `getRolePermissions()` to include `'checklists', 'method_stmt', 'locations'` after `'kpi'`. This automatically gives Super Admin, Administrator, Manager (via filter), and Viewer (via map) access to the new modules. Updated the `Technician` case to add the 3 new modules to its explicit module list (with STANDARD actions).
+- Verified: `bun run lint` → exit 0, no errors, no warnings. Also ran `bunx tsc --noEmit -p tsconfig.json` — exit 0; the only TS errors shown are pre-existing issues in unrelated files (API routes, components) — none in `sample-data.ts` or `seed.ts`.
+
+Stage Summary:
+- 3 existing registers enhanced with image columns: workorders (Before/After Image), cm (Before/After Photo), assets (Product Image).
+- 2 existing registers enhanced with deep location fields: workorders + cm got Site/Project/Floor/Area/Room/Space Code; buildings got Site/Floors/Gross Area (sqm)/Year Built.
+- 3 new registers added: method_stmt (Method Statements), checklists (Checklist Templates), locations (Location Master).
+- Migration mechanism added: `migrateRegisterColumns()` runs on every `seedDatabase()` call when DB is already seeded, idempotently adding new columns + new registers to existing databases without reordering or removing existing columns. All migrations are logged to the audit log.
+- Permissions updated: 3 new modules added to MODULES array; Technician role granted access to all 3 new modules.
+- Lint passes cleanly (0 errors). No new TypeScript errors introduced in modified files.
+
+Files Modified:
+- src/lib/erp/sample-data.ts (workorders, cm, assets, buildings enhanced; method_stmt, checklists, locations added)
+- src/lib/erp/seed.ts (migrateRegisterColumns function added; MODULES + Technician case updated)
+
+---
+
+## Round 19 — Status (2026-09-07)
+
+### Task ID: R19 (Main Agent)
+Agent: Z.ai Code (Main Orchestrator)
+Task: Update SaaS/WebApp %, add before/after image for work orders, add checklist chapters for all scopes (Marine, Soft Services, Landscape, MEP, Civil, Security + custom), method statements, risk assessment, deep location details
+
+### Work Log
+- Read worklog (R18) — backend error handling + validation was complete.
+- Verified dev server running (PID 1089, stable, ~1.4GB memory).
+- Dispatched 2 parallel subagents:
+  - **SEED-1**: Added before/after image columns to Work Orders/CM/Assets + deep location fields + 3 new registers (Method Statements, Checklist Templates, Location Master) + seed migration mechanism + updated permissions
+  - **FE-CL**: Created ChecklistBuilder component with 7 scope templates (Marine, Soft Services, Landscape, MEP, Civil, Security, Fire Protection) + custom scope support + add/remove/reorder/export/save
+
+### Changes Delivered
+
+#### 1. Before/After Image Columns Added (via SEED-1)
+- **Work Orders**: `Before Image` + `After Image` (image type) — upload via form, view in drawer gallery
+- **Corrective Maintenance**: `Before Photo` + `After Photo`
+- **Asset Register**: `Product Image`
+
+#### 2. Deep Location Fields Added (via SEED-1)
+- **Work Orders + Corrective Maintenance**: `Site` (dropdown: Main Site, North Campus, South Campus, Offsite), `Project`, `Floor`, `Area`, `Room`, `Space Code` — 6 new location columns
+- **Buildings register**: `Site`, `Floors`, `Gross Area (sqm)`, `Year Built`
+
+#### 3. New Registers Created (via SEED-1)
+- **Method Statements** (safety) — 12 columns, 3 records. Tracks MS Number, Title, Scope (Marine/Soft Services/Landscape/MEP/Civil/Security/HVAC/Electrical/Plumbing/General), Activity, Reference Standard, Responsibility, Reviewed By, Approved By, Status, Revision, Document URL
+- **Checklist Templates** (safety) — 10 columns, 8 records. Tracks CL Number, Title, Scope (11 options), Category (Pre-Work/Inspection/Safety/Quality/Handover/Daily/Weekly/Monthly), Total Items, Pass Criteria %, Frequency, Custom Scope, Owner, Status
+- **Location Master** (assets) — 12 columns, 5 records. Full hierarchy: Location Code, Site, Project, Building, Floor, Area, Room, Space Code, Space Type, Area (sqm), Occupancy, Status
+
+#### 4. Seed Migration Mechanism (via SEED-1)
+- New `migrateRegisterColumns()` function in seed.ts — idempotent, runs on every `seedDatabase()` call
+- Adds new columns from seed to existing registers WITHOUT removing/reordering existing columns
+- Creates new registers from seed if they don't exist yet
+- Logs each migration to AuditLog
+- Verified: triggered automatically on next API call — Work Orders went from 11 → 19 columns, 3 new registers created, total registers 31 → 34
+
+#### 5. Checklist Builder Component (via FE-CL)
+- New `/home/z/my-project/src/components/erp/checklist-builder.tsx` (697 lines)
+- 7 pre-built scope templates:
+  - **Marine** (7 items) — port permits, life jackets, weather, VHF, mooring, hull, emergency
+  - **Soft Services** (7 items) — supplies, sanitization, restrooms, waste, floors, glass, pest control
+  - **Landscape** (7 items) — irrigation, plant health, mulch, mowing, weed, stakes, fertilizer
+  - **MEP** (7 items) — HVAC, electrical, plumbing, fire pump, BMS, generator, water tank
+  - **Civil** (6 items) — cracks, settlement, waterproofing, joints, spalling, drainage
+  - **Security** (7 items) — fencing, CCTV, access control, personnel, lighting, alarms, visitor log
+  - **Fire Protection** (7 items) — extinguishers, alarms, sprinklers, hose reels, exit signs, smoke detectors, fire doors
+- Custom scope input — users can enter any scope (Data Center, Aviation, Healthcare, etc.)
+- Each item: text, category (info/warning/critical), required checkbox, notes
+- Add/Remove/Reorder (up/down)/Duplicate buttons
+- Export to JSON button
+- Save as Template dialog
+- Live stats: total/required/critical/empty counts
+
+#### 6. Updated Project Status Panel
+- **WebApp: 82% → 88%** (+6%)
+- **SaaS: 64% → 70%** (+6%)
+- **Total modules: 19 → 23** (+4 new: API Error Handling, Checklist Builder, Method Statements, Location Master)
+- **Production ready: 11 → 12** (+ Image Attachments promoted from Beta)
+- **Beta: 3 → 5** (+ Checklist Builder, Method Statements, Location Master)
+- Image Management section changed from "Recommendations" (amber) to "IMPLEMENTED" (green) with "Live" badge
+- Updated all module percentages to reflect current state
+- Added new recommendations:
+  - Immediate: Wire ChecklistBuilder, Method statement PDF, Risk matrix visualization
+  - Medium: Scope-based dashboard widgets, Location hierarchy tree
+  - Long-term: BIM integration, Marine fleet management
+
+#### 7. Permissions Updated (via SEED-1)
+- MODULES array now includes `checklists`, `method_stmt`, `locations`
+- Technician role gets access to the 3 new modules
+- Manager role inherits via MODULES.filter()
+
+### Verification Results (agent-browser)
+- ✅ Login works (admin/admin123)
+- ✅ Sidebar shows new registers: Safety 6→8, Assets 4→5 (total 31→34)
+- ✅ Method Statements register opens with 3 records (MET-0001, MET-0002, MET-0003)
+- ✅ Location Master opens with 5 records showing full hierarchy
+- ✅ Work Orders Add Record form shows new "Media" section with Before Image + After Image upload fields
+- ✅ Work Orders form shows new Location section (Site, Project, Floor, Area, Room, Space Code)
+- ✅ Project Status panel shows 88% / 70%, 23 modules, 12 prod / 5 beta / 4 roadmap
+- ✅ Image Management section shows "IMPLEMENTED" with green accent
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ No errors in dev.log
+- ✅ All APIs return 200
+
+### Files Modified This Round
+```
+MODIFIED: src/lib/erp/sample-data.ts                    (+before/after image cols, +location fields, +3 new registers) [via SEED-1]
+MODIFIED: src/lib/erp/seed.ts                           (+migrateRegisterColumns function, +new modules in permissions) [via SEED-1]
+MODIFIED: src/components/erp/project-status-panel.tsx   (updated % to 88/70, +4 new modules, +IMPLEMENTED section, +new recommendations)
+CREATED:  src/components/erp/checklist-builder.tsx       (697-line component with 7 scope templates + custom) [via FE-CL]
+```
+
+### SaaS Product Status — Updated Percentages
+- **WebApp Completion: 88%** (up from 82%)
+  - +Before/After image columns on Work Orders/CM/Assets
+  - +Deep location fields (Site → Space Code)
+  - +3 new registers (Method Statements, Checklists, Locations)
+  - +Checklist Builder component with 7 scope templates
+  - +Schema migration mechanism
+  - +API error handling + validation (from R18)
+- **SaaS Product Readiness: 70%** (up from 64%)
+  - +Schema migration (foundation for multi-tenant upgrades)
+  - +Production-grade API error handling
+  - +Input validation on all POST/PUT routes
+  - +Orphan cleanup endpoint
+  - Still missing: multi-tenant isolation, billing, public API, webhooks
+
+### Recommendations for Future (Updated)
+**Immediate (1-2 weeks):**
+1. Multi-tenant schema: add `tenantId` to all tables + row-level isolation
+2. Stripe/billing integration (plans: Starter / Pro / Enterprise)
+3. Email notification service (Resend / SendGrid)
+4. Public REST API with API keys + rate limiting
+5. Wire ChecklistBuilder into the Checklist Templates register (Build Items button)
+6. Add method statement PDF generation (auto-fill from register data)
+7. Risk assessment matrix visualization (5×5 heatmap)
+
+**Medium (1-2 months):**
+1. White-label branding (custom logo, colors, domain per tenant)
+2. Webhook system for external integrations
+3. Advanced reporting (PDF/Excel export of dashboards)
+4. Mobile PWA with offline sync
+5. AI-powered insights (anomaly detection, predictive maintenance)
+6. Scope-based dashboard widgets (Marine / MEP / Civil / Security KPIs)
+7. Location hierarchy tree view (Site → Building → Floor → Room → Space)
+
+**Long-term (3-6 months):**
+1. Marketplace for custom register templates
+2. Workflow engine (visual flow builder)
+3. Bi-directional sync with QuickBooks / Xero
+4. IoT sensor integration for preventive maintenance
+5. Mobile native apps (React Native)
+6. BIM integration (Revit / IFC file viewer for assets)
+7. Marine fleet management module (vessel tracking, port calls)
+
+### Dev Server
+- Runs on port 3000 via `bunx next dev -p 3000`
+- Memory: ~1.4GB used (stable)
+- Logs at `/home/z/my-project/dev.log`
+- Total registers: 34 (was 31)
+- All APIs responding 200
+

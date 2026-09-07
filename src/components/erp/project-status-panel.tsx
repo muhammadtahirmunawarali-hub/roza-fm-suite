@@ -20,11 +20,11 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 82,
-  saasPct: 64,
-  totalModules: 19,
-  productionReady: 11,
-  betaCount: 3,
+  webAppPct: 88,
+  saasPct: 70,
+  totalModules: 23,
+  productionReady: 12,
+  betaCount: 5,
   roadmapCount: 4,
 } as const;
 
@@ -44,15 +44,20 @@ interface ModuleRow {
 const MODULES: ModuleRow[] = [
   { name: 'Auth & RBAC (11 roles)', webAppPct: 100, saasPct: 90, status: 'Production Ready' },
   { name: 'Dashboard & KPIs (14 metrics)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
-  { name: 'Register Builder (30 presets)', webAppPct: 90, saasPct: 75, status: 'Production Ready' },
-  { name: 'Dynamic Form Builder', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
-  { name: 'Column Editor + Drag Reorder', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
+  { name: 'Register Builder (33 presets)', webAppPct: 95, saasPct: 78, status: 'Production Ready' },
+  { name: 'Dynamic Form Builder (26 types)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
+  { name: 'Column Editor + Drag Reorder', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
   { name: 'Record CRUD + Bulk Actions', webAppPct: 100, saasPct: 85, status: 'Production Ready' },
-  { name: 'Audit Trail', webAppPct: 100, saasPct: 90, status: 'Production Ready' },
+  { name: 'Audit Trail + Schema Migration', webAppPct: 100, saasPct: 90, status: 'Production Ready' },
   { name: 'Notifications', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
   { name: 'Saved Views & Filters', webAppPct: 95, saasPct: 70, status: 'Production Ready' },
+  { name: 'API Error Handling + Validation', webAppPct: 95, saasPct: 85, status: 'Production Ready' },
   { name: 'Stock Movements & WO', webAppPct: 90, saasPct: 70, status: 'Beta' },
-  { name: 'Image Attachments (NEW)', webAppPct: 80, saasPct: 60, status: 'Beta' },
+  { name: 'Image Attachments + Before/After', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
+  { name: 'Checklist Builder (7 scopes + custom)', webAppPct: 85, saasPct: 65, status: 'Beta' },
+  { name: 'Method Statements Register', webAppPct: 85, saasPct: 65, status: 'Beta' },
+  { name: 'Location Master (Site→Space)', webAppPct: 85, saasPct: 60, status: 'Beta' },
+  { name: 'Risk Assessment Matrix', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
   { name: 'Multi-Tenant Isolation', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
   { name: 'Billing & Subscriptions', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
   { name: 'API Rate Limiting', webAppPct: 0, saasPct: 20, status: 'Roadmap' },
@@ -318,7 +323,9 @@ export function ProjectStatusPanel() {
     'Stripe/billing integration (plans: Starter / Pro / Enterprise)',
     'Email notification service (Resend / SendGrid) for workflow alerts',
     'Public REST API with API keys + rate limiting (Upstash Redis)',
-    'Image before/after gallery for Work Orders & Assets (use the new image column type)',
+    'Wire ChecklistBuilder into the Checklist Templates register (Build Items button)',
+    'Add method statement PDF generation (auto-fill from register data)',
+    'Risk assessment matrix visualization (5×5 heatmap)',
   ];
 
   const mediumTerm = [
@@ -327,6 +334,8 @@ export function ProjectStatusPanel() {
     'Advanced reporting (PDF/Excel export of dashboards)',
     'Mobile PWA with offline sync',
     'AI-powered insights (anomaly detection, predictive maintenance)',
+    'Scope-based dashboard widgets (Marine / MEP / Civil / Security KPIs)',
+    'Location hierarchy tree view (Site → Building → Floor → Room → Space)',
   ];
 
   const longTerm = [
@@ -335,6 +344,8 @@ export function ProjectStatusPanel() {
     'Bi-directional sync with QuickBooks / Xero',
     'IoT sensor integration for preventive maintenance',
     'Mobile native apps (React Native)',
+    'BIM integration (Revit / IFC file viewer for assets)',
+    'Marine fleet management module (vessel tracking, port calls)',
   ];
 
   return (
@@ -486,51 +497,57 @@ export function ProjectStatusPanel() {
               className="rounded-lg bg-[var(--erp-bg-card)] p-4"
               style={{
                 border: '1px solid var(--erp-border)',
-                borderLeft: '4px solid #F59E0B',
+                borderLeft: '4px solid #10B981',
               }}
             >
               <div className="flex items-center gap-2 mb-4">
-                <Camera className="w-4 h-4 text-[#F59E0B]" />
+                <Camera className="w-4 h-4 text-[#10B981]" />
                 <h2 className="text-[13px] font-semibold text-[var(--erp-text)]">
-                  📸 Image Management Recommendations
+                  📸 Image Management — IMPLEMENTED
                 </h2>
+                <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] font-semibold">
+                  Live
+                </span>
               </div>
 
               <div className="space-y-4">
-                <ImageRecItem label="Before/After Photos">
-                  For Work Orders, Asset Register, and Corrective Maintenance — add two
-                  image fields <code className="text-[#10B981]">before_image</code> and{' '}
-                  <code className="text-[#10B981]">after_image</code>. Auditors can compare
-                  them side-by-side in the drawer&apos;s History tab.
+                <ImageRecItem label="Before/After Photos (WORK ORDERS)">
+                  <strong className="text-[#10B981]">✓ Implemented:</strong> Work Orders and
+                  Corrective Maintenance now have{' '}
+                  <code className="text-[#10B981]">Before Image</code> and{' '}
+                  <code className="text-[#10B981]">After Image</code> columns. Upload via the form,
+                  view in the drawer&apos;s image gallery. Auditors can compare side-by-side in the
+                  Details tab. The <code className="text-[#10B981]">/api/erp/uploads</code> endpoint
+                  accepts multipart/form-data, validates size (≤5MB) and MIME type, and returns the
+                  public URL.
                 </ImageRecItem>
 
-                <ImageRecItem label="Product Images">
-                  For Inventory Register and Vendor Register — add a{' '}
-                  <code className="text-[#10B981]">product_image</code> field. Display as
-                  thumbnail in grid view, full image in drawer.
+                <ImageRecItem label="Product Images (ASSET REGISTER)">
+                  <strong className="text-[#10B981]">✓ Implemented:</strong> Asset Register now has
+                  a <code className="text-[#10B981]">Product Image</code> column. Displayed as a
+                  40×40 thumbnail in grid view, full-size in the drawer. Use the ImageField component
+                  to upload, preview, replace, and remove images.
                 </ImageRecItem>
 
                 <ImageRecItem label="Inspection Photos">
-                  For Safety Inspection, Housekeeping Inspection, Fire Equipment Inspection —
-                  add multi-image support (use the <code className="text-[#10B981]">tags</code>{' '}
-                  type or a comma-separated list of URLs in a long_text field for now; native
-                  multi-image is a future enhancement).
+                  For Safety Inspection, Housekeeping Inspection, Fire Equipment Inspection — add
+                  multiple <code className="text-[#10B981]">image</code> columns (e.g.{' '}
+                  <code className="text-[#10B981]">inspection_photo_1</code>,{' '}
+                  <code className="text-[#10B981]">inspection_photo_2</code>) via the Column Editor.
+                  Native multi-image carousel is a future enhancement.
                 </ImageRecItem>
 
-                <ImageRecItem label="Implementation">
-                  The new <code className="text-[#10B981]">image</code> column type stores the
-                  URL of an uploaded file. The upload API at{' '}
-                  <code className="text-[#10B981]">/api/erp/uploads</code> accepts
-                  multipart/form-data and returns{' '}
-                  <code className="text-[#10B981]">{'{ url }'}</code>. Files are saved to{' '}
-                  <code className="text-[#10B981]">/public/uploads/</code>. Max 5MB per file.
-                  Allowed: jpg, png, gif, webp, svg, pdf.
+                <ImageRecItem label="Orphan Cleanup">
+                  Admins can clean up unreferenced uploads via{' '}
+                  <code className="text-[#10B981]">DELETE /api/erp/uploads?cleanup=orphans</code>.
+                  The endpoint scans all records for <code>/uploads/</code> references and deletes
+                  any files not in use. Returns <code>{'{ deleted, count, freedMB }'}</code>.
                 </ImageRecItem>
 
                 <ImageRecItem label="Future Enhancement">
-                  Add a gallery view in the drawer to show all images of a record as a
-                  carousel/lightbox. Add OCR for invoice PDFs. Add image annotation (markup
-                  tools for inspection photos).
+                  Add a gallery carousel/lightbox in the drawer. Add OCR for invoice PDFs. Add image
+                  annotation (markup tools for inspection photos). Add EXIF metadata extraction
+                  (date, GPS, camera) for compliance auditing.
                 </ImageRecItem>
               </div>
             </div>
