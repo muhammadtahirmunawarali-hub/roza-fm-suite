@@ -20,12 +20,12 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 98,
-  saasPct: 90,
+  webAppPct: 99,
+  saasPct: 92,
   aiAgentPct: 85,
   totalModules: 37,
-  productionReady: 29,
-  betaCount: 8,
+  productionReady: 30,
+  betaCount: 7,
   roadmapCount: 0,
 } as const;
 
@@ -79,7 +79,7 @@ const MODULES: ModuleRow[] = [
   { name: 'Webhook System (Outbound)', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
   { name: 'Public API v1 Records Endpoint', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
   { name: 'Deployment Guide (Local/Prod/SaaS)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
-  { name: 'Mobile App (PWA)', webAppPct: 60, saasPct: 50, status: 'Beta' },
+  { name: 'PWA + Offline Mode (Installable)', webAppPct: 95, saasPct: 85, status: 'Production Ready' },
 ];
 
 // Verify count matches PROJECT_STATUS_SUMMARY.totalModules

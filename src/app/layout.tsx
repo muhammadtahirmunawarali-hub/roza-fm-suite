@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -32,9 +32,18 @@ export const metadata: Metadata = {
   description: "Enterprise Facility Management ERP with dynamic registers, dashboard, audit logs, AI assistant, and more.",
   keywords: ["ERP", "FMCore", "Facility Management", "Maintenance", "Safety", "Assets", "Inventory"],
   authors: [{ name: "FMCore" }],
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FMCore ERP" },
   icons: {
-    icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230a0e1a'/%3E%3Ctext x='50' y='68' font-family='Arial' font-size='56' font-weight='bold' fill='%2300D4AA' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E",
+    icon: "/icon.svg",
+    apple: "/icon.svg",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#00D4AA",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

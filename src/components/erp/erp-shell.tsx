@@ -22,6 +22,7 @@ import { SettingsView } from './settings-view';
 import { UsersView } from './users-view';
 import { LoginScreen } from './login-screen';
 import { KeyboardShortcuts } from './keyboard-shortcuts';
+import { PWARegister, PWAInstallBanner } from './pwa-register';
 import { registersApi } from '@/lib/erp/api';
 
 export function ErpShell() {
@@ -152,6 +153,8 @@ export function ErpShell() {
       <CommandPalette />
       <RegisterBuilder open={builderOpen} onClose={() => setBuilderOpen(false)} />
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <PWARegister />
+      <PWAInstallBanner />
     </div>
   );
 }
