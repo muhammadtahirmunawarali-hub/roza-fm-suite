@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  // Allow the preview domain to load _next/* resources without cross-origin errors
   allowedDevOrigins: [
     "*.space-z.ai",
     "*.z.ai",

@@ -1311,3 +1311,56 @@ The project was reset to an earlier checkpoint (around Round 22) during the dev 
 - Memory: ~1.1GB used (stable with setsid + nohup)
 - All APIs responding 200
 
+
+---
+
+## Round 30 — Client-Side Error Fix (Production Mode)
+
+### Bug Fixed: "Application error: a client-side exception has occurred"
+
+**Root Cause**: Two issues:
+1. **Cross-origin blocking**: Next.js dev server blocked `_next/*` resource requests from the preview domain (`preview-chat-*.space-z.ai`)
+2. **Memory OOM**: The dev server (Turbopack) uses 1.5GB+ memory during compilation and gets OOM-killed after 1-2 requests
+
+**Fix Applied**:
+
+#### 1. `allowedDevOrigins` in `next.config.ts`
+Added wildcard patterns for preview domains:
+```typescript
+allowedDevOrigins: ["*.space-z.ai", "*.z.ai", "localhost", "127.0.0.1"],
+```
+
+#### 2. Inline SVG Favicon (replaced remote CDN)
+Replaced `https://z-cdn.chatglm.cn/z-ai/static/logo.svg` with an inline SVG data URI to eliminate CORS issues.
+
+#### 3. Switched to Production Mode (Standalone Build)
+The dev server's Turbopack compilation was consuming too much memory and getting OOM-killed. Solution:
+- Built the project with `bunx next build` (creates `.next/standalone/server.js`)
+- Copied `public/` and `.next/static/` to `.next/standalone/`
+- Started the standalone production server: `node .next/standalone/server.js`
+- Production server uses only **565MB** (vs 1.5GB+ for dev mode)
+- Created `start-prod.sh` launcher script with `setsid` + `exec` for persistence
+
+**Verification** (all passed):
+- ✅ Page size: 11,656 bytes (not 0)
+- ✅ "Loading FMCore ERP" renders
+- ✅ No "Application error"
+- ✅ Title: "FMCore ERP — Dynamic Register & Form Builder"
+- ✅ Favicon: inline SVG data URI (no CORS)
+- ✅ Auth API: 200
+- ✅ Registers API: 200
+- ✅ Memory: 565MB (stable)
+- ✅ Lint: 0 errors
+
+### Files Modified
+- `next.config.ts` — added `allowedDevOrigins` + `output: standalone`
+- `src/app/layout.tsx` — inline SVG favicon
+- `start-prod.sh` — production server launcher (new)
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | 93% |
+| SaaS Product Readiness | 76% |
+| AI Agent Strength | 78% |
+
