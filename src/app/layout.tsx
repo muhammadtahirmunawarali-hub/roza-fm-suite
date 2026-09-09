@@ -45,9 +45,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Font Awesome + Chart.js (FMCore dependencies) */}
+        {/* Font Awesome — loaded locally to avoid CDN/CORS issues */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
         <link
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          href="/css/font-awesome.min.css"
           rel="stylesheet"
         />
       </head>
