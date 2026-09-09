@@ -1861,3 +1861,48 @@ Comprehensive 3-tab guide added to Settings → "Maintain & Audit" tab:
 - Port: 3000
 - Memory: ~1.2GB (stable)
 
+
+---
+
+## Round 40 — Actions Overflow Fix + AI 100% Confirmation
+
+### Bug Fixed: Actions Column Overflow When Scrolling Right
+**Problem**: When scrolling the work orders table right-to-left, the action buttons (View, Flow, Edit) had text labels that overlapped with the table content and looked like they were overwriting columns.
+
+**Root Cause**: The `ActionBtn` component rendered both an icon AND a text label (e.g., "View", "Edit", "Flow") with `px-2` padding, making each button ~50px wide. With 5 buttons (View, Flow, Edit, Print, Delete), the total width was ~250px, which overflowed the sticky Actions column.
+
+**Fix Applied**:
+1. Changed `ActionBtn` from icon+text to **icon-only** — removed the visible `<span>{label}</span>` and replaced with `<span className="sr-only">{label}</span>` (screen reader only, not visible)
+2. Changed button from `inline-flex items-center gap-1 px-2` to `inline-flex items-center justify-center w-7 h-7` (fixed 28px square)
+3. Added `shrink-0` to prevent the buttons from shrinking when the column is narrow
+4. Reduced the Actions column `min-w` from `200px` to `120px` (5 buttons × 28px = 140px fits within 120px + padding)
+5. Changed cell padding from `px-3` to `px-2` to give more room
+
+**Result**: The Actions column is now compact (~140px wide), buttons are icon-only (28px squares), and no text overflows when scrolling. The labels are still accessible via:
+- `title` attribute (hover tooltip shows "View record", "Edit record", etc.)
+- `sr-only` span (screen readers announce the label for accessibility)
+
+### AI Agent 100% Question
+**User asked**: "Can AI achieve 100%? Please confirm in chat before SaaS."
+
+**Answer**: AI Agent is currently at **85%**. It CANNOT reach 100% because:
+1. **Voice input** (0%) — needs ASR integration (planned)
+2. **Predictive insights** (20%) — needs ML model training (planned)
+3. **Natural Language → Prisma queries** (42%) — needs query translation engine
+
+These require significant ML/infrastructure work beyond the current LLM integration. The AI is at 85% which is "Live + Capable" — it can answer questions, create/update/delete records, guide users, and open registers. The remaining 15% is advanced ML features that are on the roadmap.
+
+**SaaS is at 93%** — it has multi-tenant, billing, API keys, webhooks, SSO, branding, and deployment guide. The remaining 7% is desktop app (.exe), mobile native, and real OAuth callbacks.
+
+### Updated Progress (unchanged from Round 39)
+| Track | Percentage |
+|---|---|
+| WebApp Completion | 99% |
+| SaaS Product Readiness | 93% |
+| AI Agent Strength | 85% |
+
+### Verification
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ HTTP 200, page loads
+- ✅ Server stable
+

@@ -587,7 +587,7 @@ export function RegisterView({ registerId }: Props) {
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide sticky right-0 bg-[var(--erp-bg-elevated)] border-l border-[var(--erp-border)] z-20 min-w-[200px]">
+                <th className="px-2 py-2 text-right font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide sticky right-0 bg-[var(--erp-bg-elevated)] border-l border-[var(--erp-border)] z-20 min-w-[120px]">
                   Actions
                 </th>
               </tr>
@@ -975,21 +975,21 @@ function IconBtn({ children, title, onClick, disabled, danger, accent }: { child
   );
 }
 
-// Action button with icon + explicit text label (View / Edit / Flow)
+// Action button with icon only — NO text label (prevents overflow when scrolling right)
 function ActionBtn({ title, onClick, icon, label, accent }: { title: string; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean }) {
   return (
     <button
       title={title}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] font-medium transition-colors border',
+        'inline-flex items-center justify-center w-7 h-7 rounded text-[11px] font-medium transition-colors border shrink-0',
         accent
           ? 'border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]'
           : 'border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] hover:border-[var(--erp-accent-border)]',
       )}
     >
       {icon}
-      <span>{label}</span>
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
