@@ -1433,3 +1433,43 @@ The page now has **zero external resource URLs** — everything is served from t
 - Memory: 566MB (stable)
 - Start script: `/home/z/my-project/start-prod.sh`
 
+
+---
+
+## Round 32 — Added Error Boundaries + Fixed Prisma Logging
+
+### Changes
+
+#### 1. Added `global-error.tsx` and `error.tsx`
+Created Next.js error boundaries that catch client-side exceptions and display the actual error message + stack trace instead of the generic "Application error: a client-side exception has occurred". This will help diagnose the exact error the user is seeing.
+
+The `global-error.tsx` shows:
+- Error message (red, monospace)
+- Error digest
+- Full stack trace (collapsible)
+- "Try Again" button (calls `reset()`)
+- "Reload Page" button
+
+#### 2. Disabled Prisma Query Logging
+Changed `log: ['query']` to `log: ['error', 'warn']` in production mode. The query logging was flooding stdout with thousands of SQL queries, making it impossible to see actual errors.
+
+#### 3. Verified All Resources Load Locally
+- CSS files: 200 (contain `--erp-bg`, `--erp-accent` variables)
+- Font Awesome CSS: 200 (local)
+- Font Awesome webfonts: 200 (local)
+- Favicon: inline SVG data URI (no network request)
+- Zero external CDN resources
+
+### Current State
+- Server running in production mode (standalone build)
+- Memory: 571MB (stable)
+- All resources served locally (no CDN dependencies)
+- Error boundaries in place to catch and display any client-side errors
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | 93% |
+| SaaS Product Readiness | 76% |
+| AI Agent Strength | 78% |
+
