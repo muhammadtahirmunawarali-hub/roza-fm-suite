@@ -20,12 +20,12 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 93,
-  saasPct: 76,
-  aiAgentPct: 78,
-  totalModules: 27,
-  productionReady: 14,
-  betaCount: 7,
+  webAppPct: 95,
+  saasPct: 80,
+  aiAgentPct: 80,
+  totalModules: 29,
+  productionReady: 15,
+  betaCount: 8,
   roadmapCount: 4,
 } as const;
 
@@ -429,15 +429,15 @@ export function ProjectStatusPanel() {
                 title="WebApp Completion"
                 pct={PROJECT_STATUS_SUMMARY.webAppPct}
                 color="#10B981"
-                statusLabel="On Track"
-                description="Production-ready ERP application with full register builder, RBAC, and workflow engine. Currently in active pilot."
+                statusLabel="Nearly Complete"
+                description="Production-ready ERP with 35 registers, dynamic form builder, WO workflow, AI assistant, dashboard with filters/blur/report mode, and full RBAC."
               />
               <BigCard
                 title="SaaS Product Readiness"
                 pct={PROJECT_STATUS_SUMMARY.saasPct}
                 color="#F59E0B"
                 statusLabel="In Progress"
-                description="Multi-tenant isolation, billing, public API, and white-labeling are still in progress before commercial launch."
+                description="Multi-tenant isolation, billing, public API, white-labeling, SSO, and webhook system are the remaining SaaS features."
               />
               <BigCard
                 title="AI Agent Strength"

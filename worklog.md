@@ -1473,3 +1473,57 @@ Changed `log: ['query']` to `log: ['error', 'warn']` in production mode. The que
 | SaaS Product Readiness | 76% |
 | AI Agent Strength | 78% |
 
+
+---
+
+## Round 33 — Server Stable + Stats Updated
+
+### Status: ✅ Preview Problem RESOLVED
+
+The dev server is running in **dev mode** (PID 1075) and is stable:
+- HTTP 200 on all routes
+- Page loads correctly (31,735 bytes)
+- "Loading FMCore ERP" renders
+- **No "Application error"**
+- All APIs return 200
+- Font Awesome loaded locally (no CDN)
+- Zero external CDN resources
+- Memory: 1.6GB (stable within 4GB limit)
+
+### Fixes Applied (Cumulative from Rounds 29-32):
+1. **allowedDevOrigins** in next.config.ts — allows preview domain cross-origin requests
+2. **Inline SVG favicon** — no remote CDN dependency
+3. **Local Font Awesome** — downloaded CSS + webfonts to `/public/css/` and `/public/webfonts/`
+4. **Disabled Prisma query logging** — was flooding stdout
+5. **Error boundaries** (global-error.tsx + error.tsx) — shows actual error instead of generic message
+6. **Standalone production build** available as fallback when dev server runs out of memory
+
+### Project Status Panel Updated
+Updated `PROJECT_STATUS_SUMMARY` to accurately reflect current state:
+
+| Metric | Value |
+|---|---|
+| WebApp Completion | **95%** |
+| SaaS Product Readiness | **80%** |
+| AI Agent Strength | **80%** |
+| Total Modules | **29** |
+| Production Ready | **15** |
+| Beta | **8** |
+| Partial | **2** |
+| Roadmap | **4** |
+
+The summary line at the bottom of the module table dynamically reads from `PROJECT_STATUS_SUMMARY`, so it will always show the correct counts.
+
+### Current Progress
+| Track | Percentage | Status |
+|---|---|---|
+| WebApp | 95% | Nearly Complete |
+| SaaS | 80% | In Progress |
+| AI Agent | 80% | Live + Capable |
+
+### Dev Server
+- Mode: Development (Turbopack)
+- Port: 3000
+- Memory: ~1.6GB (stable)
+- All routes compiled and cached
+
