@@ -6,7 +6,7 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { UserMenu } from './user-menu';
 import { cn } from '@/lib/utils';
-import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2 } from 'lucide-react';
+import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, Globe } from 'lucide-react';
 import { notificationsApi } from '@/lib/erp/api';
 
 export function Toolbar() {
@@ -15,6 +15,7 @@ export function Toolbar() {
     setAiPanel, aiPanelOpen,
     setNotifPanel, notifPanelOpen,
     setCommandOpen, tabs, activeTabId,
+    language, setLanguage, rtl, setRtl,
   } = useErpStore();
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -101,6 +102,34 @@ export function Toolbar() {
           title="Toggle theme"
           onClick={toggleTheme}
         />
+        {/* Language Picker */}
+        <div className="relative group">
+          <button
+            className="flex items-center gap-1 px-2 h-8 rounded-md text-[12px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors"
+            title="Change language"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline uppercase">{language}</span>
+          </button>
+          <div className="absolute right-0 top-full mt-1 w-40 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)] shadow-xl z-50 hidden group-hover:block py-1">
+            {[
+              { code: 'en', label: '🇬🇧 English' },
+              { code: 'ar', label: '🇸🇦 العربية' },
+              { code: 'fr', label: '🇫🇷 Français' },
+              { code: 'es', label: '🇪🇸 Español' },
+              { code: 'hi', label: '🇮🇳 हिन्दी' },
+              { code: 'ur', label: '🇵🇰 اردو' },
+            ].map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => { setLanguage(lang.code); if (lang.code === 'ar' || lang.code === 'ur') setRtl(true); else setRtl(false); }}
+                className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-[var(--erp-bg-hover)] ${language === lang.code ? 'text-[var(--erp-accent)] font-semibold' : 'text-[var(--erp-text-secondary)]'}`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <ToolbarBtn
           icon={<Wand2 className="w-4 h-4" />}
           title="AI Assistant"
