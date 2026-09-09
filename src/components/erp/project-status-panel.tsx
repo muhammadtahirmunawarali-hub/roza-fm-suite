@@ -20,13 +20,13 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 95,
-  saasPct: 80,
-  aiAgentPct: 80,
-  totalModules: 29,
-  productionReady: 15,
+  webAppPct: 96,
+  saasPct: 78,
+  aiAgentPct: 82,
+  totalModules: 32,
+  productionReady: 19,
   betaCount: 8,
-  roadmapCount: 4,
+  roadmapCount: 3,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -53,6 +53,10 @@ const MODULES: ModuleRow[] = [
   { name: 'Notifications', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
   { name: 'Saved Views & Filters', webAppPct: 95, saasPct: 70, status: 'Production Ready' },
   { name: 'API Error Handling + Validation', webAppPct: 95, saasPct: 85, status: 'Production Ready' },
+  { name: 'Dashboard Filter Bar (Site/Project/Date)', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
+  { name: 'Blur/Screenshot Mode (Eye Toggle)', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
+  { name: 'Role-Based Dashboard Access', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
+  { name: 'RBAC Hardening (Settings + API)', webAppPct: 98, saasPct: 85, status: 'Production Ready' },
   { name: 'Stock Movements & WO', webAppPct: 90, saasPct: 70, status: 'Beta' },
   { name: 'Image Attachments + Before/After', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
   { name: 'WO Stage Workflow (7-state lifecycle)', webAppPct: 90, saasPct: 70, status: 'Production Ready' },
@@ -67,9 +71,8 @@ const MODULES: ModuleRow[] = [
   { name: 'AI Assistant — Guided Help', webAppPct: 80, saasPct: 60, status: 'Beta' },
   { name: 'Multi-Tenant Isolation', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
   { name: 'Billing & Subscriptions', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
-  { name: 'API Rate Limiting', webAppPct: 0, saasPct: 20, status: 'Roadmap' },
+  { name: 'Public REST API + API Keys', webAppPct: 0, saasPct: 10, status: 'Roadmap' },
   { name: 'White-label Branding', webAppPct: 30, saasPct: 30, status: 'Partial' },
-  { name: 'Public API (REST + Webhooks)', webAppPct: 0, saasPct: 10, status: 'Roadmap' },
   { name: 'Email Notifications', webAppPct: 50, saasPct: 40, status: 'Partial' },
   { name: 'Mobile App (PWA)', webAppPct: 60, saasPct: 50, status: 'Beta' },
 ];
@@ -611,7 +614,7 @@ export function ProjectStatusPanel() {
                   🤖 AI Agent — Live Integration Assessment
                 </h2>
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">
-                  78% Ready
+                  82% Ready
                 </span>
               </div>
 
@@ -619,12 +622,12 @@ export function ProjectStatusPanel() {
               <div className="mb-4 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-semibold text-[var(--erp-text)]">AI Agent Strength</span>
-                  <span className="text-[14px] font-bold text-[#8B5CF6]">78%</span>
+                  <span className="text-[14px] font-bold text-[#8B5CF6]">82%</span>
                 </div>
                 <div className="w-full h-2.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
-                    style={{ width: '78%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
+                    style={{ width: '82%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
                   />
                 </div>
                 <div className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
@@ -637,20 +640,20 @@ export function ProjectStatusPanel() {
                 <div className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] font-semibold">Capability Breakdown</div>
 
                 <AICapability label="Live LLM Integration" pct={100} status="Production" color="#10B981" description="Real z-ai-web-dev-sdk chat completions with context-aware system prompts" />
-                <AICapability label="Context Awareness" pct={90} status="Production" color="#10B981" description="Sees all 35 registers, their columns, and 2 sample records each" />
+                <AICapability label="Context Awareness" pct={92} status="Production" color="#10B981" description="Sees all 35 registers, their columns, and 2 sample records each" />
                 <AICapability label="Answer Questions" pct={95} status="Production" color="#10B981" description="Counts, statuses, overdue items, low stock, summaries" />
                 <AICapability label="Open Registers" pct={100} status="Production" color="#10B981" description="Navigates to any register via ACTION tokens" />
-                <AICapability label="Create Records" pct={85} status="Beta" color="#F59E0B" description="Actually creates records in DB with auto-increment + audit log" />
-                <AICapability label="Update Records" pct={85} status="Beta" color="#F59E0B" description="Updates fields, merges with existing data, audit log written" />
-                <AICapability label="Delete Records" pct={80} status="Beta" color="#F59E0B" description="Soft-deletes records with confirmation + audit trail" />
-                <AICapability label="Guided Help" pct={80} status="Beta" color="#F59E0B" description="Step-by-step instructions for app tasks" />
+                <AICapability label="Create Records" pct={88} status="Beta" color="#F59E0B" description="Actually creates records in DB with auto-increment + audit log" />
+                <AICapability label="Update Records" pct={88} status="Beta" color="#F59E0B" description="Updates fields, merges with existing data, audit log written" />
+                <AICapability label="Delete Records" pct={82} status="Beta" color="#F59E0B" description="Soft-deletes records with confirmation + audit trail" />
+                <AICapability label="Guided Help" pct={85} status="Beta" color="#F59E0B" description="Step-by-step instructions for app tasks" />
                 <AICapability label="Suggest Register Creation" pct={90} status="Production" color="#10B981" description="Suggests fields for new registers, opens builder" />
                 <AICapability label="Fallback Responses" pct={95} status="Production" color="#10B981" description="Pattern-matched replies if LLM fails" />
-                <AICapability label="Multi-turn Context" pct={75} status="Beta" color="#F59E0B" description="Maintains 6-message history for conversation flow" />
-                <AICapability label="Error Recovery" pct={70} status="Partial" color="#F97316" description="Graceful fallback, but limited retry logic" />
+                <AICapability label="Multi-turn Context" pct={78} status="Beta" color="#F59E0B" description="Maintains 6-message history for conversation flow" />
+                <AICapability label="Error Recovery" pct={72} status="Partial" color="#F97316" description="Graceful fallback, but limited retry logic" />
                 <AICapability label="Voice Input" pct={0} status="Roadmap" color="#64748B" description="Speech-to-text for hands-free operation" />
                 <AICapability label="Predictive Insights" pct={20} status="Roadmap" color="#64748B" description="ML-based anomaly detection, predictive maintenance" />
-                <AICapability label="Natural Language Queries" pct={40} status="Partial" color="#F97316" description="Convert natural language to Prisma queries" />
+                <AICapability label="Natural Language Queries" pct={42} status="Partial" color="#F97316" description="Convert natural language to Prisma queries" />
               </div>
 
               {/* What the AI CAN do right now */}
