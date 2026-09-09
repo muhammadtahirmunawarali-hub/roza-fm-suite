@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
 import { ProjectStatusPanel } from './project-status-panel';
+import { DeploymentGuide } from './deployment-guide';
 
 export function SettingsView() {
   const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
@@ -178,6 +179,7 @@ export function SettingsView() {
     { id: 'numbering',   label: 'Document #',    icon: <Hash className="w-4 h-4" /> },
     { id: 'saved-views', label: 'Saved Views',   icon: <Bookmark className="w-4 h-4" /> },
     { id: 'backup',      label: 'Backup & Reset', icon: <Database className="w-4 h-4" /> },
+    { id: 'deploy',       label: 'Deploy Guide',   icon: <Rocket className="w-4 h-4" /> },
     { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
   ];
@@ -552,6 +554,10 @@ export function SettingsView() {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'deploy' && (
+            <DeploymentGuide />
           )}
 
           {activeTab === 'project' && (
