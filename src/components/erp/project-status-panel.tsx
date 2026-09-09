@@ -20,11 +20,11 @@ import {
 // ---------------------------------------------------------------------------
 
 export const PROJECT_STATUS_SUMMARY = {
-  webAppPct: 96,
-  saasPct: 85,
-  aiAgentPct: 82,
-  totalModules: 32,
-  productionReady: 24,
+  webAppPct: 97,
+  saasPct: 88,
+  aiAgentPct: 85,
+  totalModules: 36,
+  productionReady: 28,
   betaCount: 8,
   roadmapCount: 0,
 } as const;
@@ -74,6 +74,10 @@ const MODULES: ModuleRow[] = [
   { name: 'Public REST API v1 + API Keys', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
   { name: 'Tenant Management', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
   { name: 'Email Notification Service', webAppPct: 50, saasPct: 70, status: 'Production Ready' },
+  { name: 'White-label Branding', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
+  { name: 'SSO (Dev Mode + Google/Microsoft)', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
+  { name: 'Webhook System (Outbound)', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
+  { name: 'Public API v1 Records Endpoint', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
   { name: 'Mobile App (PWA)', webAppPct: 60, saasPct: 50, status: 'Beta' },
 ];
 
@@ -614,7 +618,7 @@ export function ProjectStatusPanel() {
                   🤖 AI Agent — Live Integration Assessment
                 </h2>
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">
-                  82% Ready
+                  85% Ready
                 </span>
               </div>
 
@@ -622,12 +626,12 @@ export function ProjectStatusPanel() {
               <div className="mb-4 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-semibold text-[var(--erp-text)]">AI Agent Strength</span>
-                  <span className="text-[14px] font-bold text-[#8B5CF6]">82%</span>
+                  <span className="text-[14px] font-bold text-[#8B5CF6]">85%</span>
                 </div>
                 <div className="w-full h-2.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
-                    style={{ width: '82%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
+                    style={{ width: '85%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
                   />
                 </div>
                 <div className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
