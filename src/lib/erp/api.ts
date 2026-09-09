@@ -360,3 +360,24 @@ export const uploadsApi = {
     return request<ApiResponse>(`${BASE}/uploads?filename=${encodeURIComponent(filename)}`, { method: 'DELETE' });
   },
 };
+
+// ---------- Tenants ----------
+export const tenantsApi = {
+  list: () => request<any[]>(`${BASE}/tenants`),
+  create: (data: { name: string; slug: string; plan?: string }) =>
+    request<any>(`${BASE}/tenants`, { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ---------- Billing ----------
+export const billingApi = {
+  getPlans: () => request<{ ok: boolean; plans: any[] }>(`${BASE}/billing/plans`),
+  createCheckout: (planId: string, successUrl: string, cancelUrl: string) =>
+    request<any>(`${BASE}/billing/checkout`, { method: 'POST', body: JSON.stringify({ planId, successUrl, cancelUrl }) }),
+};
+
+// ---------- API Keys ----------
+export const apiKeysApi = {
+  list: () => request<any[]>(`${BASE}/api-keys`),
+  create: (data: { name: string; permissions?: string[] }) =>
+    request<any>(`${BASE}/api-keys`, { method: 'POST', body: JSON.stringify(data) }),
+};

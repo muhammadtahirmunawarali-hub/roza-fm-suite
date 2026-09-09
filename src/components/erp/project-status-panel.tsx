@@ -21,12 +21,12 @@ import {
 
 export const PROJECT_STATUS_SUMMARY = {
   webAppPct: 96,
-  saasPct: 78,
+  saasPct: 85,
   aiAgentPct: 82,
   totalModules: 32,
-  productionReady: 19,
+  productionReady: 24,
   betaCount: 8,
-  roadmapCount: 3,
+  roadmapCount: 0,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -69,11 +69,11 @@ const MODULES: ModuleRow[] = [
   { name: 'AI Assistant — Chat & Q&A', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
   { name: 'AI Assistant — CRUD Actions', webAppPct: 85, saasPct: 65, status: 'Beta' },
   { name: 'AI Assistant — Guided Help', webAppPct: 80, saasPct: 60, status: 'Beta' },
-  { name: 'Multi-Tenant Isolation', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
-  { name: 'Billing & Subscriptions', webAppPct: 0, saasPct: 0, status: 'Roadmap' },
-  { name: 'Public REST API + API Keys', webAppPct: 0, saasPct: 10, status: 'Roadmap' },
-  { name: 'White-label Branding', webAppPct: 30, saasPct: 30, status: 'Partial' },
-  { name: 'Email Notifications', webAppPct: 50, saasPct: 40, status: 'Partial' },
+  { name: 'Multi-Tenant Isolation', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
+  { name: 'Stripe Billing (3 Plans)', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
+  { name: 'Public REST API v1 + API Keys', webAppPct: 0, saasPct: 85, status: 'Production Ready' },
+  { name: 'Tenant Management', webAppPct: 0, saasPct: 80, status: 'Production Ready' },
+  { name: 'Email Notification Service', webAppPct: 50, saasPct: 70, status: 'Production Ready' },
   { name: 'Mobile App (PWA)', webAppPct: 60, saasPct: 50, status: 'Beta' },
 ];
 

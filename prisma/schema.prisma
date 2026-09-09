@@ -229,3 +229,38 @@ model StockMovement {
   @@index([movementType])
   @@index([createdAt])
 }
+
+// ============================================================
+// TENANTS (SaaS multi-tenancy)
+// ============================================================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  plan        String   @default("starter")
+  status      String   @default("active")
+  stripeCustomerId String?
+  stripeSubId String?
+  maxUsers    Int      @default(10)
+  maxRecords  Int      @default(10000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// API KEYS (Public REST API authentication)
+// ============================================================
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  key         String   @unique @default(cuid())
+  name        String
+  permissions String   @default("[]")
+  rateLimit   Int      @default(100)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
