@@ -7,7 +7,7 @@ import { useErpStore } from '@/lib/erp/store';
 import type { Register } from '@/lib/erp/types';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
-import { Wand2, Send, X, Sparkles } from 'lucide-react';
+import { Mic, MicOff, Wand2, Send, X, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Msg { role: 'user' | 'assistant'; content: string; action?: { type: string; payload?: any } }
@@ -28,6 +28,8 @@ export function AiAssistant() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [registers, setRegisters] = useState<Register[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +77,49 @@ export function AiAssistant() {
       // No action needed — the reply text already contains the step-by-step guide
       toast.info(`Guide: ${action.payload?.topic?.replace(/_/g, ' ') || 'instructions'}`);
     }
+  };
+
+  const toggleVoiceInput = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Voice input not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join('');
+      setInput(transcript);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      setListening(false);
+      if (event.error !== 'no-speech') {
+        toast.error('Voice input error: ' + event.error);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+    toast.success('Listening... speak now');
   };
 
   const send = async (text?: string) => {
@@ -197,6 +242,18 @@ export function AiAssistant() {
               className="flex-1 text-[12px] p-2 rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] resize-none max-h-[120px]"
               disabled={loading}
             />
+            <button
+              onClick={toggleVoiceInput}
+              className={`flex items-center justify-center w-9 h-9 rounded-md transition-colors shrink-0 ${
+                listening
+                  ? 'bg-[var(--erp-danger)] text-white animate-pulse'
+                  : 'bg-[var(--erp-bg-card)] border border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]'
+              }`}
+              title={listening ? 'Stop listening' : 'Voice input (speak)'}
+              aria-label={listening ? 'Stop listening' : 'Voice input'}
+            >
+              {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
             <button
               onClick={() => send()}
               disabled={loading || !input.trim()}

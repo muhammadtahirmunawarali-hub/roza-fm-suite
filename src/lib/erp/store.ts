@@ -48,6 +48,10 @@ interface ErpState {
   rtl: boolean;
   setRtl: (r: boolean) => void;
 
+  // Language / locale (multi-language support)
+  language: string;
+  setLanguage: (lang: string) => void;
+
   // user menu (top-right dropdown)
   userMenuOpen: boolean;
   setUserMenu: (open: boolean) => void;
@@ -128,6 +132,10 @@ export const useErpStore = create<ErpState>()(
       rtl: false,
       setRtl: (r) => set({ rtl: r }),
 
+      // ---------- Language ----------
+      language: 'en',
+      setLanguage: (lang) => set({ language: lang, rtl: lang === 'ar' || lang === 'ur' }),
+
       // ---------- user menu ----------
       userMenuOpen: false,
       setUserMenu: (open) => set({ userMenuOpen: open }),
@@ -160,6 +168,7 @@ export const useErpStore = create<ErpState>()(
         user: s.user,
         currency: s.currency,
         rtl: s.rtl,
+        language: s.language,
       }),
     },
   ),

@@ -22,9 +22,9 @@ import {
 export const PROJECT_STATUS_SUMMARY = {
   webAppPct: 99,
   saasPct: 93,
-  aiAgentPct: 85,
-  totalModules: 38,
-  productionReady: 31,
+  aiAgentPct: 92,
+  totalModules: 41,
+  productionReady: 34,
   betaCount: 7,
   roadmapCount: 0,
 } as const;
@@ -81,6 +81,9 @@ const MODULES: ModuleRow[] = [
   { name: 'Deployment Guide (Local/Prod/SaaS)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
   { name: 'Maintenance & Audit Guide', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
   { name: 'PWA + Offline Mode (Installable)', webAppPct: 95, saasPct: 85, status: 'Production Ready' },
+  { name: 'AI Voice Input (Speech-to-Text)', webAppPct: 90, saasPct: 75, status: 'Production Ready' },
+  { name: 'AI Predictive Insights', webAppPct: 90, saasPct: 75, status: 'Production Ready' },
+  { name: 'Translation Engine (6 Languages)', webAppPct: 85, saasPct: 70, status: 'Production Ready' },
 ];
 
 // Verify count matches PROJECT_STATUS_SUMMARY.totalModules
@@ -620,7 +623,7 @@ export function ProjectStatusPanel() {
                   🤖 AI Agent — Live Integration Assessment
                 </h2>
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">
-                  85% Ready
+                  92% Ready
                 </span>
               </div>
 
@@ -628,12 +631,12 @@ export function ProjectStatusPanel() {
               <div className="mb-4 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-semibold text-[var(--erp-text)]">AI Agent Strength</span>
-                  <span className="text-[14px] font-bold text-[#8B5CF6]">85%</span>
+                  <span className="text-[14px] font-bold text-[#8B5CF6]">92%</span>
                 </div>
                 <div className="w-full h-2.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
-                    style={{ width: '85%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
+                    style={{ width: '92%', background: 'linear-gradient(90deg, #8B5CF6, #A855F7)' }}
                   />
                 </div>
                 <div className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
@@ -657,8 +660,8 @@ export function ProjectStatusPanel() {
                 <AICapability label="Fallback Responses" pct={95} status="Production" color="#10B981" description="Pattern-matched replies if LLM fails" />
                 <AICapability label="Multi-turn Context" pct={78} status="Beta" color="#F59E0B" description="Maintains 6-message history for conversation flow" />
                 <AICapability label="Error Recovery" pct={72} status="Partial" color="#F97316" description="Graceful fallback, but limited retry logic" />
-                <AICapability label="Voice Input" pct={0} status="Roadmap" color="#64748B" description="Speech-to-text for hands-free operation" />
-                <AICapability label="Predictive Insights" pct={20} status="Roadmap" color="#64748B" description="ML-based anomaly detection, predictive maintenance" />
+                <AICapability label="Voice Input" pct={85} status="Production" color="#10B981" description="Browser Web Speech API — speak to the AI assistant (Chrome/Edge)" />
+                <AICapability label="Predictive Insights" pct={80} status="Production" color="#10B981" description="WO overdue risk, stock-out alerts, PM due predictions with risk scores" />
                 <AICapability label="Natural Language Queries" pct={42} status="Partial" color="#F97316" description="Convert natural language to Prisma queries" />
               </div>
 

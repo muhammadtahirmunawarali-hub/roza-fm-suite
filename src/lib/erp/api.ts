@@ -171,6 +171,11 @@ export const aiApi = {
     }),
 };
 
+// ---------- AI Insights ----------
+export const aiInsightsApi = {
+  get: () => request<{ ok: boolean; insights: any[]; count: number; generatedAt: string }>(`${BASE}/ai/insights`),
+};
+
 // ---------- Global search ----------
 export const searchApi = {
   search: (q: string) =>
