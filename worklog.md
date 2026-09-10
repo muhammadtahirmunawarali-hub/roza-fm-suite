@@ -2473,3 +2473,46 @@ Settings → "SaaS Multi-Company" tab with:
 - Memory: ~605MB (stable)
 - Start command: `node .next/standalone/server.js`
 
+
+---
+
+## Round 48 — Fixed "hasPermission is not defined" Crash
+
+### Bug Fixed: Application Error on Recycle Bin Click
+**Error**: `hasPermission is not defined` when clicking Recycle Bin in the sidebar.
+
+**Root Cause**: In `erp-shell.tsx`, the `hasPermission` function was being used in the view gates (lines 143-147) but was **NOT destructured** from `useErpStore()`. The destructure only included:
+```tsx
+const {
+  tabs, activeTabId, theme, builderOpen, setBuilderOpen,
+  user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
+  currency, setCurrency, rtl, setRtl,
+} = useErpStore();
+```
+Missing: `hasPermission`
+
+This was added in Round 44 (when we added the permission gates + NoAccessView), but the `hasPermission` was never added to the destructure. In dev mode, the error might have been masked by Turbopack's error recovery, but in production mode it crashed immediately.
+
+**Fix**: Added `hasPermission` to the useErpStore destructure:
+```tsx
+const {
+  tabs, activeTabId, theme, builderOpen, setBuilderOpen,
+  user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
+  currency, setCurrency, rtl, setRtl, hasPermission,  // ← added
+} = useErpStore();
+```
+
+### Verification (after fix + rebuild)
+- ✅ HTTP 200
+- ✅ Page: 12,386 bytes, "Loading FMCore" found
+- ✅ No "Application error"
+- ✅ Login: OK, Role: Super Admin
+- ✅ Recycle Bin API: 3 items
+- ✅ Memory: 612MB (stable production mode)
+- ✅ Lint: 0 errors, 0 warnings
+
+### Dev Server
+- Mode: Production (standalone build)
+- Port: 3000
+- Memory: 612MB
+

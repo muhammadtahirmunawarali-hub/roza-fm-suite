@@ -30,7 +30,7 @@ export function ErpShell() {
   const {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
-    currency, setCurrency, rtl, setRtl,
+    currency, setCurrency, rtl, setRtl, hasPermission,
   } = useErpStore();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
