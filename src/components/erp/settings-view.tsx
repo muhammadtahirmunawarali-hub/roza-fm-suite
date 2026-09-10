@@ -23,6 +23,7 @@ import { ProjectStatusPanel } from './project-status-panel';
 import { DeploymentGuide } from './deployment-guide';
 import { MaintenanceGuide } from './maintenance-guide';
 import { SaasManagement } from './saas-management';
+import { GoLiveGuide } from './go-live-guide';
 
 export function SettingsView() {
   const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
@@ -184,6 +185,7 @@ export function SettingsView() {
     { id: 'deploy',       label: 'Deploy Guide',   icon: <Rocket className="w-4 h-4" /> },
     { id: 'maintenance',  label: 'Maintain & Audit', icon: <Wrench className="w-4 h-4" /> },
     { id: 'saas',        label: 'SaaS Multi-Company', icon: <Building2 className="w-4 h-4" /> },
+    { id: 'golive',      label: 'Go-Live Guide', icon: <Rocket className="w-4 h-4" /> },
     { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
   ];
@@ -570,6 +572,10 @@ export function SettingsView() {
 
           {activeTab === 'saas' && (
             <SaasManagement />
+          )}
+
+          {activeTab === 'golive' && (
+            <GoLiveGuide />
           )}
 
           {activeTab === 'project' && (
