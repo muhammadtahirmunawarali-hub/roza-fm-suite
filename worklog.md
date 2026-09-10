@@ -2563,3 +2563,103 @@ Comprehensive 4-tab guide for deploying, launching, and selling the product:
 - ✅ Lint: 0 errors, 0 warnings
 - ✅ Memory: 601MB (stable production mode)
 
+
+---
+
+## Round 50 — Vercel Deployment Fix + Why .tar Upload Failed
+
+### Why the .tar Upload Failed
+1. **Vercel doesn't accept pre-built files** — it needs to run `npm install` + `npm run build` itself
+2. **The .tar likely included node_modules (1.2GB) and .next (399MB)** — Vercel rejects these
+3. **SQLite file database doesn't work on Vercel** — Vercel is serverless (no persistent filesystem)
+4. **The .env used a file path** (`file:/home/z/my-project/db/custom.db`) — won't work on Vercel
+5. **The build script had copy commands** (`cp -r public .next/standalone/`) which confused Vercel
+
+### Fixes Applied
+
+1. **vercel.json** — tells Vercel how to build the project
+2. **Fixed package.json build script** — removed `cp` commands (Vercel handles static files)
+3. **Added postbuild script** — `prisma generate` runs after build
+4. **Added engines** — `node >= 18.0.0`
+5. **.vercelignore** — excludes node_modules, .next, db, logs
+6. **.gitignore** — excludes same files for GitHub deployment
+7. **.env.example** — documents both SQLite (local) and PostgreSQL (Vercel) configs
+
+### How to Deploy to Vercel (3 Methods)
+
+**Method 1: Vercel CLI (Easiest — no GitHub needed)**
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# In your project folder
+cd fmcore-erp
+vercel
+
+# Follow the prompts:
+# ? Set up and deploy? → Y
+# ? Which scope? → your-account
+# ? Link to existing project? → N
+# ? Project name? → fmcore-erp
+# ? Directory? → ./
+# ? Override settings? → N
+
+# Add environment variables
+vercel env add DATABASE_URL
+# Paste: postgresql://user:password@host:port/database
+
+vercel env add AUTH_SECRET
+# Paste: your-random-secret
+
+# Deploy to production
+vercel --prod
+```
+
+**Method 2: GitHub + Vercel Dashboard**
+1. Create a GitHub repo
+2. Push your code (without node_modules, .next, db)
+3. Go to vercel.com/new → Import your repo
+4. Add env vars in Settings
+5. Click Deploy
+
+**Method 3: Fix the .tar upload**
+If you want to use drag-and-drop:
+1. Create a clean .tar WITHOUT node_modules, .next, db:
+   ```bash
+   tar -czf fmcore-clean.tar.gz --exclude=node_modules --exclude=.next --exclude=db --exclude=dev.log .
+   ```
+2. Upload the clean .tar to Vercel
+3. Vercel will run `npm install` + `npm run build` automatically
+
+### Important: Database Migration for Vercel
+Vercel doesn't support SQLite file databases. You need PostgreSQL:
+
+1. **Get a free PostgreSQL database**:
+   - Neon (neon.tech) — free tier, 0.5GB
+   - Supabase (supabase.com) — free tier, 500MB
+   - Vercel Postgres — built into Vercel dashboard
+
+2. **Update prisma/schema.prisma**:
+   ```prisma
+   datasource db {
+     provider = "postgresql"  # changed from "sqlite"
+     url = env("DATABASE_URL")
+   }
+   ```
+
+3. **Set DATABASE_URL in Vercel**:
+   ```
+   postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb
+   ```
+
+4. **Push the schema**:
+   ```bash
+   bun run db:push
+   ```
+
+### Verification
+- ✅ HTTP 200, page loads
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Memory: 609MB (stable)
+- ✅ Build succeeds
+
