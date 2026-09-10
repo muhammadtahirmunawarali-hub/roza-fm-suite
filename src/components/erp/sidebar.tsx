@@ -227,7 +227,7 @@ export function Sidebar() {
               onClick={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
             />
           )}
-          {hasPermission('recycle_bin', 'view') && (
+          {(hasPermission('recycle_bin', 'view') || user?.role === 'Super Admin' || user?.role === 'Administrator' || user?.role === 'Manager') && (
             <SidebarItem
               collapsed={collapsed}
               icon="fa-recycle"

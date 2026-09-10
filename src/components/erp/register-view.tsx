@@ -418,6 +418,27 @@ export function RegisterView({ registerId }: Props) {
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Record
               </Button>
             )}
+            {/* Delete Register (Super Admin / Admin only) */}
+            {(user?.role === 'Super Admin' || user?.role === 'Administrator') && !register.isSystem && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (confirm(`Delete the entire "${register.name}" register?\n\nThis will move ALL ${total} records to the Recycle Bin. The register itself will be soft-deleted and can be recovered from Settings.\n\nAre you sure?`)) {
+                    registersApi.remove(registerId).then(() => {
+                      toast.success(`Register "${register.name}" deleted — records moved to Recycle Bin`);
+                      // Close the tab and go back to dashboard
+                      window.location.reload();
+                    }).catch((e: any) => {
+                      toast.error('Failed to delete register', { description: e.message });
+                    });
+                  }
+                }}
+                className="h-8 text-[12px] text-[var(--erp-danger)] border-[var(--erp-danger)]/30 hover:bg-[var(--erp-danger)]/10"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Register
+              </Button>
+            )}
           </div>
         </div>
 

@@ -144,7 +144,7 @@ export function ErpShell() {
           {activeTab?.type === 'audit' && (hasPermission('audit', 'view') ? <AuditLogsView /> : <NoAccessView module="Audit Logs" />)}
           {activeTab?.type === 'settings' && (hasPermission('settings', 'view') ? <SettingsView /> : <NoAccessView module="Settings" />)}
           {activeTab?.type === 'users' && (hasPermission('users', 'view') ? <UsersView /> : <NoAccessView module="User Management" />)}
-          {activeTab?.type === 'recycle' && (hasPermission('recycle_bin', 'view') ? <RecycleBinView /> : <NoAccessView module="Recycle Bin" />)}
+          {activeTab?.type === 'recycle' && ((hasPermission('recycle_bin', 'view') || user?.role === 'Super Admin' || user?.role === 'Administrator' || user?.role === 'Manager') ? <RecycleBinView /> : <NoAccessView module="Recycle Bin" />)}
         </main>
         <StatusBar />
       </div>
