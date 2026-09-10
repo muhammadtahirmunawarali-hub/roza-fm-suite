@@ -20,6 +20,7 @@ import { ReportsView } from './reports-view';
 import { AuditLogsView } from './audit-logs-view';
 import { SettingsView } from './settings-view';
 import { UsersView } from './users-view';
+import { RecycleBinView } from './recycle-bin-view';
 import { LoginScreen } from './login-screen';
 import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { PWARegister, PWAInstallBanner } from './pwa-register';
@@ -139,10 +140,11 @@ export function ErpShell() {
         <main className="flex-1 overflow-y-auto bg-[var(--erp-bg)]">
           {activeTab?.type === 'dashboard' && <Dashboard />}
           {activeTab?.type === 'register' && activeTab.refId && <RegisterView registerId={activeTab.refId} />}
-          {activeTab?.type === 'reports' && <ReportsView />}
-          {activeTab?.type === 'audit' && <AuditLogsView />}
-          {activeTab?.type === 'settings' && <SettingsView />}
-          {activeTab?.type === 'users' && <UsersView />}
+          {activeTab?.type === 'reports' && (hasPermission('reports', 'view') ? <ReportsView /> : <NoAccessView module="Reports" />)}
+          {activeTab?.type === 'audit' && (hasPermission('audit', 'view') ? <AuditLogsView /> : <NoAccessView module="Audit Logs" />)}
+          {activeTab?.type === 'settings' && (hasPermission('settings', 'view') ? <SettingsView /> : <NoAccessView module="Settings" />)}
+          {activeTab?.type === 'users' && (hasPermission('users', 'view') ? <UsersView /> : <NoAccessView module="User Management" />)}
+          {activeTab?.type === 'recycle' && (hasPermission('recycle_bin', 'view') ? <RecycleBinView /> : <NoAccessView module="Recycle Bin" />)}
         </main>
         <StatusBar />
       </div>
@@ -155,6 +157,28 @@ export function ErpShell() {
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <PWARegister />
       <PWAInstallBanner />
+    </div>
+  );
+}
+
+// No-access view for unauthorized tabs
+function NoAccessView({ module }: { module: string }) {
+  return (
+    <div className="flex items-center justify-center h-full p-6">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 rounded-full bg-[rgba(239,68,68,0.1)] flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-[var(--erp-danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-[18px] font-semibold text-[var(--erp-text)] mb-2">Access Denied</h2>
+        <p className="text-[12px] text-[var(--erp-text-secondary)] mb-1">
+          You don&apos;t have permission to access <strong>{module}</strong>.
+        </p>
+        <p className="text-[11px] text-[var(--erp-text-muted)]">
+          Please contact your administrator if you believe this is an error.
+        </p>
+      </div>
     </div>
   );
 }

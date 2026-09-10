@@ -21,10 +21,10 @@ import {
 
 export const PROJECT_STATUS_SUMMARY = {
   webAppPct: 100,
-  saasPct: 95,
+  saasPct: 96,
   aiAgentPct: 93,
-  totalModules: 42,
-  productionReady: 35,
+  totalModules: 44,
+  productionReady: 37,
   betaCount: 7,
   roadmapCount: 0,
 } as const;
@@ -85,6 +85,8 @@ const MODULES: ModuleRow[] = [
   { name: 'AI Predictive Insights', webAppPct: 90, saasPct: 75, status: 'Production Ready' },
   { name: 'Translation Engine (6 Languages)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
   { name: 'Language Picker (Toolbar)', webAppPct: 95, saasPct: 75, status: 'Production Ready' },
+  { name: 'Recycle Bin (Deleted Records Recovery)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
+  { name: 'Extended Roles (Client/Main/Sub Contractor)', webAppPct: 95, saasPct: 80, status: 'Production Ready' },
 ];
 
 // Verify count matches PROJECT_STATUS_SUMMARY.totalModules

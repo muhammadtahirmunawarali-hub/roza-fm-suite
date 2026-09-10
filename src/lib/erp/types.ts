@@ -98,7 +98,7 @@ export interface RecordData {
 }
 
 // ---------- Tabs ----------
-export type TabType = 'dashboard' | 'register' | 'settings' | 'reports' | 'audit' | 'users';
+export type TabType = 'dashboard' | 'register' | 'settings' | 'reports' | 'audit' | 'users' | 'recycle' | 'role_access';
 
 export interface Tab {
   id: string;          // unique tab id

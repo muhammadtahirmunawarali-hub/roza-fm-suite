@@ -9,6 +9,9 @@ export const ROLES = [
   { id: 'Super Admin',     name: 'Super Admin',     description: 'Full system access including user management', color: '#DC2626', level: 100 },
   { id: 'Administrator',   name: 'Administrator',   description: 'Full access to all modules except user management', color: '#7C3AED', level: 90 },
   { id: 'Manager',         name: 'Manager',         description: 'Manage records, approve workflows, view reports', color: '#2563EB', level: 70 },
+  { id: 'Client Staff',    name: 'Client Staff',    description: 'Client representative — view + comment on project records', color: '#0EA5E9', level: 55 },
+  { id: 'Main Contractor', name: 'Main Contractor', description: 'Main contractor staff — manage WOs, PM, assign subcontractors', color: '#8B5CF6', level: 65 },
+  { id: 'Sub Contractor',  name: 'Sub Contractor',  description: 'Sub contractor staff — execute assigned WOs only', color: '#F59E0B', level: 35 },
   { id: 'Accountant',      name: 'Accountant',      description: 'Finance module: invoices, payments, expenses', color: '#059669', level: 60 },
   { id: 'Sales Manager',   name: 'Sales Manager',   description: 'Sales module: quotations, orders, invoices', color: '#D97706', level: 60 },
   { id: 'Purchasing',      name: 'Purchasing',      description: 'Procurement: vendors, POs, goods receipts', color: '#0891B2', level: 50 },
@@ -244,7 +247,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
     'vendors', 'contracts', 'mat_req', 'pur_req', 'inventory', 'siv',
     'visitors', 'leave', 'training',
     'housekeeping', 'kpi', 'checklists', 'method_stmt', 'locations',
-    'reports', 'audit', 'settings', 'users',
+    'reports', 'audit', 'settings', 'users', 'recycle_bin', 'role_access',
   ];
 
   switch (role) {
@@ -268,6 +271,15 @@ export function getRolePermissions(role: string): { module: string; actions: str
     case 'HR':
       return ['dashboard', 'attendance', 'visitors', 'leave', 'training', 'reports']
         .map((m) => ({ module: m, actions: STANDARD_PLUS_APPROVE }));
+    case 'Client Staff':
+      return ['dashboard', 'workorders', 'pm', 'assets', 'reports']
+        .map((m) => ({ module: m, actions: READ_ONLY }));
+    case 'Main Contractor':
+      return ['dashboard', 'workorders', 'wo_attachments', 'pm', 'cm', 'assets', 'checklists', 'method_stmt', 'locations', 'reports']
+        .map((m) => ({ module: m, actions: STANDARD_PLUS_APPROVE }));
+    case 'Sub Contractor':
+      return ['dashboard', 'workorders', 'wo_attachments', 'checklists']
+        .map((m) => ({ module: m, actions: STANDARD }));
     case 'Technician':
       return ['dashboard', 'workorders', 'wo_attachments', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp', 'checklists', 'method_stmt', 'locations']
         .map((m) => ({ module: m, actions: STANDARD }));

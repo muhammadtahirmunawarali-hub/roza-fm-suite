@@ -227,6 +227,15 @@ export function Sidebar() {
               onClick={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
             />
           )}
+          {hasPermission('recycle_bin', 'view') && (
+            <SidebarItem
+              collapsed={collapsed}
+              icon="fa-recycle"
+              label="Recycle Bin"
+              active={activeTabId === 'recycle'}
+              onClick={() => openTab({ id: 'recycle', type: 'recycle', label: 'Recycle Bin', icon: 'fa-recycle' })}
+            />
+          )}
           {hasPermission('settings', 'view') && (
             <SidebarItem
               collapsed={collapsed}
