@@ -180,12 +180,11 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     }
   }, [open, editMode]);
 
-  if (!record) return null;
-
-  const statusCol = register.columns.find((c) => c.type === 'status');
-  const currentStatus = statusCol ? String(record.data[statusCol.name] || '—') : null;
+  const statusCol = register ? register.columns.find((c) => c.type === 'status') : null;
+  const currentStatus = statusCol && record ? String(record.data[statusCol.name] || '—') : null;
 
   const handlePrint = () => {
+    if (!register || !record) return;
     printRecord(register, record, company, currency);
   };
 
@@ -197,6 +196,12 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     setWorkflowOpen(false);
     onRefresh();
   };
+
+  // Don't render during SSR — Portal needs document.body
+  if (typeof document === 'undefined') return null;
+
+  // Don't render if no record (drawer closed)
+  if (!record) return null;
 
   return createPortal(
     <>
@@ -337,7 +342,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer with CLOSE button */}
         <div className="px-4 py-2 border-t border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
@@ -345,6 +350,14 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
           </span>
           <span>Updated {formatTimeAgo(record.updatedAt)}</span>
         </div>
+        {/* Big visible CLOSE bar — always works */}
+        <button
+          type="button"
+          onClick={() => { setEditMode(false); onClose(); }}
+          className="w-full py-3 bg-[var(--erp-accent)] text-white text-[12px] font-semibold hover:bg-[var(--erp-accent-hover)] transition-colors shrink-0"
+        >
+          ✕ Close
+        </button>
       </aside>
 
       {/* Workflow modal */}
