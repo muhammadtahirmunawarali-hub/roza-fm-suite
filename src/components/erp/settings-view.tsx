@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { settingsApi, backupApi, savedViewsApi, statsApi, type SavedViewMeta, type SystemStats } from '@/lib/erp/api';
 import type { Setting } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
+import { RoleAccessSettings } from './role-access-settings';
 import { FAIcon } from './icon';
 import { EmptyStateIllustration } from './empty-state-illustration';
 import {
@@ -185,6 +186,7 @@ export function SettingsView() {
     { id: 'deploy',       label: 'Deploy Guide',   icon: <Rocket className="w-4 h-4" /> },
     { id: 'maintenance',  label: 'Maintain & Audit', icon: <Wrench className="w-4 h-4" /> },
     { id: 'saas',        label: 'SaaS Multi-Company', icon: <Building2 className="w-4 h-4" /> },
+    { id: 'roles',       label: 'Role Access', icon: <Shield className="w-4 h-4" /> },
     { id: 'golive',      label: 'Go-Live Guide', icon: <Rocket className="w-4 h-4" /> },
     { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
@@ -572,6 +574,10 @@ export function SettingsView() {
 
           {activeTab === 'saas' && (
             <SaasManagement />
+          )}
+
+          {activeTab === 'roles' && (
+            <RoleAccessSettings />
           )}
 
           {activeTab === 'golive' && (

@@ -202,8 +202,8 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
       {/* Overlay */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 transition-opacity"
-          onClick={() => !workflowOpen && !editMode && onClose()}
+          className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
+          onClick={() => { if (workflowOpen) return; if (editMode) { if (confirm("Discard changes and close?")) { cancelEdit(); onClose(); } } else { onClose(); } }}
           style={{ animation: 'fadeIn 0.2s ease-out' }}
         />
       )}
@@ -211,8 +211,8 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
       {/* Drawer */}
       <aside
         className={cn(
-          'fixed right-0 top-0 bottom-0 w-full sm:w-[560px] bg-[var(--erp-bg-secondary)] border-l border-[var(--erp-border)] flex flex-col z-50 shadow-2xl transition-transform duration-300',
-          open ? 'translate-x-0' : 'translate-x-full',
+          'fixed right-0 top-0 bottom-0 w-full sm:w-[560px] bg-[var(--erp-bg-secondary)] border-l border-[var(--erp-border)] flex flex-col z-[70] shadow-2xl transition-transform duration-300 pointer-events-none',
+          open ? 'translate-x-0 pointer-events-auto' : 'translate-x-full',
         )}
       >
         <style>{`
@@ -250,8 +250,8 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
             </div>
           )}
           <button
-            onClick={editMode ? cancelEdit : onClose}
-            className="p-2 rounded-md text-[var(--erp-text-muted)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors"
+            onClick={() => { if (editMode) { if (confirm("Discard changes and close?")) { cancelEdit(); onClose(); } } else { onClose(); } }}
+            className="p-2.5 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0"
             aria-label={editMode ? 'Cancel edit' : 'Close drawer'}
           >
             <X className="w-4 h-4" />
