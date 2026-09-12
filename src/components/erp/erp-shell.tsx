@@ -38,10 +38,61 @@ export function ErpShell() {
   // Apply theme + RTL direction to <html> element
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.classList.remove('dark', 'light');
+      // Remove all theme classes
+      document.documentElement.classList.remove('dark', 'light', 'midnight', 'ocean', 'forest', 'sunset');
+      // Add current theme class
       document.documentElement.classList.add(theme);
-      document.documentElement.style.colorScheme = theme;
+      // For non-standard themes, also add 'dark' so the dark CSS variables apply
+      if (theme !== 'light') {
+        document.documentElement.classList.add('dark');
+      }
+      document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.dir = rtl ? 'rtl' : 'ltr';
+
+      // Apply theme-specific CSS variables
+      const themeVars: Record<string, Record<string, string>> = {
+        dark: {
+          '--erp-bg': '#0a0e1a', '--erp-bg-secondary': '#0f1420', '--erp-bg-card': '#141b2d',
+          '--erp-bg-elevated': '#1a2333', '--erp-bg-input': '#0d1320', '--erp-bg-hover': '#1e2840',
+          '--erp-border': '#1e2940', '--erp-text': '#e8edf5', '--erp-text-secondary': '#9ba8c0',
+          '--erp-text-muted': '#5a6a85', '--erp-accent': '#00D4AA', '--erp-accent-hover': '#00B894',
+        },
+        light: {
+          '--erp-bg': '#f8fafc', '--erp-bg-secondary': '#f1f5f9', '--erp-bg-card': '#ffffff',
+          '--erp-bg-elevated': '#ffffff', '--erp-bg-input': '#f8fafc', '--erp-bg-hover': '#f1f5f9',
+          '--erp-border': '#e2e8f0', '--erp-text': '#1a202c', '--erp-text-secondary': '#475569',
+          '--erp-text-muted': '#94a3b8', '--erp-accent': '#00D4AA', '--erp-accent-hover': '#00B894',
+        },
+        midnight: {
+          '--erp-bg': '#0a0a1a', '--erp-bg-secondary': '#10102a', '--erp-bg-card': '#15153a',
+          '--erp-bg-elevated': '#1a1a4a', '--erp-bg-input': '#0d0d25', '--erp-bg-hover': '#202050',
+          '--erp-border': '#252560', '--erp-text': '#e0e0ff', '--erp-text-secondary': '#9090d0',
+          '--erp-text-muted': '#505080', '--erp-accent': '#6366f1', '--erp-accent-hover': '#5558e3',
+        },
+        ocean: {
+          '--erp-bg': '#001220', '--erp-bg-secondary': '#001a30', '--erp-bg-card': '#002040',
+          '--erp-bg-elevated': '#002855', '--erp-bg-input': '#001530', '--erp-bg-hover': '#003060',
+          '--erp-border': '#003d70', '--erp-text': '#e0f0ff', '--erp-text-secondary': '#80b0d0',
+          '--erp-text-muted': '#407090', '--erp-accent': '#0ea5e9', '--erp-accent-hover': '#0284c7',
+        },
+        forest: {
+          '--erp-bg': '#0a1a0a', '--erp-bg-secondary': '#0f2510', '--erp-bg-card': '#143020',
+          '--erp-bg-elevated': '#1a3a28', '--erp-bg-input': '#0d2010', '--erp-bg-hover': '#1e4030',
+          '--erp-border': '#1e5030', '--erp-text': '#e0f0e0', '--erp-text-secondary': '#80b080',
+          '--erp-text-muted': '#406040', '--erp-accent': '#22c55e', '--erp-accent-hover': '#16a34a',
+        },
+        sunset: {
+          '--erp-bg': '#1a0a0a', '--erp-bg-secondary': '#251010', '--erp-bg-card': '#302018',
+          '--erp-bg-elevated': '#3a2820', '--erp-bg-input': '#201010', '--erp-bg-hover': '#403028',
+          '--erp-border': '#503830', '--erp-text': '#ffe0e0', '--erp-text-secondary': '#d0a0a0',
+          '--erp-text-muted': '#806060', '--erp-accent': '#f97316', '--erp-accent-hover': '#ea580c',
+        },
+      };
+
+      const vars = themeVars[theme] || themeVars.dark;
+      Object.entries(vars).forEach(([key, value]) => {
+        document.documentElement.style.setProperty(key, value);
+      });
     }
   }, [theme, rtl]);
 

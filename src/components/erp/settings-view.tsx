@@ -298,24 +298,29 @@ export function SettingsView() {
               <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
                 <Palette className="w-4 h-4 text-[var(--erp-accent)]" /> Appearance
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {(['dark', 'light'] as const).map((t) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {([
+                  { id: 'dark', icon: 'fa-moon', desc: 'Easy on the eyes, great for low-light' },
+                  { id: 'light', icon: 'fa-sun', desc: 'Clean and bright, ideal for daytime' },
+                  { id: 'midnight', icon: 'fa-star', desc: 'Deep purple, creative and unique' },
+                  { id: 'ocean', icon: 'fa-water', desc: 'Blue tones, calm and professional' },
+                  { id: 'forest', icon: 'fa-tree', desc: 'Green tones, natural and fresh' },
+                  { id: 'sunset', icon: 'fa-fire', desc: 'Warm orange, energetic and bold' },
+                ] as const).map((t) => (
                   <button
-                    key={t}
-                    onClick={() => { setTheme(t); update('theme', t); }}
+                    key={t.id}
+                    onClick={() => { setTheme(t.id as any); update('theme', t.id); }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      theme === t
+                      theme === t.id
                         ? 'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
                         : 'border-[var(--erp-border)] hover:border-[var(--erp-text-muted)]'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <FAIcon name={t === 'dark' ? 'fa-moon' : 'fa-sun'} className="text-[16px]" />
-                      <span className="text-[13px] font-medium capitalize text-[var(--erp-text)]">{t} Mode</span>
+                      <FAIcon name={t.icon} className="text-[16px]" />
+                      <span className="text-[13px] font-medium capitalize text-[var(--erp-text)]">{t.id} Mode</span>
                     </div>
-                    <div className="text-[11px] text-[var(--erp-text-muted)]">
-                      {t === 'dark' ? 'Easy on the eyes, great for low-light environments' : 'Clean and bright, ideal for daytime use'}
-                    </div>
+                    <div className="text-[11px] text-[var(--erp-text-muted)]">{t.desc}</div>
                   </button>
                 ))}
               </div>

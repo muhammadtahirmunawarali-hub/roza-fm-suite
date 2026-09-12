@@ -20,7 +20,7 @@ interface ErpState {
   setActiveTab: (id: string) => void;
 
   // theme
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'midnight' | 'ocean' | 'forest' | 'sunset';
   setTheme: (t: 'dark' | 'light') => void;
   toggleTheme: () => void;
 
@@ -106,7 +106,7 @@ export const useErpStore = create<ErpState>()(
       // ---------- theme ----------
       theme: 'dark',
       setTheme: (t) => set({ theme: t }),
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () => set((s) => { const themes = ['dark', 'light', 'midnight', 'ocean', 'forest', 'sunset'] as const; const idx = themes.indexOf(s.theme as any); return { theme: themes[(idx + 1) % themes.length] }; }),
 
       // ---------- AI ----------
       aiPanelOpen: false,

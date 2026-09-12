@@ -4,6 +4,7 @@
 // Replaces the View modal with a richer UX: tabs for Details / History / Activity,
 // inline workflow actions, inline field editing, and a timeline of status transitions.
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
@@ -197,7 +198,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     onRefresh();
   };
 
-  return (
+  return createPortal(
     <>
       {/* Overlay */}
       {open && (
@@ -355,7 +356,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
         onTransition={handleWorkflowTransition}
       />
     </>
-  );
+  , document.body);
 }
 
 // ---------- Inline Edit Tab ----------
