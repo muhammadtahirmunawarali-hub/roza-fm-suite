@@ -78,7 +78,7 @@ export function ApprovalWorkflow({ open, register, record, onClose, onTransition
     }
   };
 
-  if (!record) return null;
+  if (!record || !register) return null;
 
   const statusCol = register.columns.find((c) => c.type === 'status');
   if (!statusCol) {

@@ -11,7 +11,7 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
   Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock, Pencil,
-  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket, Wrench,
+  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket, Wrench, Workflow,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import { DeploymentGuide } from './deployment-guide';
 import { MaintenanceGuide } from './maintenance-guide';
 import { SaasManagement } from './saas-management';
 import { GoLiveGuide } from './go-live-guide';
+import { FlowGuidance } from './flow-guidance';
 
 export function SettingsView() {
   const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
@@ -185,6 +186,7 @@ export function SettingsView() {
     { id: 'backup',      label: 'Backup & Reset', icon: <Database className="w-4 h-4" /> },
     { id: 'deploy',       label: 'Deploy Guide',   icon: <Rocket className="w-4 h-4" /> },
     { id: 'maintenance',  label: 'Maintain & Audit', icon: <Wrench className="w-4 h-4" /> },
+    { id: 'flow', label: 'Flow Guide (A→B→C→D)', icon: <Workflow className="w-4 h-4" /> },
     { id: 'saas',        label: 'SaaS Multi-Company', icon: <Building2 className="w-4 h-4" /> },
     { id: 'roles',       label: 'Role Access', icon: <Shield className="w-4 h-4" /> },
     { id: 'golive',      label: 'Go-Live Guide', icon: <Rocket className="w-4 h-4" /> },
@@ -575,6 +577,10 @@ export function SettingsView() {
 
           {activeTab === 'maintenance' && (
             <MaintenanceGuide />
+          )}
+
+          {activeTab === 'flow' && (
+            <FlowGuidance />
           )}
 
           {activeTab === 'saas' && (

@@ -98,7 +98,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
   };
 
   const saveInlineEdit = async () => {
-    if (!record) return;
+    if (!record || !register) return;
     const { valid, errors: errs } = validateRecord(editData, register.columns);
     if (!valid) {
       setErrors(errs);
@@ -122,7 +122,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
 
   // Load history when drawer opens or record changes
   useEffect(() => {
-    if (!open || !record) return;
+    if (!open || !record || !register) return;
     let cancelled = false;
     recordsApi.getHistory(register.id, record.id).then((res) => {
       if (cancelled) return;
@@ -142,7 +142,8 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     if (tab !== 'related' || !record) return;
     let cancelled = false;
     setRelatedLoading(true);
-    recordsApi.getRelated(register.id, record.id).then((res) => {
+    const relatedPromise = register ? recordsApi.getRelated(register.id, record.id) : Promise.resolve({ related: [] });
+    relatedPromise.then((res) => {
       if (cancelled) return;
       setRelated(res.related || []);
     }).catch((e) => {
@@ -185,7 +186,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
 
   const handlePrint = () => {
     if (!register || !record) return;
-    printRecord(register, record, company, currency);
+    if (register && record) printRecord(register, record, company, currency);
   };
 
   const handleWorkflowClick = () => {
