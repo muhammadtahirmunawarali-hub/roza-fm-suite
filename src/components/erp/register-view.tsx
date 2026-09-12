@@ -980,8 +980,9 @@ function Badge({ variant, children, icon }: { variant: BadgeVariant; children: R
 function IconBtn({ children, title, onClick, disabled, danger, accent }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean; danger?: boolean; accent?: boolean }) {
   return (
     <button
+      type="button"
       title={title}
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       disabled={disabled}
       className={cn(
         'p-1.5 rounded transition-colors',
@@ -1000,8 +1001,9 @@ function IconBtn({ children, title, onClick, disabled, danger, accent }: { child
 function ActionBtn({ title, onClick, icon, label, accent }: { title: string; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean }) {
   return (
     <button
+      type="button"
       title={title}
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       className={cn(
         'inline-flex items-center justify-center w-7 h-7 rounded text-[11px] font-medium transition-colors border shrink-0',
         accent

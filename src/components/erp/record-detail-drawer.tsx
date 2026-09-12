@@ -204,7 +204,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
       {open && (
         <div
           className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
-          onClick={() => { if (workflowOpen) return; if (editMode) { if (confirm("Discard changes and close?")) { cancelEdit(); onClose(); } } else { onClose(); } }}
+          onClick={() => { if (workflowOpen) return; if (editMode) setEditMode(false); onClose(); }}
           style={{ animation: 'fadeIn 0.2s ease-out' }}
         />
       )}
@@ -251,9 +251,9 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
             </div>
           )}
           <button
-            onClick={() => { if (editMode) { if (confirm("Discard changes and close?")) { cancelEdit(); onClose(); } } else { onClose(); } }}
-            className="p-2.5 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0"
-            aria-label={editMode ? 'Cancel edit' : 'Close drawer'}
+            onClick={() => { if (editMode) setEditMode(false); onClose(); }}
+            className="p-2.5 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0 z-[80] relative"
+            aria-label="Close drawer"
           >
             <X className="w-4 h-4" />
           </button>

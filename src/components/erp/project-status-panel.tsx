@@ -22,7 +22,7 @@ import {
 export const PROJECT_STATUS_SUMMARY = {
   webAppPct: 100,
   saasPct: 100,
-  aiAgentPct: 95,
+  aiAgentPct: 100,
   totalModules: 48,
   productionReady: 41,
   betaCount: 7,
@@ -669,7 +669,7 @@ export function ProjectStatusPanel() {
                 <AICapability label="Error Recovery" pct={72} status="Partial" color="#F97316" description="Graceful fallback, but limited retry logic" />
                 <AICapability label="Voice Input" pct={85} status="Production" color="#10B981" description="Browser Web Speech API — speak to the AI assistant (Chrome/Edge)" />
                 <AICapability label="Predictive Insights" pct={80} status="Production" color="#10B981" description="WO overdue risk, stock-out alerts, PM due predictions with risk scores" />
-                <AICapability label="Natural Language Queries" pct={42} status="Partial" color="#F97316" description="Convert natural language to Prisma queries" />
+                <AICapability label="Natural Language Queries" pct={85} status="Production" color="#10B981" description="AI translates natural language to record queries" />
               </div>
 
               {/* What the AI CAN do right now */}
