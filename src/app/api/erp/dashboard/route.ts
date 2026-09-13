@@ -331,6 +331,14 @@ export const GET = apiHandler(async () => {
         const pct = ((last - prev) / prev) * 100;
         kpi.deltaType = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
         kpi.delta = `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`;
+      } else if (last > 0) {
+        // Previous was 0 but today has activity — show as "new"
+        kpi.deltaType = 'up';
+        kpi.delta = '+new';
+      } else {
+        // Both zero — show flat
+        kpi.deltaType = 'flat';
+        kpi.delta = '0%';
       }
     }
   });
