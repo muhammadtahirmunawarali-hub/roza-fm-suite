@@ -142,7 +142,7 @@ export function statusVariant(status: string | undefined): BadgeVariant {
   if (['open', 'draft', 'submitted', 'pending', 'scheduled', 'reported', 'due', 'under review', 'on track', 'at risk'].includes(s)) return 'warning';
   if (['in progress', 'active', 'approved', 'issued', 'on order', 'in stock', 'operational', 'compliant', 'calibrated', 'pass', 'achieved', 'exceeded', 'present', 'completed', 'paid'].includes(s)) return 'success';
   if (['overdue', 'critical', 'rejected', 'cancelled', 'fail', 'non-compliant', 'expired', 'out of service', 'beyond repair', 'terminated', 'blacklisted', 'suspended', 'absent'].includes(s)) return 'danger';
-  if (['closed', 'inactive', 'completed', 'decommissioned', 'disposed', 'written off', 'standby', 'conditional pass', 'needs improvement', 'half day', 'late', 'on leave', 'behind'].includes(s)) return 'info';
+  if (['closed', 'inactive', 'decommissioned', 'disposed', 'written off', 'standby', 'conditional pass', 'needs improvement', 'half day', 'late', 'on leave', 'behind'].includes(s)) return 'info';
   return 'neutral';
 }
 
