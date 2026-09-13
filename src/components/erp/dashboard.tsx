@@ -310,29 +310,47 @@ export function Dashboard() {
           {data.recentActivity.length === 0 ? (
             <EmptyPanel text="No recent activity" />
           ) : (
-            data.recentActivity.map((log) => (
-              <div key={log.id} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)] transition-colors">
-                <div
-                  className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold"
-                  style={{
-                    background: actionColor(log.action) + '20',
-                    color: actionColor(log.action),
+            data.recentActivity.map((log) => {
+              // Find the matching register by module name and make the entry clickable
+              const reg = registers.find((r) => r.name === log.module);
+              const clickable = !!reg;
+              return (
+                <button
+                  key={log.id}
+                  type="button"
+                  onClick={() => {
+                    if (reg) {
+                      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+                    }
                   }}
+                  disabled={!clickable}
+                  className={cn(
+                    'w-full text-left px-4 py-2.5 flex items-start gap-3 transition-colors',
+                    clickable ? 'hover:bg-[var(--erp-bg-hover)] cursor-pointer' : 'cursor-default',
+                  )}
                 >
-                  {log.action[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] text-[var(--erp-text)] truncate">{log.summary}</div>
-                  <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
-                    <span className="font-medium">{log.userName || 'System'}</span>
-                    <span>·</span>
-                    <span>{log.module}</span>
-                    <span>·</span>
-                    <span>{formatTimeAgo(log.createdAt)}</span>
+                  <div
+                    className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold"
+                    style={{
+                      background: actionColor(log.action) + '20',
+                      color: actionColor(log.action),
+                    }}
+                  >
+                    {log.action[0]}
                   </div>
-                </div>
-              </div>
-            ))
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-[var(--erp-text)] truncate">{log.summary}</div>
+                    <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
+                      <span className="font-medium">{log.userName || 'System'}</span>
+                      <span>·</span>
+                      <span>{log.module}</span>
+                      <span>·</span>
+                      <span>{formatTimeAgo(log.createdAt)}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
           )}
         </Panel>
 
@@ -344,31 +362,49 @@ export function Dashboard() {
           {data.upcomingItems.length === 0 ? (
             <EmptyPanel text="No upcoming items" />
           ) : (
-            data.upcomingItems.map((item, i) => (
-              <div key={i} className="px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--erp-bg-hover)] transition-colors">
-                <div
-                  className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                  style={{
-                    background: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
+            data.upcomingItems.map((item, i) => {
+              // Find the register by name and make the item clickable
+              const reg = registers?.find((r: Register) => r.name === item.register);
+              const clickable = !!reg;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    if (reg) {
+                      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+                    }
                   }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] text-[var(--erp-text)] truncate">{item.label}</div>
-                  <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">
-                    {item.register} · due {item.date}
-                  </div>
-                </div>
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
-                  style={{
-                    background: item.severity === 'critical' ? 'rgba(239,68,68,0.15)' : item.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(6,182,212,0.15)',
-                    color: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
-                  }}
+                  disabled={!clickable}
+                  className={cn(
+                    'w-full text-left px-4 py-2.5 flex items-start gap-3 transition-colors',
+                    clickable ? 'hover:bg-[var(--erp-bg-hover)] cursor-pointer' : 'cursor-default',
+                  )}
                 >
-                  {item.severity}
-                </span>
-              </div>
-            ))
+                  <div
+                    className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                    style={{
+                      background: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-[var(--erp-text)] truncate">{item.label}</div>
+                    <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">
+                      {item.register} · due {item.date}
+                    </div>
+                  </div>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
+                    style={{
+                      background: item.severity === 'critical' ? 'rgba(239,68,68,0.15)' : item.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(6,182,212,0.15)',
+                      color: item.severity === 'critical' ? 'var(--erp-danger)' : item.severity === 'warning' ? 'var(--erp-warning)' : 'var(--erp-info)',
+                    }}
+                  >
+                    {item.severity}
+                  </span>
+                </button>
+              );
+            })
           )}
         </Panel>
       </div>

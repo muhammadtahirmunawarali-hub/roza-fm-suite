@@ -59,7 +59,7 @@ export function RecentRecordsWidget() {
     // Try to open the register if we can find it
     const reg = registers?.find((r: Register) => r.name === entry.module);
     if (reg) {
-      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: r.id });
+      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
     }
   };
 

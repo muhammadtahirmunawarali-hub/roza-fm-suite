@@ -3112,3 +3112,66 @@ The Round 58-59 fixes were lost (likely due to a file revert or context issue). 
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 61 — QA Pass + Bug Fixes + Dashboard Clickable Items
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads with 29 cards, 12 sections, no console errors
+- ✅ WO register: 8 records, table renders properly
+- ✅ Asset Register: 10 records
+- ✅ Drawer: dual X buttons (top-left + top-right), DialogTitle (sr-only), Move to Next Stage button works
+- ✅ Stage transition: Open → Assigned → In Progress (toast confirms)
+- ✅ Inline Edit → Save: "Record updated successfully"
+- ✅ Settings: all 10 tabs work (Company, Appearance, Flow Guide, SaaS, Role Access, About, etc.)
+- ✅ Recycle Bin: 3 deleted records with Restore buttons
+- ✅ Audit Logs: 149 total events, 22 Created, 3 Updated
+- ✅ Notifications panel: 6 notifications
+- ✅ Command Palette: search works, finds registers + records
+- ✅ AI Assistant: responds to questions with real data
+
+### Bug Fixed: `r.id` undefined in RecentRecordsWidget
+**File**: `src/components/erp/recent-records-widget.tsx`
+
+**Bug**: The `handleClick` function used `r.id` (the find callback variable) instead of `reg.id` (the outer variable):
+```tsx
+// BEFORE (bug):
+const reg = registers?.find((r: Register) => r.name === entry.module);
+if (reg) {
+  openTab({ ..., refId: r.id });  // ← r is out of scope!
+}
+
+// AFTER (fixed):
+const reg = registers?.find((r: Register) => r.name === entry.module);
+if (reg) {
+  openTab({ ..., refId: reg.id });  // ← uses reg
+}
+```
+This would have crashed when clicking a recent record item on the dashboard.
+
+### Feature Added: Clickable Dashboard Items
+**File**: `src/components/erp/dashboard.tsx`
+
+Made the "Recent Activity" and "Upcoming & Overdue" list items clickable — clicking an item now navigates to the corresponding register:
+
+1. **Recent Activity panel**: Each audit log entry is now a `<button>` that finds the matching register by module name and opens it in a new tab. Previously these were static `<div>`s with hover effect but no click handler.
+
+2. **Upcoming & Overdue panel**: Each item is now a `<button>` that opens the relevant register. Items that don't match a register are disabled (cursor-default).
+
+**Verified**: Clicked "Updated record #4 in Maintenance Work Orders" → navigated to the WO register with the table loaded.
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
+
+### Verification
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ No infinite API loop (0 calls in steady state)
+- ✅ Dashboard clickable items navigate to registers
+- ✅ All key flows working (login, drawer, stage transition, inline edit, settings, recycle bin, audit, notifications, command palette, AI)
