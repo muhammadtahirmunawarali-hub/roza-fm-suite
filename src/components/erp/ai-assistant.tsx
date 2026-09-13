@@ -34,7 +34,11 @@ export function AiAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    registersApi.list().then(setRegisters).catch(() => {});
+    let cancelled = false;
+    registersApi.list().then((regs) => {
+      if (!cancelled) setRegisters(regs);
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
