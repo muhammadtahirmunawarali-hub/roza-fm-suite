@@ -67,6 +67,10 @@ interface ErpState {
 
   // permission check
   hasPermission: (module: string, action: string) => boolean;
+
+  // pending action for newly-opened register tab (e.g. 'add-record' when clicking "New Work Order" from dashboard)
+  pendingAction: { tabId: string; action: string } | null;
+  setPendingAction: (action: { tabId: string; action: string } | null) => void;
 }
 
 export const useErpStore = create<ErpState>()(
@@ -157,6 +161,10 @@ export const useErpStore = create<ErpState>()(
         const perm = (u.permissions || []).find((p: any) => p.module === module);
         return !!perm && perm.actions.includes(action);
       },
+
+      // ---------- pending action (e.g. auto-open Add Record from dashboard quick action) ----------
+      pendingAction: null,
+      setPendingAction: (action) => set({ pendingAction: action }),
     }),
     {
       name: 'fmcore-erp-state',

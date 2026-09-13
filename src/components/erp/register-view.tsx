@@ -39,7 +39,7 @@ interface Props {
 const PAGE_SIZES = [10, 25, 50, 100];
 
 export function RegisterView({ registerId }: Props) {
-  const { hasPermission, user, currency } = useErpStore();
+  const { hasPermission, user, currency, pendingAction, setPendingAction } = useErpStore();
   const [register, setRegister] = useState<Register | null>(null);
   const [records, setRecords] = useState<RecordData[]>([]);
   const [total, setTotal] = useState(0);
@@ -127,6 +127,21 @@ export function RegisterView({ registerId }: Props) {
     })();
     return () => { cancelled = true; };
   }, [registerId]);
+
+  // Check for pending action (e.g. "add-record" from dashboard quick action)
+  useEffect(() => {
+    if (!register || !pendingAction) return;
+    const tabId = `reg_${register.id}`;
+    if (pendingAction.tabId === tabId && pendingAction.action === 'add-record') {
+      // Only auto-open if user has create permission
+      if (hasPermission(register.code, 'create')) {
+        setEditing(null);
+        setFormOpen(true);
+      }
+      // Clear the pending action so it doesn't re-trigger on re-render
+      setPendingAction(null);
+    }
+  }, [register, pendingAction, hasPermission, setPendingAction]);
 
   // Debounce search
   useEffect(() => {

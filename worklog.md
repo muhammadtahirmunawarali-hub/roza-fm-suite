@@ -3381,3 +3381,66 @@ All 4 usage cards now display correctly:
 - ✅ New Company onboarding form works
 - ✅ Project Status shows 100% on all tracks
 - ✅ No console errors
+
+---
+
+## Round 65 — QA Pass + Dashboard Quick Actions Auto-Open Add Record Form
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+- ✅ CSV Import dialog works (Upload + Download template)
+- ✅ Column Editor works (31 columns editable for WO register)
+- ✅ Saved Views panel works (1 saved view + Save Current View button)
+- ✅ Register Builder works (Create New Register dialog)
+- ✅ Notifications panel: Mark all button works (6 unread → 0)
+- ✅ Building Register: 3 records
+- ✅ Quick Actions: New Register, New Work Order, New Purchase Request, Report Incident, Issue Permit, Add Vendor, Log Visitor
+
+### Enhancement: Quick Actions Auto-Open Add Record Form
+
+**Problem found during QA**: The dashboard's Quick Action buttons ("New Work Order", "New Purchase Request", etc.) only navigated to the register — they didn't auto-open the "Add Record" form. Users had to click the "Add Record" button manually after navigating, which was an extra step that hurt the UX of "quick actions".
+
+**Fix**: Added a `pendingAction` mechanism to the Zustand store that allows the dashboard to signal "open add-record form" to the RegisterView:
+
+1. **Store** (`src/lib/erp/store.ts`):
+   - Added `pendingAction: { tabId: string; action: string } | null` state
+   - Added `setPendingAction` setter
+   - Not persisted (cleared on page refresh)
+
+2. **Dashboard** (`src/components/erp/dashboard.tsx`):
+   - Updated `openRegisterByCode(code, openAddForm = false)` to optionally set a pending action
+   - Quick Actions now call `openRegisterByCode(qa.code, true)` — the `true` flag triggers the pending action
+
+3. **RegisterView** (`src/components/erp/register-view.tsx`):
+   - Added a useEffect that checks for `pendingAction` when the register loads
+   - If the action matches `'add-record'` for the current tab, auto-opens the Add Record form (only if user has `create` permission)
+   - Clears the pending action after handling (so it doesn't re-trigger on re-render)
+
+**Verified with agent-browser**:
+- Clicked "New Work Order" quick action on dashboard
+- Navigated to Maintenance Work Orders register
+- Add Record form AUTO-OPENED ("Add Record to Maintenance Work Orders" dialog with DETAILS, CLASSIFICATION, STATUS, TIMELINE sections)
+- Form is fully functional
+- No console errors
+- No infinite API loop
+
+### Files Changed
+1. `src/lib/erp/store.ts` — added `pendingAction` state + `setPendingAction` setter
+2. `src/components/erp/dashboard.tsx` — `openRegisterByCode` now accepts `openAddForm` flag; Quick Actions pass `true`
+3. `src/components/erp/register-view.tsx` — added useEffect to check + handle pending action (auto-open Add Record form)
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
+
+### Verification
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ No infinite API loop
+- ✅ Quick Action "New Work Order" auto-opens Add Record form
+- ✅ Form is functional with all sections
+- ✅ No console errors

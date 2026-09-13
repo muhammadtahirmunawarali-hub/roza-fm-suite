@@ -32,7 +32,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const { openTab, setBuilderOpen, currency } = useErpStore();
+  const { openTab, setBuilderOpen, currency, setPendingAction } = useErpStore();
 
   const loadAll = async () => {
     setLoading(true);
@@ -57,10 +57,15 @@ export function Dashboard() {
     loadAll();
   }, []);
 
-  const openRegisterByCode = (code: string) => {
+  const openRegisterByCode = (code: string, openAddForm = false) => {
     const reg = registers.find((r) => r.code === code);
     if (reg) {
-      openTab({ id: `reg_${reg.id}`, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+      const tabId = `reg_${reg.id}`;
+      openTab({ id: tabId, type: 'register', label: reg.name, icon: reg.icon, refId: reg.id });
+      // If requested, signal the RegisterView to auto-open the Add Record form
+      if (openAddForm) {
+        setPendingAction({ tabId, action: 'add-record' });
+      }
     }
   };
 
@@ -183,7 +188,7 @@ export function Dashboard() {
           {quickActions.map((qa) => (
             <button
               key={qa.code}
-              onClick={() => openRegisterByCode(qa.code)}
+              onClick={() => openRegisterByCode(qa.code, true)}
               className="group flex items-center gap-2 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] transition-all"
             >
               <div
