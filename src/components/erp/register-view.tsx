@@ -1,7 +1,7 @@
 'use client';
 
 // FMCore ERP — Register View (grid mode with bulk actions, CSV import, print, workflow, saved views)
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { recordsApi, registersApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
@@ -63,6 +63,16 @@ export function RegisterView({ registerId }: Props) {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const [columnEditorOpen, setColumnEditorOpen] = useState(false);
+
+  // Refs to access latest viewing/editing values without re-triggering loadRecords.
+  // CRITICAL FIX: When `viewing`/`editing` were in loadRecords deps, it caused an
+  // infinite loop: loadRecords → setViewing(updated) → viewing changed → loadRecords
+  // recreated → useEffect fires → loadRecords runs again → repeat forever.
+  // Using refs breaks this cycle: refs are read (not in deps), so loadRecords is stable.
+  const viewingRef = useRef<RecordData | null>(null);
+  const editingRef = useRef<RecordData | null>(null);
+  viewingRef.current = viewing;
+  editingRef.current = editing;
 
   // Permission flags (register may be null initially)
   const regCode = register?.code || '';
@@ -136,13 +146,17 @@ export function RegisterView({ registerId }: Props) {
       });
       setRecords(res.data);
       setTotal(res.total);
-      // If a record is currently being viewed or edited, update it with the fresh data
-      if (viewing) {
-        const updated = res.data.find((r) => r.id === viewing.id);
+      // CRITICAL: Read latest viewing/editing from refs (not closure).
+      // This prevents the infinite loop where setViewing(updated) → viewing changes
+      // → loadRecords recreated → useEffect fires → loadRecords runs again.
+      const currentViewing = viewingRef.current;
+      const currentEditing = editingRef.current;
+      if (currentViewing) {
+        const updated = res.data.find((r) => r.id === currentViewing.id);
         if (updated) setViewing(updated);
       }
-      if (editing) {
-        const updated = res.data.find((r) => r.id === editing.id);
+      if (currentEditing) {
+        const updated = res.data.find((r) => r.id === currentEditing.id);
         if (updated) setEditing(updated);
       }
     } catch (e: any) {
@@ -150,7 +164,7 @@ export function RegisterView({ registerId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [register, registerId, page, pageSize, debouncedSearch, sortField, sortDir, filters, viewing, editing]);
+  }, [register, registerId, page, pageSize, debouncedSearch, sortField, sortDir, filters]);
 
   useEffect(() => { loadRecords(); }, [loadRecords]);
 
@@ -728,8 +742,8 @@ export function RegisterView({ registerId }: Props) {
         register={register}
         record={viewing}
         company={company}
-        onClose={() => setViewing(null)}
-        onEdit={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
+        onClose={() => { viewingRef.current = null; setViewing(null); }}
+        onEdit={() => { if (viewing) { viewingRef.current = null; setEditing(viewing); setViewing(null); setFormOpen(true); } }}
         onRefresh={loadRecords}
       />
 

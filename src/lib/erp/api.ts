@@ -8,13 +8,22 @@ const BASE = '/api/erp';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
+    credentials: 'include', // CRITICAL: always send the session cookie (fixes 401 on preview domain)
     headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
     ...options,
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}
-    throw new Error(msg);
+    let detail: any = undefined;
+    try {
+      const j = await res.json();
+      msg = j.error || j.message || msg;
+      detail = j.details;
+    } catch {}
+    const err: any = new Error(msg);
+    err.status = res.status;
+    err.details = detail;
+    throw err;
   }
   return res.json() as Promise<T>;
 }
@@ -353,7 +362,7 @@ export const uploadsApi = {
   upload: async (file: File): Promise<UploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${BASE}/uploads`, { method: 'POST', body: formData });
+    const res = await fetch(`${BASE}/uploads`, { method: 'POST', body: formData, credentials: 'include' });
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
       try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}

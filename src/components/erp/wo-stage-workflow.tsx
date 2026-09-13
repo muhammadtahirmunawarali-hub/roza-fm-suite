@@ -181,7 +181,11 @@ export function WOStageWorkflow({ register, record, onUpdated }: Props) {
       setShowHoldDialog(false);
       setHoldReason('');
     } catch (e: any) {
-      toast.error('Stage transition failed', { description: e.message });
+      const status = e?.status;
+      let msg = e?.message || 'Unknown error';
+      if (status === 401) msg = 'Session expired — please sign in again, then retry.';
+      else if (status === 403) msg = "You don't have permission to edit this record.";
+      toast.error('Stage transition failed', { description: msg });
     } finally {
       setTransitioning(false);
     }
@@ -200,6 +204,12 @@ export function WOStageWorkflow({ register, record, onUpdated }: Props) {
 
   // Get valid next stages for the quick-action buttons
   const nextStages = VALID_TRANSITIONS[currentStage] || [];
+
+  // The PRIMARY "next" stage is the first forward stage in the pipeline
+  const FORWARD_STAGES: WOStage[] = ['Assigned', 'In Progress', 'Completion', 'Closed'];
+  const primaryNextStage = nextStages.find((s) => FORWARD_STAGES.includes(s)) || null;
+  const sideStages = nextStages.filter((s) => s !== primaryNextStage);
+  const isTerminal = currentStage === 'Closed' || currentStage === 'Cancelled';
 
   return (
     <div className="rounded-lg border border-[var(--erp-border)] bg-[var(--erp-bg-card)] p-3 space-y-3">
@@ -274,11 +284,52 @@ export function WOStageWorkflow({ register, record, onUpdated }: Props) {
         })}
       </div>
 
-      {/* Quick transition buttons */}
-      {nextStages.length > 0 && (
+      {/* PRIMARY "Next Stage" button — big, prominent, easy to click */}
+      {!isTerminal && primaryNextStage && (
+        <button
+          onClick={() => transitionTo(primaryNextStage)}
+          disabled={transitioning}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md text-[13px] font-semibold text-white transition-all disabled:opacity-60 hover:brightness-110 shadow-sm"
+          style={{
+            background: `linear-gradient(135deg, ${STAGES[primaryNextStage].color}, ${STAGES[primaryNextStage].color}dd)`,
+            border: `1px solid ${STAGES[primaryNextStage].color}`,
+          }}
+        >
+          {transitioning ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <span>Move to Next Stage:</span>
+              <span className="bg-white/20 px-2 py-0.5 rounded">{STAGES[primaryNextStage].label}</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Terminal state banner */}
+      {isTerminal && (
+        <div
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-semibold"
+          style={{
+            background: STAGES[currentStage].bgColor,
+            color: STAGES[currentStage].color,
+            border: `1px solid ${STAGES[currentStage].borderColor}`,
+          }}
+        >
+          {currentStage === 'Closed' ? (
+            <><CheckCircle2 className="w-4 h-4" /> This work order is Closed — no further transitions</>
+          ) : (
+            <><XCircle className="w-4 h-4" /> This work order is Cancelled — no further transitions</>
+          )}
+        </div>
+      )}
+
+      {/* Side transition buttons (On Hold, Cancelled, etc.) */}
+      {sideStages.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] text-[var(--erp-text-muted)] uppercase tracking-wide">Transition to:</span>
-          {nextStages.map((stage) => {
+          <span className="text-[10px] text-[var(--erp-text-muted)] uppercase tracking-wide">Or:</span>
+          {sideStages.map((stage) => {
             const meta = STAGES[stage];
             const StageIcon = meta.icon;
             return (

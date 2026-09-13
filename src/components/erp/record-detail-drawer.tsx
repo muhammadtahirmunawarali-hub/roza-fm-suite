@@ -4,8 +4,8 @@
 // Replaces the View modal with a richer UX: tabs for Details / History / Activity,
 // inline workflow actions, inline field editing, and a timeline of status transitions.
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useErpStore } from '@/lib/erp/store';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
 import { FAIcon } from './icon';
@@ -63,6 +63,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [masterData, setMasterData] = useState<Record<string, string[]>>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const canEdit = hasPermission(register.code, 'edit');
   const canApprove = hasPermission(register.code, 'approve');
@@ -83,6 +84,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     if (!record) return;
     setEditData({ ...record.data });
     setErrors({});
+    setSaveError(null);
     setEditMode(true);
   }, [record]);
 
@@ -90,6 +92,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     setEditMode(false);
     setEditData({});
     setErrors({});
+    setSaveError(null);
   }, []);
 
   const setField = (name: string, value: any) => {
@@ -99,6 +102,7 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
 
   const saveInlineEdit = async () => {
     if (!record || !register) return;
+    setSaveError(null);
     const { valid, errors: errs } = validateRecord(editData, register.columns);
     if (!valid) {
       setErrors(errs);
@@ -114,7 +118,12 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
       setEditMode(false);
       onRefresh();
     } catch (e: any) {
-      toast.error('Failed to save record', { description: e.message });
+      const status = e?.status;
+      let msg = e?.message || 'Unknown error';
+      if (status === 401) msg = 'Authentication required — your session has expired. Please sign in again.';
+      else if (status === 403) msg = "You don't have permission to edit this record.";
+      setSaveError(msg);
+      toast.error('Failed to save record', { description: msg });
     } finally {
       setSaving(false);
     }
@@ -198,37 +207,41 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
     onRefresh();
   };
 
-  // Don't render during SSR — Portal needs document.body
-  if (typeof document === 'undefined') return null;
+  // Unified close handler — exits edit mode + workflow + calls onClose
+  const handleClose = () => {
+    setEditMode(false);
+    setWorkflowOpen(false);
+    setSaveError(null);
+    onClose();
+  };
 
   // Don't render if no record (drawer closed)
   if (!record) return null;
 
-  return createPortal(
-    <>
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
-          onClick={() => { if (workflowOpen) return; if (editMode) setEditMode(false); onClose(); }}
-          style={{ animation: 'fadeIn 0.2s ease-out' }}
-        />
-      )}
-
-      {/* Drawer */}
-      <aside
-        className={cn(
-          'fixed right-0 top-0 bottom-0 w-full sm:w-[560px] bg-[var(--erp-bg-secondary)] border-l border-[var(--erp-border)] flex flex-col z-[70] shadow-2xl transition-transform duration-300 pointer-events-none',
-          open ? 'translate-x-0 pointer-events-auto' : 'translate-x-full',
-        )}
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-[600px] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
       >
-        <style>{`
-          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        `}</style>
+        {/* Screen-reader accessible title (visually hidden) — fixes Radix warning */}
+        <DialogTitle className="sr-only">
+          {register.name} — Record #{record.sequence}
+        </DialogTitle>
 
-        {/* Header */}
+        {/* Header — TWO close buttons: top-LEFT + top-RIGHT */}
         <div className="flex items-center gap-3 px-4 h-[60px] border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0">
+          {/* LEFT close X */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-2 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0"
+            aria-label="Close (top-left)"
+            title="Close (Esc)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          {/* Register icon + title */}
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: `linear-gradient(135deg, ${register.color}30, ${register.color}10)`, color: register.color }}
@@ -256,10 +269,13 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
               </span>
             </div>
           )}
+          {/* RIGHT close X */}
           <button
-            onClick={() => { if (editMode) setEditMode(false); onClose(); }}
-            className="p-2.5 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0 z-[80] relative"
-            aria-label="Close drawer"
+            type="button"
+            onClick={handleClose}
+            className="p-2 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0"
+            aria-label="Close (top-right)"
+            title="Close (Esc)"
           >
             <X className="w-4 h-4" />
           </button>
@@ -301,6 +317,25 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
           <div className="px-4 py-2 border-b border-[var(--erp-danger)]/30 bg-[rgba(239,68,68,0.05)] flex items-center gap-2 text-[11px] text-[var(--erp-danger)]">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{Object.keys(errors).length} field(s) need attention</span>
+          </div>
+        )}
+
+        {/* RED save-error banner — clearly visible so user knows the save failed */}
+        {editMode && saveError && (
+          <div className="mx-4 my-2 p-3 rounded-lg border-2 border-[var(--erp-danger)] bg-[rgba(239,68,68,0.08)] flex items-start gap-2.5 text-[11px] text-[var(--erp-danger)]">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-[12px] mb-0.5">Save failed</div>
+              <div className="text-[var(--erp-danger)] leading-relaxed">{saveError}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSaveError(null)}
+              className="shrink-0 p-1 rounded hover:bg-[var(--erp-danger)]/10 transition-colors"
+              aria-label="Dismiss error"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
         )}
 
@@ -354,23 +389,23 @@ export function RecordDetailDrawer({ open, register, record, company, onClose, o
         {/* Big visible CLOSE bar — always works */}
         <button
           type="button"
-          onClick={() => { setEditMode(false); onClose(); }}
-          className="w-full py-3 bg-[var(--erp-accent)] text-white text-[12px] font-semibold hover:bg-[var(--erp-accent-hover)] transition-colors shrink-0"
+          onClick={handleClose}
+          className="w-full py-3 bg-[var(--erp-accent)] text-white text-[12px] font-semibold hover:bg-[var(--erp-accent-hover)] transition-colors shrink-0 flex items-center justify-center gap-2"
         >
-          ✕ Close
+          <X className="w-3.5 h-3.5" /> Close
         </button>
-      </aside>
 
-      {/* Workflow modal */}
-      <ApprovalWorkflow
-        open={workflowOpen}
-        register={register}
-        record={record}
-        onClose={() => setWorkflowOpen(false)}
-        onTransition={handleWorkflowTransition}
-      />
-    </>
-  , document.body);
+        {/* Workflow modal */}
+        <ApprovalWorkflow
+          open={workflowOpen}
+          register={register}
+          record={record}
+          onClose={() => setWorkflowOpen(false)}
+          onTransition={handleWorkflowTransition}
+        />
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ---------- Inline Edit Tab ----------

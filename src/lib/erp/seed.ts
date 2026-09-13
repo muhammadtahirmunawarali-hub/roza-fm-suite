@@ -91,12 +91,45 @@ async function migrateRegisterColumns() {
   }
 }
 
+/**
+ * Add new seed records to existing registers if the register has fewer records than the seed.
+ * This is idempotent — only adds records that don't exist yet (matched by sequence).
+ * Enables "add more demo data" without wiping the DB.
+ */
+async function migrateNewRecords() {
+  for (const seed of REGISTER_SEEDS) {
+    const reg = await db.register.findFirst({ where: { code: seed.code } });
+    if (!reg) continue;
+    const existingCount = await db.record.count({ where: { registerId: reg.id, isDeleted: false } });
+    const seedCount = seed.records.length;
+    if (existingCount >= seedCount) continue; // already has all records
+
+    // Add only the NEW records (those beyond existingCount)
+    for (let r = existingCount; r < seedCount; r++) {
+      try {
+        await db.record.create({
+          data: {
+            registerId: reg.id,
+            sequence: r + 1,
+            data: JSON.stringify(seed.records[r]),
+            createdBy: 'system',
+          },
+        });
+      } catch (e) {
+        // skip duplicate sequence (shouldn't happen, but be safe)
+      }
+    }
+  }
+}
+
 export async function seedDatabase(force = false) {
   // Check if already seeded
   const existing = await db.register.count();
   if (existing > 0 && !force) {
     // ---- Schema Migration: add new columns to existing registers ----
     await migrateRegisterColumns();
+    // ---- Record Migration: add new demo records (e.g. extra WOs/assets) ----
+    await migrateNewRecords();
     // Even on already-seeded, ensure users exist
     await ensureDefaultUsers();
     return { seeded: false, reason: 'already_seeded', count: existing };
