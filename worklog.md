@@ -3629,3 +3629,64 @@ useEffect(() => {
 - ✅ Recent Records shows actual register changes (not login events)
 - ✅ Clicking a recent record navigates to the correct register
 - ✅ No console errors
+
+---
+
+## Round 69 — QA Pass + Replaced Native confirm() with AlertDialog in Recycle Bin
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (1 call in 3s — notification polling)
+- ✅ Dashboard loads clean, no console errors
+- ✅ Delete record flow: confirmation dialog appears (Cancel + Delete Record buttons)
+- ✅ Recycle Bin: 3 deleted records with Restore buttons
+- ✅ Restore flow works — record restored (deleted count 3 → 2), POST returned 200
+- ✅ Permanent delete button has tooltip "Permanently delete (cannot be undone)"
+
+### Enhancement: Replaced Native confirm() with AlertDialog
+
+**Problem found during QA**: The Recycle Bin's "Permanent Delete" button used a native JavaScript `confirm()` dialog:
+```tsx
+if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+```
+Native confirms are jarring, don't match the app's design, block the page thread, and can't be styled. They also caused issues during automated testing (the browser flagged it as a blocking dialog).
+
+**Fix**: Replaced with a proper shadcn/ui AlertDialog that matches the app's design:
+
+1. **Added imports**: `AlertDialog` components + `AlertTriangle` icon
+2. **Added state**: `confirmDelete: { id: string; name: string } | null` — tracks which record is pending deletion
+3. **Updated button**: Now sets `confirmDelete` state instead of calling `handlePermanentDelete` directly
+4. **Added AlertDialog** at the end of the component with:
+   - Warning triangle icon (red)
+   - Title: "Permanently delete record?"
+   - Description: "You are about to permanently delete [name]. This action cannot be undone."
+   - Cancel button (default styling)
+   - Permanently Delete button (red bg, with Trash2 icon + loading spinner)
+
+**Verified with agent-browser**:
+- Click permanent delete → AlertDialog appears (not native confirm) ✅
+- Dialog shows "Permanently delete record?" heading + "cannot be undone" warning ✅
+- Cancel button closes the dialog cleanly ✅
+- No console errors ✅
+
+### Files Changed
+1. `src/components/erp/recycle-bin-view.tsx`:
+   - Added AlertDialog imports + AlertTriangle icon
+   - Added `confirmDelete` state
+   - Changed permanent delete button to set state instead of calling confirm()
+   - Added AlertDialog component at the end of JSX
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
+
+### Verification
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ No infinite API loop
+- ✅ AlertDialog appears instead of native confirm
+- ✅ Cancel works cleanly
+- ✅ Restore flow works (record restored)
+- ✅ No console errors

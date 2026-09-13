@@ -7,8 +7,18 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { RotateCcw, Trash2, Search, Inbox, Loader2 } from 'lucide-react';
+import { RotateCcw, Trash2, Search, Inbox, Loader2, AlertTriangle } from 'lucide-react';
 import { formatDateTime, formatTimeAgo } from '@/lib/erp/utils';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 interface RecycleItem {
   id: string;
@@ -31,6 +41,7 @@ export function RecycleBinView() {
   const [filterRegister, setFilterRegister] = useState('');
   const [restoring, setRestoring] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
   const loadItems = async () => {
     setLoading(true);
@@ -66,7 +77,6 @@ export function RecycleBinView() {
   };
 
   const handlePermanentDelete = async (id: string, name: string) => {
-    if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
     setDeleting(id);
     try {
       const res = await fetch(`/api/erp/recycle-bin?id=${id}`, { method: 'DELETE' });
@@ -81,6 +91,7 @@ export function RecycleBinView() {
       toast.error('Delete failed', { description: e.message });
     } finally {
       setDeleting(null);
+      setConfirmDelete(null);
     }
   };
 
@@ -201,7 +212,7 @@ export function RecycleBinView() {
                   </button>
                   {canDelete && (
                     <button
-                      onClick={() => handlePermanentDelete(item.id, `${item.registerName} #${item.sequence}`)}
+                      onClick={() => setConfirmDelete({ id: item.id, name: `${item.registerName} #${item.sequence}` })}
                       disabled={deleting === item.id}
                       className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-[var(--erp-border)] text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:border-[var(--erp-danger)] transition-colors disabled:opacity-50"
                       title="Permanently delete (cannot be undone)"
@@ -215,6 +226,32 @@ export function RecycleBinView() {
           })}
         </div>
       )}
+
+      {/* Permanent delete confirmation dialog (replaces native confirm) */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+              Permanently delete record?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to permanently delete <strong className="text-[var(--erp-text)]">{confirmDelete?.name}</strong>.
+              This action <strong className="text-[var(--erp-danger)]">cannot be undone</strong>. The record will be permanently removed from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDelete && handlePermanentDelete(confirmDelete.id, confirmDelete.name)}
+              className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+              Permanently Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
