@@ -23,16 +23,25 @@ interface AuditEntry {
 }
 
 export function RecentRecordsWidget() {
-  const { openTab, registers } = useErpStore() as any;
+  const { openTab } = useErpStore() as any;
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [registers, setRegisters] = useState<Register[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    auditApi.list({ page: 1, pageSize: 8 }).then((res) => {
+    // Load registers for click navigation
+    registersApi.list().then((regs) => {
+      if (!cancelled) setRegisters(regs);
+    }).catch(() => {});
+    auditApi.list({ page: 1, pageSize: 20 }).then((res) => {
       if (!cancelled) {
-        // Filter to only Created actions for "recent records" feel
-        const created = res.data.filter((e: any) => e.action === 'Created' || e.action === 'Updated');
+        // Filter to Created/Updated actions AND exclude Auth module (login events)
+        // so the widget shows actual register changes, not login history
+        const created = res.data.filter((e: any) =>
+          (e.action === 'Created' || e.action === 'Updated') &&
+          e.module !== 'Auth'
+        );
         setEntries(created.slice(0, 6) as any);
       }
     }).catch(() => {}).finally(() => {
