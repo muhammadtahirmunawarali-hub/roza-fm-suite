@@ -187,20 +187,28 @@ export function SaasManagement() {
 function UsageCard({ icon, label, current, limit, unlimited, text, limitText, color }: any) {
   const pct = unlimited ? 0 : limit > 0 ? Math.round((current / limit) * 100) : 0;
   const isWarning = pct > 80;
+  // Text-based cards (like storage) don't have a numeric current/limit
+  const isTextCard = text !== undefined;
   return (
     <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3">
       <div className="flex items-center gap-2 mb-1.5">
         <span style={{ color }}>{icon}</span>
         <span className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] font-semibold">{label}</span>
       </div>
-      <div className="text-[18px] font-bold text-[var(--erp-text)]">{text || current}</div>
-      <div className="text-[10px] text-[var(--erp-text-muted)]">{unlimited ? 'Unlimited' : `/ ${limit} limit`}</div>
-      {!unlimited && limit > 0 && (
-        <div className="mt-1.5 w-full h-1.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
-          <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: isWarning ? '#EF4444' : color }} />
-        </div>
+      <div className="text-[18px] font-bold text-[var(--erp-text)]">{text !== undefined ? text : current}</div>
+      {isTextCard ? (
+        // Text-based card (e.g. Storage): show limitText as the limit
+        <div className="text-[10px] text-[var(--erp-text-muted)]">/ {limitText || 'No limit'}</div>
+      ) : (
+        <>
+          <div className="text-[10px] text-[var(--erp-text-muted)]">{unlimited ? 'Unlimited' : `/ ${limit} limit`}</div>
+          {!unlimited && limit > 0 && (
+            <div className="mt-1.5 w-full h-1.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: isWarning ? '#EF4444' : color }} />
+            </div>
+          )}
+        </>
       )}
-      {limitText && <div className="text-[9px] text-[var(--erp-text-muted)] mt-0.5">/ {limitText}</div>}
     </div>
   );
 }

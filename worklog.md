@@ -3306,3 +3306,78 @@ The deltas appear as colored badges: green for up-trend, red for down-trend, gra
 - ✅ Audit logs search filters correctly (5 results for "Maintenance")
 - ✅ Clear search restores full list
 - ✅ No console errors
+
+---
+
+## Round 64 — QA Pass + Fixed SaaS Storage "undefined" Bug + Verified User Management
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+- ✅ User Management (via User menu → Manage Users): 6 users, search works (filtered to 1 for "priya")
+- ✅ SaaS Multi-Company tab loads
+- ✅ New Company onboarding form works
+- ✅ Project Status: WebApp 100%, SaaS 100%, AI Agent 100%
+
+### Bug Fixed: SaaS Storage Card Showing "undefined"
+
+**Problem found during QA**: The SaaS Multi-Company tab's usage cards showed "STORAGE 0 MB / undefined limit / 1 GB" — the word "undefined" appeared because the `UsageCard` component was rendering BOTH the numeric limit line AND the text limitText line for text-based cards (like Storage).
+
+**Root cause**: The `UsageCard` component had this logic:
+```tsx
+// Line 197 (always rendered):
+<div>{unlimited ? 'Unlimited' : `/ ${limit} limit`}</div>
+// Line 203 (rendered when limitText exists):
+{limitText && <div>/ {limitText}</div>}
+```
+
+For the Storage card, `text="0 MB"` and `limitText="1 GB"` were passed, but `current` and `limit` were undefined (not passed). So:
+- Line 197 rendered: `/ undefined limit` (because `limit` was undefined)
+- Line 203 rendered: `/ 1 GB` (correct)
+
+Result: "0 MB / undefined limit / 1 GB" (two limit lines, one broken).
+
+**Fix**: Added an `isTextCard` check — when `text` is provided (text-based card like Storage), only render the limitText line:
+```tsx
+const isTextCard = text !== undefined;
+// ...
+{isTextCard ? (
+  // Text-based card: show limitText only
+  <div>/ {limitText || 'No limit'}</div>
+) : (
+  // Numeric card: show limit + progress bar
+  <div>{unlimited ? 'Unlimited' : `/ ${limit} limit`}</div>
+  // + progress bar
+)}
+```
+
+**Result**: Storage card now shows "0 MB / 1 GB" (clean, no "undefined").
+
+### Verification
+All 4 usage cards now display correctly:
+| Card | Before | After |
+|---|---|---|
+| Users | 6 / 10 limit | 6 / 10 limit (unchanged) |
+| Records | 126 / 10000 limit | 126 / 10000 limit (unchanged) |
+| Registers | 35 Unlimited | 35 Unlimited (unchanged) |
+| Storage | 0 MB / **undefined** limit / 1 GB | 0 MB / **1 GB** ✅ |
+
+### Files Changed
+1. `src/components/erp/saas-management.tsx` — fixed `UsageCard` to handle text-based cards (Storage) without rendering the numeric limit line
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
+
+### Verification
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ No infinite API loop
+- ✅ Storage card shows "0 MB / 1 GB" (no "undefined")
+- ✅ User Management search works
+- ✅ New Company onboarding form works
+- ✅ Project Status shows 100% on all tracks
+- ✅ No console errors
