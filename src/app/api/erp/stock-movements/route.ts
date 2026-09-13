@@ -88,7 +88,8 @@ export async function POST(req: NextRequest) {
       } else if (movementType === 'return_to_stock' || movementType === 'adjustment_in') {
         invData['Qty In Stock'] = currentQty + Number(quantity);
         const maxLevel = Number(invData['Max Level']) || 999999;
-        if (invData['Qty In Stock'] > minLevel && invData['Qty In Stock'] <= maxLevel) {
+        const restockMinLevel = Number(invData['Min Level']) || 0;
+        if (invData['Qty In Stock'] > restockMinLevel && invData['Qty In Stock'] <= maxLevel) {
           invData['Status'] = 'In Stock';
         }
       }

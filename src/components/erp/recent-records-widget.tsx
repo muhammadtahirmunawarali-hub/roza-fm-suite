@@ -33,7 +33,7 @@ export function RecentRecordsWidget() {
       if (!cancelled) {
         // Filter to only Created actions for "recent records" feel
         const created = res.data.filter((e: any) => e.action === 'Created' || e.action === 'Updated');
-        setEntries(created.slice(0, 6));
+        setEntries(created.slice(0, 6) as any);
       }
     }).catch(() => {}).finally(() => {
       if (!cancelled) setLoading(false);

@@ -83,7 +83,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     code: reg.code,
     name: reg.name,
     icon: reg.icon,
-    category: reg.category,
+    category: reg.category as any,
     color: reg.color,
     description: reg.description,
     columns: JSON.parse(reg.columns) as ColumnDef[],

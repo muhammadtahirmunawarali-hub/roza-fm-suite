@@ -186,8 +186,8 @@ export function SavedViews({ registerId, registerName, currentFilters, onApply }
                         <span className="text-[12px] font-medium text-[var(--erp-text)] truncate">{v.name}</span>
                       </div>
                       <div className="text-[9px] text-[var(--erp-text-muted)] truncate ml-4">
-                        {v.filters.search ? `Search: "${v.filters.search}"` : 'No search'}
-                        {Object.keys(v.filters.filters || {}).length > 0 && ` · ${Object.keys(v.filters.filters).length} filter(s)`}
+                        {v.filters?.search ? `Search: "${v.filters.search}"` : 'No search'}
+                        {Object.keys(v.filters?.filters || {}).length > 0 && ` · ${Object.keys(v.filters?.filters || {}).length} filter(s)`}
                       </div>
                     </button>
                     <button

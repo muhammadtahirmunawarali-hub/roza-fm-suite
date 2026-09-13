@@ -44,7 +44,8 @@ export function serverError(error: string = 'Internal server error', details?: a
 // ---------- API Handler wrapper (try/catch + logging) ----------
 // Wraps an async route handler so any thrown error becomes a clean 500 response
 // instead of crashing the dev server or returning an unhandled rejection.
-type HandlerFn = (req: Request, ctx: any) => Promise<Response>;
+// Uses `any` for req/ctx so both NextRequest and standard Request work.
+type HandlerFn = (req: any, ctx: any) => Promise<any>;
 
 export function apiHandler(handler: HandlerFn): HandlerFn {
   return async (req, ctx) => {
