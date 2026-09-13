@@ -34,6 +34,7 @@ export function AuditLogsView() {
   const [pageSize] = useState(25);
   const [moduleFilter, setModuleFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<AuditLog | null>(null);
 
@@ -52,10 +53,19 @@ export function AuditLogsView() {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // Apply action filter client-side (audit logs are usually small)
-  const filteredLogs = actionFilter === 'all'
-    ? logs
-    : logs.filter((l) => l.action.toLowerCase() === actionFilter.toLowerCase());
+  // Apply action filter + text search client-side (audit logs are usually small)
+  const filteredLogs = logs
+    .filter((l) => actionFilter === 'all' || l.action.toLowerCase() === actionFilter.toLowerCase())
+    .filter((l) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        l.summary?.toLowerCase().includes(q) ||
+        l.module?.toLowerCase().includes(q) ||
+        l.userName?.toLowerCase().includes(q) ||
+        l.action?.toLowerCase().includes(q)
+      );
+    });
 
   const exportCsv = () => {
     if (filteredLogs.length === 0) { toast.info('No logs to export'); return; }
@@ -102,6 +112,25 @@ export function AuditLogsView() {
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)]" />
               <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search summary, user, module..."
+                className="pl-8 pr-3 py-1.5 text-[12px] rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] focus:ring-1 focus:ring-[var(--erp-accent-border)] w-[220px]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--erp-text-muted)] hover:text-[var(--erp-text)]"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)]" />
+              <input
                 value={moduleFilter}
                 onChange={(e) => setModuleFilter(e.target.value)}
                 placeholder="Filter by module..."
@@ -141,6 +170,12 @@ export function AuditLogsView() {
           </span>
           <span className="text-[var(--erp-text-muted)]">·</span>
           <span className="text-[var(--erp-text-secondary)]">{total} total events</span>
+          {(searchQuery || actionFilter !== 'all' || moduleFilter) && (
+            <>
+              <span className="text-[var(--erp-text-muted)]">·</span>
+              <span className="text-[var(--erp-accent)] font-medium">{filteredLogs.length} matching</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -157,8 +192,8 @@ export function AuditLogsView() {
             <EmptyStateIllustration type="no-audit" size={120} className="mb-3" />
             <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">No audit logs found</h3>
             <p className="text-[12px] text-[var(--erp-text-muted)] max-w-xs">
-              {moduleFilter || actionFilter !== 'all'
-                ? 'Try adjusting your filters to see more events.'
+              {moduleFilter || actionFilter !== 'all' || searchQuery
+                ? 'Try adjusting your filters or search query to see more events.'
                 : 'Audit logs will appear here as users interact with the system.'}
             </p>
           </div>
