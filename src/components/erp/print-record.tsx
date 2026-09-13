@@ -5,6 +5,7 @@
 // document number, all fields, and signature area.
 import type { Register, RecordData } from '@/lib/erp/types';
 import { formatDocNumber, formatDate, formatDateTime, displayColumnName } from '@/lib/erp/utils';
+import { toast } from 'sonner';
 
 interface PrintData {
   register: Register;
@@ -21,7 +22,7 @@ interface PrintData {
 export function printRecord(register: Register, record: RecordData, company: PrintData['company'], currency = 'AED') {
   const win = window.open('', '_blank', 'width=800,height=900');
   if (!win) {
-    alert('Please allow popups to print records');
+    toast.error('Popup blocked', { description: 'Please allow popups for this site to print records.' });
     return;
   }
 

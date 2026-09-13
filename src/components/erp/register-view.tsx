@@ -22,7 +22,7 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import { ColumnEditor } from './column-editor';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -63,6 +63,8 @@ export function RegisterView({ registerId }: Props) {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const [columnEditorOpen, setColumnEditorOpen] = useState(false);
+  const [confirmRegisterDelete, setConfirmRegisterDelete] = useState(false);
+  const [deletingRegister, setDeletingRegister] = useState(false);
 
   // Refs to access latest viewing/editing values without re-triggering loadRecords.
   // CRITICAL FIX: When `viewing`/`editing` were in loadRecords deps, it caused an
@@ -452,17 +454,7 @@ export function RegisterView({ registerId }: Props) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  if (confirm(`Delete the entire "${register.name}" register?\n\nThis will move ALL ${total} records to the Recycle Bin. The register itself will be soft-deleted and can be recovered from Settings.\n\nAre you sure?`)) {
-                    registersApi.remove(registerId).then(() => {
-                      toast.success(`Register "${register.name}" deleted — records moved to Recycle Bin`);
-                      // Close the tab and go back to dashboard
-                      window.location.reload();
-                    }).catch((e: any) => {
-                      toast.error('Failed to delete register', { description: e.message });
-                    });
-                  }
-                }}
+                onClick={() => setConfirmRegisterDelete(true)}
                 className="h-8 text-[12px] text-[var(--erp-danger)] border-[var(--erp-danger)]/30 hover:bg-[var(--erp-danger)]/10"
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Register
@@ -796,6 +788,47 @@ export function RegisterView({ registerId }: Props) {
               className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
             >
               Delete Record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Register confirmation (replaces native confirm) */}
+      <AlertDialog open={confirmRegisterDelete} onOpenChange={(o) => !o && !deletingRegister && setConfirmRegisterDelete(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+              Delete the entire "{register.name}" register?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move ALL <strong className="text-[var(--erp-text)]">{total} records</strong> to the Recycle Bin.
+              The register itself will be soft-deleted and can be recovered from Settings.
+              This action <strong className="text-[var(--erp-danger)]">cannot be undone</strong> from the UI.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingRegister}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingRegister}
+              onClick={async (e) => {
+                e.preventDefault();
+                setDeletingRegister(true);
+                try {
+                  await registersApi.remove(registerId);
+                  toast.success(`Register "${register.name}" deleted — records moved to Recycle Bin`);
+                  setConfirmRegisterDelete(false);
+                  setTimeout(() => window.location.reload(), 800);
+                } catch (err: any) {
+                  toast.error('Failed to delete register', { description: err.message });
+                } finally {
+                  setDeletingRegister(false);
+                }
+              }}
+              className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+            >
+              {deletingRegister ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+              Delete Register
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

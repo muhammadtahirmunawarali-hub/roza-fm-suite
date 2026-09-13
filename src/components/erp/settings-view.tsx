@@ -11,12 +11,22 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import {
   Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
   Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock, Pencil,
-  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket, Wrench, Workflow,
+  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket, Wrench, Workflow, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/erp/utils';
@@ -39,6 +49,10 @@ export function SettingsView() {
   const [editName, setEditName] = useState('');
   const [editShared, setEditShared] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [confirmImport, setConfirmImport] = useState<any>(null); // pending import data
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
 
   useEffect(() => {
@@ -152,29 +166,45 @@ export function SettingsView() {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      if (!confirm('Importing will REPLACE all current data. Continue?')) return;
       try {
         const text = await file.text();
         const data = JSON.parse(text);
-        await backupApi.import(data);
-        toast.success('Backup imported successfully');
-        setTimeout(() => window.location.reload(), 800);
+        // Show confirmation dialog instead of native confirm()
+        setConfirmImport(data);
       } catch (e: any) {
-        toast.error('Import failed', { description: e.message });
+        toast.error('Invalid backup file', { description: e.message });
       }
     };
     input.click();
   };
 
   const resetDb = async () => {
-    if (!confirm('This will erase ALL data and re-seed sample data. Continue?')) return;
+    setResetting(true);
     try {
       const res = await fetch('/api/erp/reset', { method: 'POST' });
       const data = await res.json();
       toast.success(`Database reset — ${data.registers} registers, ${data.records} records`);
+      setConfirmReset(false);
       setTimeout(() => window.location.reload(), 800);
     } catch (e: any) {
       toast.error('Reset failed', { description: e.message });
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const doImport = async () => {
+    if (!confirmImport) return;
+    setImporting(true);
+    try {
+      await backupApi.import(confirmImport);
+      toast.success('Backup imported successfully');
+      setConfirmImport(null);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (e: any) {
+      toast.error('Import failed', { description: e.message });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -429,7 +459,7 @@ export function SettingsView() {
                         Erase everything and re-seed the sample data. This action cannot be undone.
                       </p>
                     </div>
-                    <Button onClick={resetDb} variant="outline" size="sm" className="h-8 text-[12px] border-[var(--erp-danger)] text-[var(--erp-danger)] hover:bg-[var(--erp-danger)] hover:text-white">
+                    <Button onClick={() => setConfirmReset(true)} variant="outline" size="sm" className="h-8 text-[12px] border-[var(--erp-danger)] text-[var(--erp-danger)] hover:bg-[var(--erp-danger)] hover:text-white">
                       <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
                     </Button>
                   </div>
@@ -696,6 +726,60 @@ export function SettingsView() {
           </div>
         </div>
       )}
+
+      {/* Import backup confirmation dialog */}
+      <AlertDialog open={!!confirmImport} onOpenChange={(o) => !o && !importing && setConfirmImport(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+              Import backup?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Importing will <strong className="text-[var(--erp-danger)]">REPLACE all current data</strong> (registers, records, settings).
+              This action <strong className="text-[var(--erp-danger)]">cannot be undone</strong>. Consider exporting a backup first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={importing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={importing}
+              onClick={(e) => { e.preventDefault(); doImport(); }}
+              className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+            >
+              {importing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+              {importing ? 'Importing...' : 'Import & Replace'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset database confirmation dialog */}
+      <AlertDialog open={confirmReset} onOpenChange={(o) => !o && !resetting && setConfirmReset(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+              Reset &amp; re-seed database?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will <strong className="text-[var(--erp-danger)]">erase ALL data</strong> (registers, records, settings, audit logs) and re-seed with sample data.
+              This action <strong className="text-[var(--erp-danger)]">cannot be undone</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resetting}
+              onClick={(e) => { e.preventDefault(); resetDb(); }}
+              className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+            >
+              {resetting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />}
+              {resetting ? 'Resetting...' : 'Reset Database'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

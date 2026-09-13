@@ -10,7 +10,17 @@ import { cn } from '@/lib/utils';
 import {
   Dialog, DialogContent,
 } from '@/components/ui/dialog';
-import { Search, Plus, Download, RotateCcw, Moon, Sun, Bell, Wand2, FileText, History, Settings as SettingsIcon, Database } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+import { Search, Plus, Download, RotateCcw, Moon, Sun, Bell, Wand2, FileText, History, Settings as SettingsIcon, Database, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function CommandPalette() {
@@ -24,6 +34,8 @@ export function CommandPalette() {
   const [searchResults, setSearchResults] = useState<{ registerId: string; registerName: string; records: any[] }[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     registersApi.list().then(setRegisters).catch(() => {});
@@ -72,7 +84,7 @@ export function CommandPalette() {
     cmds.push({ id: 'act-notif', label: 'View notifications', icon: <Bell className="w-4 h-4" />, group: 'Actions', action: () => setNotifPanel(true) });
     cmds.push({ id: 'act-theme', label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`, icon: theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, group: 'Actions', action: toggleTheme });
     cmds.push({ id: 'act-backup', label: 'Export backup (JSON)', icon: <Download className="w-4 h-4" />, group: 'Actions', action: exportBackup });
-    cmds.push({ id: 'act-reset', label: 'Reset & re-seed database', icon: <RotateCcw className="w-4 h-4" />, group: 'Actions', action: resetDb });
+    cmds.push({ id: 'act-reset', label: 'Reset & re-seed database', icon: <RotateCcw className="w-4 h-4" />, group: 'Actions', action: () => { setCommandOpen(false); setConfirmReset(true); } });
 
     // Registers
     registers.forEach((r) => {
@@ -125,6 +137,7 @@ export function CommandPalette() {
   };
 
   return (
+    <>
     <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
       <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden top-[15%] translate-y-0">
         {/* Search input */}
@@ -223,6 +236,49 @@ export function CommandPalette() {
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Reset database confirmation dialog */}
+    <AlertDialog open={confirmReset} onOpenChange={(o) => !o && !resetting && setConfirmReset(false)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+            Reset &amp; re-seed database?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            This will <strong className="text-[var(--erp-danger)]">erase ALL data</strong> (registers, records, settings, audit logs) and re-seed with sample data.
+            This action <strong className="text-[var(--erp-danger)]">cannot be undone</strong>.
+            Consider exporting a backup first.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={resetting}
+            onClick={async (e) => {
+              e.preventDefault();
+              setResetting(true);
+              try {
+                const res = await fetch('/api/erp/reset', { method: 'POST' });
+                const data = await res.json();
+                toast.success(`Database reset — ${data.registers} registers, ${data.records} records`);
+                setConfirmReset(false);
+                setTimeout(() => window.location.reload(), 800);
+              } catch (err: any) {
+                toast.error('Reset failed', { description: err.message });
+              } finally {
+                setResetting(false);
+              }
+            }}
+            className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+          >
+            {resetting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />}
+            {resetting ? 'Resetting...' : 'Reset Database'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
@@ -242,14 +298,5 @@ async function exportBackup() {
   }
 }
 
-async function resetDb() {
-  if (!confirm('This will erase all data and re-seed sample data. Continue?')) return;
-  try {
-    const res = await fetch('/api/erp/reset', { method: 'POST' });
-    const data = await res.json();
-    toast.success(`Database reset — ${data.registers} registers, ${data.records} records`);
-    setTimeout(() => window.location.reload(), 800);
-  } catch (e: any) {
-    toast.error('Reset failed', { description: e.message });
-  }
-}
+// resetDb is now handled by the AlertDialog inside CommandPalette component
+
