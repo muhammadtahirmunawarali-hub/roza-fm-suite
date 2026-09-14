@@ -1355,7 +1355,13 @@ function colIconFor(type: string): string {
 }
 
 function formatCurrencyCompact(n: number, currency = 'AED'): string {
-  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
-  return `${currency} ${n.toLocaleString()}`;
+  // Match the utils.ts version — use currency symbol, not raw code
+  const symbols: Record<string, string> = {
+    AED: 'د.إ', USD: '$', EUR: '€', GBP: '£', SAR: '﷼', QAR: '﷼', PKR: '₨',
+    INR: '₹', JPY: '¥', CHF: 'CHF', CAD: 'C$', AUD: 'A$',
+  };
+  const symbol = symbols[currency.toUpperCase()] || currency;
+  if (n >= 1_000_000) return `${symbol} ${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${symbol} ${(n / 1_000).toFixed(1)}K`;
+  return `${symbol} ${n.toLocaleString()}`;
 }

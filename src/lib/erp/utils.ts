@@ -64,9 +64,9 @@ export function formatCurrency(value: number | string | undefined, currency = 'A
 // Compact currency display (e.g. "AED 1.2M") — used in dashboard, reports
 export function formatCurrencyCompact(n: number, currency = 'AED'): string {
   const symbol = getCurrencySymbol(currency);
-  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
-  return `${currency} ${n.toLocaleString()}`;
+  if (n >= 1_000_000) return `${symbol} ${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${symbol} ${(n / 1_000).toFixed(1)}K`;
+  return `${symbol} ${n.toLocaleString()}`;
 }
 
 // Backwards-compatible alias — now uses global currency from store

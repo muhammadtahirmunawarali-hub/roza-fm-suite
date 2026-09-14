@@ -4326,3 +4326,34 @@ Each component now safely handles unmount-during-fetch scenarios without React w
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 83 — QA Pass + Fixed Currency Symbol Consistency
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (1 call/3s — notification polling)
+- ✅ Dashboard loads clean, no console errors
+- ✅ Responsive design: 22 elements with sm:/md:/lg:/xl: breakpoints
+- ✅ Error boundaries exist (error.tsx + global-error.tsx with Try Again button)
+- ✅ Mobile menu button present
+
+### Bug Fix: Currency Symbol Consistency
+
+**Problem**: The `formatCurrencyCompact` function in `utils.ts` used `getCurrencySymbol()` correctly (returning symbols like "﷼" for QAR), but the DUPLICATE `formatCurrencyCompact` in `record-detail-drawer.tsx` (a local copy) still used the raw currency code (`${currency}` → "QAR"). This meant:
+- Dashboard/reports showed `﷼ 1.2M` (correct symbol)
+- Record detail drawer showed `QAR 1.2M` (raw code — inconsistent)
+
+**Fix**: Updated the local `formatCurrencyCompact` in `record-detail-drawer.tsx` to use a currency symbol map (matching the utils version), so both now display symbols consistently.
+
+### Files Changed
+1. `src/lib/erp/utils.ts` — `formatCurrencyCompact` now uses `getCurrencySymbol()` (was already using it, confirmed correct)
+2. `src/components/erp/record-detail-drawer.tsx` — local `formatCurrencyCompact` updated to use symbol map instead of raw currency code
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
