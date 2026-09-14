@@ -145,7 +145,12 @@ export const GET = apiHandler(async () => {
         const s = get(r, statusCol.name, []) || 'Unknown';
         counts[s] = (counts[s] || 0) + 1;
       });
-      const colorMap: Record<string, string> = { 'Open': '#EF4444', 'In Progress': '#F59E0B', 'Completed': '#10B981', 'On Hold': '#64748B', 'Cancelled': '#94A3B8' };
+      const colorMap: Record<string, string> = {
+        'Open': '#EF4444', 'In Progress': '#F59E0B', 'Completed': '#10B981',
+        'On Hold': '#64748B', 'Cancelled': '#94A3B8',
+        'Assigned': '#3B82F6', 'Closed': '#059669', 'Completion': '#14B8A6',
+        'Unknown': '#64748B',
+      };
       charts.push({
         id: 'wo-status',
         title: 'Work Orders by Status',
