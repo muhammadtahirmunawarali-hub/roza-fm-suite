@@ -74,11 +74,14 @@ model User {
   avatar      String?  // initials or url
   status      String   @default("Active") // Active|Inactive|Suspended
   permissions String   @default("[]") // JSON array of {module, actions[]}
+  tenantId    String?  // SaaS: links user to a tenant company (null = Super Admin / system user)
   lastLoginAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   auditLogs   AuditLog[]
   sessions    Session[]
+
+  @@index([tenantId])
 }
 
 // ============================================================
@@ -244,6 +247,7 @@ model Tenant {
   stripeSubId String?
   maxUsers    Int      @default(10)
   maxRecords  Int      @default(10000)
+  maxStorageMb Int     @default(1024) // storage limit in MB (default 1GB)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

@@ -14,26 +14,30 @@ export const GET = apiHandler(async (req: NextRequest) => {
     orderBy: { createdAt: 'desc' },
   });
   
-  // Get user count per tenant (in single-tenant mode, all users belong to default)
-  const userCount = await db.user.count();
-  const recordCount = await db.record.count({ where: { isDeleted: false } });
+  // Get user count per tenant (users with tenantId matching)
+  const tenantsWithCounts = await Promise.all(
+    tenants.map(async (t) => {
+      const tenantUserCount = await db.user.count({ where: { tenantId: t.id } });
+      return {
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        plan: t.plan,
+        status: t.status,
+        maxUsers: t.maxUsers,
+        maxRecords: t.maxRecords,
+        maxStorageMb: t.maxStorageMb,
+        stripeCustomerId: t.stripeCustomerId,
+        createdAt: t.createdAt.toISOString(),
+        currentUsers: tenantUserCount, // actual users belonging to this tenant
+        currentRecords: 0, // records are shared (not tenant-scoped yet)
+      };
+    })
+  );
   
   return NextResponse.json({
     ok: true,
-    tenants: tenants.map(t => ({
-      id: t.id,
-      name: t.name,
-      slug: t.slug,
-      plan: t.plan,
-      status: t.status,
-      maxUsers: t.maxUsers,
-      maxRecords: t.maxRecords,
-      stripeCustomerId: t.stripeCustomerId,
-      createdAt: t.createdAt.toISOString(),
-      // In multi-tenant: these would be scoped per tenant
-      currentUsers: userCount,
-      currentRecords: recordCount,
-    })),
+    tenants: tenantsWithCounts,
     total: tenants.length,
   });
 });

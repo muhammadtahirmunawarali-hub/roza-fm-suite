@@ -43,12 +43,12 @@ export const POST = apiHandler(async (req: NextRequest) => {
         email: adminEmail,
         username,
         password: adminPassword,
-        role: 'Super Admin',
+        role: 'Super Admin', // tenant admin gets Super Admin role within their tenant
         department: 'Management',
         avatar: initials,
         status: 'Active',
         permissions: JSON.stringify([{ module: 'dashboard', actions: ['view', 'create', 'edit', 'delete', 'approve', 'export', 'import'] }]),
-        // In production with multi-tenant: tenantId: tenant.id
+        tenantId: tenant.id, // ← LINK user to this tenant
       },
     });
     

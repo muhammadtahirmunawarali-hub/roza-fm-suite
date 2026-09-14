@@ -7,11 +7,11 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Building2, Users, Database, CreditCard, Plus, RefreshCw, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Building2, Users, Database, CreditCard, Plus, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Trash2, Pencil, Save, X, HardDrive } from 'lucide-react';
 
 interface Tenant {
   id: string; name: string; slug: string; plan: string; status: string;
-  maxUsers: number; maxRecords: number; currentUsers: number; currentRecords: number;
+  maxUsers: number; maxRecords: number; maxStorageMb?: number; currentUsers: number; currentRecords: number;
   stripeCustomerId: string | null; createdAt: string;
 }
 
@@ -31,6 +31,11 @@ export function SaasManagement() {
   const [showSignup, setShowSignup] = useState(false);
   const [signupForm, setSignupForm] = useState({ companyName: '', slug: '', adminName: '', adminEmail: '', adminPassword: '', plan: 'starter' });
   const [signingUp, setSigningUp] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [editForm, setEditForm] = useState({ plan: 'starter', status: 'active', maxUsers: 10, maxRecords: 10000, maxStorageMb: 1024 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -97,6 +102,61 @@ export function SaasManagement() {
     }
   };
 
+  const handleDeleteTenant = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/erp/saas/tenants/${confirmDelete.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(`Tenant "${confirmDelete.name}" deleted`, { description: 'All users belonging to this tenant were removed. Demo data is untouched.' });
+        setTenants(tenants.filter(t => t.id !== confirmDelete.id));
+        setConfirmDelete(null);
+      } else {
+        toast.error('Delete failed', { description: data.error });
+      }
+    } catch (e: any) {
+      toast.error('Delete failed', { description: e.message });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const startEdit = (tenant: Tenant) => {
+    setEditingTenant(tenant);
+    setEditForm({
+      plan: tenant.plan,
+      status: tenant.status,
+      maxUsers: tenant.maxUsers,
+      maxRecords: tenant.maxRecords,
+      maxStorageMb: tenant.maxStorageMb || 1024,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTenant) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/erp/saas/tenants/${editingTenant.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(`Tenant "${editingTenant.name}" updated`);
+        setTenants(tenants.map(t => t.id === editingTenant.id ? { ...t, ...editForm } : t));
+        setEditingTenant(null);
+      } else {
+        toast.error('Update failed', { description: data.error });
+      }
+    } catch (e: any) {
+      toast.error('Update failed', { description: e.message });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[var(--erp-accent)]" /></div>;
 
   return (
@@ -159,21 +219,119 @@ export function SaasManagement() {
         ) : (
           <div className="divide-y divide-[var(--erp-border)]">
             {tenants.map(t => (
-              <div key={t.id} className="px-4 py-3 flex items-center gap-3 hover:bg-[var(--erp-bg-hover)]">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-[14px]" style={{ background: `linear-gradient(135deg, var(--erp-accent), #009975)` }}>
-                  {t.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-semibold text-[var(--erp-text)]">{t.name}</span>
-                    <span className="text-[10px] text-[var(--erp-text-muted)] font-mono">@{t.slug}</span>
-                    <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold', t.plan === 'enterprise' ? 'bg-purple-500/20 text-purple-400' : t.plan === 'pro' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-500/20 text-slate-400')}>{t.plan}</span>
-                    <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold', t.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400')}>{t.status}</span>
+              <div key={t.id} className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-[14px]" style={{ background: `linear-gradient(135deg, var(--erp-accent), #009975)` }}>
+                    {t.name.charAt(0)}
                   </div>
-                  <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">
-                    {t.currentUsers}/{t.maxUsers} users · {t.currentRecords}/{t.maxRecords} records · Created {new Date(t.createdAt).toLocaleDateString()}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[12px] font-semibold text-[var(--erp-text)]">{t.name}</span>
+                      <span className="text-[10px] text-[var(--erp-text-muted)] font-mono">@{t.slug}</span>
+                      <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold', t.plan === 'enterprise' ? 'bg-purple-500/20 text-purple-400' : t.plan === 'pro' ? 'bg-blue-500/20 text-blue-400' : t.plan === 'custom' ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-500/20 text-slate-400')}>{t.plan}</span>
+                      <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold', t.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400')}>{t.status}</span>
+                    </div>
+                    <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span><Users className="w-2.5 h-2.5 inline mr-0.5" />{t.currentUsers}/{t.maxUsers} users</span>
+                      <span>·</span>
+                      <span><Database className="w-2.5 h-2.5 inline mr-0.5" />{t.currentRecords}/{t.maxRecords} records</span>
+                      <span>·</span>
+                      <span><HardDrive className="w-2.5 h-2.5 inline mr-0.5" />{((t.maxStorageMb || 1024) / 1024).toFixed(0)} GB storage</span>
+                      <span>·</span>
+                      <span>Created {new Date(t.createdAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
+                  {/* Action buttons */}
+                  {user?.role === 'Super Admin' && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => startEdit(t)}
+                        disabled={editingTenant?.id === t.id}
+                        className="p-1.5 rounded text-[var(--erp-text-muted)] hover:text-[var(--erp-accent)] hover:bg-[var(--erp-bg-hover)] transition-colors disabled:opacity-30"
+                        title="Edit tenant (plan, limits, storage)"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(t)}
+                        className="p-1.5 rounded text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:bg-[var(--erp-bg-hover)] transition-colors"
+                        title="Delete tenant + all its users"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
+                {/* Edit form (inline, shown when editing this tenant) */}
+                {editingTenant?.id === t.id && (
+                  <div className="mt-3 p-3 rounded-lg border border-[var(--erp-accent-border)] bg-[var(--erp-bg-input)] space-y-2">
+                    <div className="text-[11px] font-semibold text-[var(--erp-accent)] flex items-center gap-1">
+                      <Pencil className="w-3 h-3" /> Edit {t.name}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div>
+                        <label className="text-[9px] text-[var(--erp-text-muted)] uppercase">Plan</label>
+                        <select value={editForm.plan} onChange={e => setEditForm({...editForm, plan: e.target.value})} className="w-full h-7 px-1.5 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[10px]">
+                          <option value="starter">Starter</option>
+                          <option value="pro">Professional</option>
+                          <option value="enterprise">Enterprise</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[var(--erp-text-muted)] uppercase">Status</label>
+                        <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} className="w-full h-7 px-1.5 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[10px]">
+                          <option value="active">Active</option>
+                          <option value="suspended">Suspended</option>
+                          <option value="trial">Trial</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[var(--erp-text-muted)] uppercase">Max Users</label>
+                        <input type="number" value={editForm.maxUsers} onChange={e => setEditForm({...editForm, maxUsers: Number(e.target.value)})} className="w-full h-7 px-1.5 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[10px]" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-[var(--erp-text-muted)] uppercase">Max Records</label>
+                        <input type="number" value={editForm.maxRecords} onChange={e => setEditForm({...editForm, maxRecords: Number(e.target.value)})} className="w-full h-7 px-1.5 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[10px]" />
+                      </div>
+                    </div>
+                    {/* Storage upgrade */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <HardDrive className="w-3 h-3 text-[var(--erp-warning)]" />
+                      <label className="text-[10px] text-[var(--erp-text-secondary)]">Storage limit:</label>
+                      <select
+                        value={editForm.maxStorageMb}
+                        onChange={e => setEditForm({...editForm, maxStorageMb: Number(e.target.value)})}
+                        className="h-7 px-1.5 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[10px]"
+                      >
+                        <option value={1024}>1 GB</option>
+                        <option value={5120}>5 GB</option>
+                        <option value={10240}>10 GB</option>
+                        <option value={51200}>50 GB</option>
+                        <option value={102400}>100 GB</option>
+                        <option value={512000}>500 GB</option>
+                        <option value={1048576}>1 TB</option>
+                      </select>
+                      <span className="text-[9px] text-[var(--erp-text-muted)]">({(editForm.maxStorageMb / 1024).toFixed(1)} GB)</span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={savingEdit}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] bg-[var(--erp-accent)] text-white font-medium disabled:opacity-50"
+                      >
+                        {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={() => setEditingTenant(null)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] border border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]"
+                      >
+                        <X className="w-3 h-3" /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -201,6 +359,48 @@ export function SaasManagement() {
           ))}
         </div>
       </div>
+
+      {/* Delete tenant confirmation dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-lg border border-[var(--erp-danger)]/50 bg-[var(--erp-bg-card)] p-6 max-w-md w-full space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[var(--erp-danger)]" />
+              <h3 className="text-[14px] font-semibold text-[var(--erp-text)]">Delete company "{confirmDelete.name}"?</h3>
+            </div>
+            <p className="text-[12px] text-[var(--erp-text-muted)]">
+              This will permanently delete:
+            </p>
+            <ul className="text-[11px] text-[var(--erp-text-secondary)] space-y-1 ml-4 list-disc">
+              <li>The tenant record ({confirmDelete.name})</li>
+              <li>All users belonging to this tenant ({confirmDelete.currentUsers} user{confirmDelete.currentUsers !== 1 ? 's' : ''})</li>
+            </ul>
+            <div className="p-2 rounded-md bg-[rgba(16,185,129,0.08)] border border-[var(--erp-success)]/30 text-[11px] text-[var(--erp-success)]">
+              ✓ <strong>Safe:</strong> Super Admin's demo data and other companies' data are NOT affected.
+            </div>
+            <p className="text-[11px] text-[var(--erp-danger)]">
+              ⚠️ This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-md text-[11px] border border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTenant}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-md text-[11px] bg-[var(--erp-danger)] text-white font-medium hover:bg-[var(--erp-danger)]/90 disabled:opacity-50 flex items-center gap-1"
+              >
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                Delete Company
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
