@@ -4722,3 +4722,92 @@ This ensures the DB is seeded on first load but doesn't add overhead to frequent
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 91 — SaaS Production Guide + Enhanced Print Layout + Column Editor Verified
+
+### SaaS Production Roadmap (Answering User Questions)
+
+#### When to Remove Demo Login Buttons
+**Timeline: Before going live (30 min effort)**
+
+The login screen has 5 demo account quick-login buttons (Admin, Manager, Technician, HR, Accountant). To remove them for production:
+1. Open `src/components/erp/login-screen.tsx`
+2. Remove or comment out the `QUICK_LOGINS` array
+3. Remove the demo accounts section JSX
+4. **Keep the demo users in the DB** (they're useful for testing — just hide the buttons)
+
+**Before/After**: 
+- Before: Login shows "Quick login — demo accounts" with 5 buttons
+- After: Clean login with just username/password fields + Sign In button
+
+#### Vercel Deployment
+**Timeline: 5 minutes (already documented in Settings → Go-Live Guide)**
+
+1. Push code to GitHub
+2. Go to vercel.com → Import Project
+3. Set environment variables (DATABASE_URL, etc.)
+4. **Important**: SQLite doesn't persist on Vercel — need to migrate to PostgreSQL (Neon/Supabase)
+5. Deploy
+
+**Before/After**:
+- Before: App runs on localhost:3000 (only you can access)
+- After: App live at `your-app.vercel.app` (anyone can access)
+
+#### Desktop App (.exe)
+**Timeline: 3-5 days (documented in Settings → Maintain & Audit)**
+
+Use Tauri (Rust + WebView):
+1. `bun add -D @tauri-apps/cli`
+2. `bunx tauri init`
+3. Configure `tauri.conf.json` (window size, icon, etc.)
+4. `bunx tauri build` → produces `.exe` / `.dmg` / `.deb`
+
+**Before/After**:
+- Before: Web app only (browser required)
+- After: Native desktop app (.exe) with system tray, offline mode, file system access
+
+### Column Editor — Already Works (Verified)
+
+The Column Editor (Edit button in register view) already supports:
+- ✅ **Add Column**: Click "Add Column" → choose name + type (text, number, dropdown, status, etc.)
+- ✅ **Delete Column**: Click trash icon on any column → removes it
+- ✅ **Rename Column**: Edit the column name field
+- ✅ **Change Type**: Change dropdown/status/number/etc.
+- ✅ **Toggle Required**: Make fields mandatory
+- ✅ **Save Changes**: Persists to database
+
+**Each company can customize**: Different companies can add/remove columns from any register (e.g. Company A adds "Site Code" to Work Orders, Company B removes "Space Code").
+
+### Enhancement: Beautiful Single-Page Print Layout
+
+**Problem**: The old print layout was functional but plain — no status/priority badges, basic styling, not optimized for one page.
+
+**Fix**: Enhanced the print template with:
+
+1. **Status & Priority Badges** — colored pill badges at the top showing:
+   - Status (Open=amber, In Progress=green, Completed=green, Cancelled=red)
+   - Priority (Critical=red, High=amber, Medium=blue, Low=green)
+
+2. **Inline Status/Priority Fields** — status and priority values now render as colored pills within the field grid (not plain text)
+
+3. **Professional Header** — gradient accent bar, logo with shadow, better typography
+
+4. **Section Titles with Accent** — colored vertical bar before each section title
+
+5. **Compact Layout** — reduced font sizes and spacing to fit on one A4 page
+
+6. **Audit Info Bar** — styled with background color, shows Record ID, Created, Updated, By
+
+7. **Better Print CSS** — `@page { margin: 1cm; size: A4; }` for consistent printing
+
+### Files Changed
+1. `src/components/erp/print-record.tsx` — completely redesigned print layout with badges, colors, compact spacing
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

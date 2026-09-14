@@ -57,14 +57,39 @@ export function printRecord(register: Register, record: RecordData, company: Pri
   };
 
   // Render image cells as actual <img> tags (not in the formatVal function)
-  const renderField = (c: any): string => {
+  const renderField = (c: any, statusColorFn?: (s: string) => string): string => {
     const val = record.data[c.name];
     const label = displayColumnName(c.name, currency);
     if (c.type === 'image' && val) {
       return `<div class="field"><div class="field-label">${label}</div><img src="${val}" alt="${label}" style="max-width:200px;max-height:200px;border:1px solid #e2e8f0;border-radius:4px;" /></div>`;
     }
+    if (c.type === 'status' && val && statusColorFn) {
+      const color = statusColorFn(String(val));
+      return `<div class="field"><div class="field-label">${label}</div><div class="field-value status-text" style="background:${color}22;color:${color};">${escapeHtml(formatVal(val, c.type))}</div></div>`;
+    }
+    if (c.type === 'priority' && val && statusColorFn) {
+      const pv = String(val).toLowerCase();
+      const color = pv === 'critical' ? '#EF4444' : pv === 'high' ? '#F59E0B' : pv === 'medium' ? '#3B82F6' : '#10B981';
+      return `<div class="field"><div class="field-label">${label}</div><div class="field-value priority-text" style="background:${color}22;color:${color};">${escapeHtml(formatVal(val, c.type))}</div></div>`;
+    }
     return `<div class="field ${c.type === 'long_text' ? 'long-text-field' : ''}"><div class="field-label">${label}</div><div class="field-value">${escapeHtml(formatVal(val, c.type))}</div></div>`;
   };
+
+  // Status badge color
+  const statusColor = (s: string): string => {
+    const ss = (s || '').toLowerCase();
+    if (['open', 'draft', 'pending', 'due', 'scheduled'].includes(ss)) return '#F59E0B';
+    if (['in progress', 'active', 'approved', 'issued', 'completed'].includes(ss)) return '#10B981';
+    if (['overdue', 'critical', 'rejected', 'cancelled'].includes(ss)) return '#EF4444';
+    if (['closed', 'inactive', 'standby'].includes(ss)) return '#64748B';
+    return '#64748B';
+  };
+
+  // Find status and priority for header badge
+  const statusCol = printableCols.find((c) => c.type === 'status');
+  const priorityCol = printableCols.find((c) => c.type === 'priority');
+  const statusVal = statusCol ? String(record.data[statusCol.name] || '') : '';
+  const priorityVal = priorityCol ? String(record.data[priorityCol.name] || '') : '';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -76,132 +101,191 @@ export function printRecord(register: Register, record: RecordData, company: Pri
   body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     color: #1a202c;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
-    padding: 30px;
+    padding: 25px;
     background: #fff;
   }
+  /* Header with gradient accent */
   .header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid ${register.color};
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid ${register.color};
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, ${register.color}, ${register.color}44);
   }
   .company { flex: 1; }
   .company-logo {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     background: linear-gradient(135deg, ${register.color}, ${register.color}cc);
     color: white;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px ${register.color}33;
   }
-  .company-name { font-size: 18px; font-weight: 600; color: #1a202c; margin-bottom: 4px; }
-  .company-meta { font-size: 11px; color: #64748b; line-height: 1.6; }
+  .company-name { font-size: 16px; font-weight: 700; color: #1a202c; margin-bottom: 3px; }
+  .company-meta { font-size: 10px; color: #64748b; line-height: 1.5; }
   .doc-info { text-align: right; }
   .doc-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: ${register.color};
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .doc-number { font-size: 20px; font-weight: 800; color: #1a202c; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .doc-date { font-size: 10px; color: #64748b; }
+  /* Status/Priority badges */
+  .badges { display: flex; gap: 8px; margin-bottom: 16px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: white; }
+  /* Section titles */
+  .section-title {
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: ${register.color};
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-  .doc-number { font-size: 22px; font-weight: 700; color: #1a202c; margin-bottom: 6px; }
-  .doc-date { font-size: 11px; color: #64748b; }
-  .section-title {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
     color: #64748b;
-    margin: 20px 0 10px;
-    padding-bottom: 4px;
+    font-weight: 700;
+    margin: 14px 0 8px;
+    padding-bottom: 3px;
     border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
+  .section-title::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background: ${register.color};
+    border-radius: 2px;
+  }
+  /* Fields grid */
   .fields-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px 30px;
-    margin-bottom: 20px;
+    gap: 10px 24px;
+    margin-bottom: 12px;
   }
-  .field { margin-bottom: 8px; }
+  .field { padding: 4px 0; }
   .field-label {
-    font-size: 9px;
+    font-size: 8px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #94a3b8;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     font-weight: 600;
   }
   .field-value {
-    font-size: 13px;
+    font-size: 12px;
     color: #1a202c;
     font-weight: 500;
     word-wrap: break-word;
   }
   .long-text-field {
     grid-column: 1 / -1;
-    padding: 10px;
+    padding: 8px 10px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 11px;
     color: #334155;
-    line-height: 1.6;
+    line-height: 1.5;
     white-space: pre-wrap;
   }
+  .field-value.status-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .field-value.priority-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  /* Audit info bar */
   .audit-info {
     display: flex;
     justify-content: space-between;
-    margin-top: 30px;
-    padding: 10px 0;
-    border-top: 1px solid #e2e8f0;
-    font-size: 10px;
+    margin-top: 16px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+    font-size: 9px;
     color: #94a3b8;
   }
+  /* Signatures */
   .signature-area {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    margin-top: 60px;
+    gap: 40px;
+    margin-top: 40px;
   }
-  .signature-box {
-    text-align: center;
-  }
+  .signature-box { text-align: center; }
   .signature-line {
-    border-top: 1px solid #1a202c;
-    margin-bottom: 6px;
-    padding-top: 40px;
+    border-top: 1.5px solid #334155;
+    margin-bottom: 5px;
+    padding-top: 35px;
   }
   .signature-label {
-    font-size: 10px;
+    font-size: 9px;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-weight: 600;
   }
+  /* Footer */
   .footer {
     position: fixed;
-    bottom: 20px;
-    left: 30px;
-    right: 30px;
+    bottom: 15px;
+    left: 25px;
+    right: 25px;
     text-align: center;
-    font-size: 9px;
+    font-size: 8px;
     color: #94a3b8;
-    padding-top: 10px;
+    padding-top: 8px;
     border-top: 1px solid #e2e8f0;
   }
   @media print {
-    body { padding: 20px; }
-    .footer { position: static; margin-top: 30px; }
+    body { padding: 15px; }
+    .footer { position: static; margin-top: 20px; }
+    @page { margin: 1cm; size: A4; }
   }
-  @page { margin: 1.5cm; }
 </style>
 </head>
 <body>
@@ -222,20 +306,26 @@ export function printRecord(register: Register, record: RecordData, company: Pri
     </div>
   </div>
 
+  ${statusVal || priorityVal ? `<div class="badges">
+    ${statusVal ? `<div class="badge" style="background: ${statusColor(statusVal)};"><span class="badge-dot"></span>${escapeHtml(statusVal)}</div>` : ''}
+    ${priorityVal ? `<div class="badge" style="background: ${priorityVal.toLowerCase() === 'critical' ? '#EF4444' : priorityVal.toLowerCase() === 'high' ? '#F59E0B' : priorityVal.toLowerCase() === 'medium' ? '#3B82F6' : '#10B981'};"><span class="badge-dot"></span>${escapeHtml(priorityVal)} Priority</div>` : ''}
+  </div>` : ''}
+
   <div class="section-title">Record Details</div>
   <div class="fields-grid">
     <div>
-      ${leftCols.map((c) => renderField(c)).join('')}
+      ${leftCols.map((c) => renderField(c, statusColor)).join('')}
     </div>
     <div>
-      ${rightCols.filter((c) => c.type !== 'long_text').map((c) => renderField(c)).join('')}
+      ${rightCols.filter((c) => c.type !== 'long_text').map((c) => renderField(c, statusColor)).join('')}
     </div>
   </div>
 
   <div class="audit-info">
-    <span>Record ID: ${record.id}</span>
+    <span>Record ID: ${record.id.slice(-8)}</span>
     <span>Created: ${formatDateTime(record.createdAt)}</span>
-    <span>Last Updated: ${formatDateTime(record.updatedAt)}</span>
+    <span>Updated: ${formatDateTime(record.updatedAt)}</span>
+    <span>By: ${record.createdBy || 'system'}</span>
   </div>
 
   <div class="signature-area">
@@ -250,7 +340,7 @@ export function printRecord(register: Register, record: RecordData, company: Pri
   </div>
 
   <div class="footer">
-    This document was generated by FMCore ERP on ${formatDateTime(new Date().toISOString())} · ${register.name} · ${docNumber}
+    Generated by FMCore ERP · ${register.name} · ${docNumber} · ${formatDateTime(new Date().toISOString())}
   </div>
 
   <script>
