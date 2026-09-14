@@ -238,10 +238,12 @@ const translations: Record<Language, Record<string, string>> = {
   },
 };
 
-export function t(key: string, lang: Language = 'en'): string {
-  return translations[lang]?.[key] || translations.en[key] || key;
+// Accept string (from store) and cast to Language internally
+export function t(key: string, lang: string = 'en'): string {
+  const l = (lang as Language) || 'en';
+  return translations[l]?.[key] || translations.en[key] || key;
 }
 
-export function isRTL(lang: Language): boolean {
+export function isRTL(lang: string): boolean {
   return lang === 'ar';
 }

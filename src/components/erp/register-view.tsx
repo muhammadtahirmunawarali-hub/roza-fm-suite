@@ -223,7 +223,7 @@ export function RegisterView({ registerId }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newName: duplicateForm.newName || `${register.name} (Copy)`,
+          newName: duplicateForm.newName || `${register?.name || 'Register'} (Copy)`,
           copyRecords: duplicateForm.copyRecords,
         }),
       });
