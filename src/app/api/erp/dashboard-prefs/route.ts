@@ -3,7 +3,6 @@
 // POST /api/erp/dashboard-prefs           → save dashboard preferences
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { seedDatabase } from '@/lib/erp/seed';
 
 interface Prefs {
   pinnedKpis?: string[];
@@ -26,7 +25,7 @@ async function getCurrentUser(req: NextRequest): Promise<string | null> {
 }
 
 export async function GET(req: NextRequest) {
-  await seedDatabase(false);
+  // Note: seedDatabase is NOT called here — it's called on /api/erp/auth/me (app startup)
   const userId = await getCurrentUser(req);
 
   if (!userId) {

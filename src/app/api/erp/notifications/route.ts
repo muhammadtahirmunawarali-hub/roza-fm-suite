@@ -1,11 +1,11 @@
 // FMCore ERP — Notifications API
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { seedDatabase } from '@/lib/erp/seed';
 import { apiHandler } from '@/lib/erp/api-helpers';
 
 export const GET = apiHandler(async () => {
-  await seedDatabase(false);
+  // Note: seedDatabase is NOT called here — it's called on /api/erp/auth/me (app startup)
+  // to avoid running 4+ DB queries on every 30s notification poll
   const rows = await db.notification.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,

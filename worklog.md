@@ -4673,3 +4673,52 @@ This makes it immediately clear whether the logged-in user is a system Super Adm
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 90 — QA Pass + Performance Optimization (Removed Redundant seedDatabase Calls)
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+- ✅ Notifications still load correctly after optimization (6 total, 0 unread)
+
+### Performance Optimization: Removed Redundant seedDatabase Calls
+
+**Problem found during code review**: The `seedDatabase(false)` function was called on every request to:
+1. `/api/erp/notifications` — polled every 30 seconds by the toolbar
+2. `/api/erp/dashboard-prefs` — called on dashboard load
+
+Each `seedDatabase(false)` call runs 4+ DB queries:
+- `db.register.count()` — check if seeded
+- `migrateRegisterColumns()` — iterate ALL registers
+- `migrateNewRecords()` — iterate ALL seed registers
+- `ensureDefaultUsers()` — check users
+
+This meant 4+ DB queries every 30 seconds (notification poll) just to check if the DB needs seeding — which it never does after the first run.
+
+**Fix**: Removed `seedDatabase(false)` from:
+1. `src/app/api/erp/notifications/route.ts` — notifications now only query the notifications table
+2. `src/app/api/erp/dashboard-prefs/route.ts` — dashboard prefs now only query user prefs
+
+The `seedDatabase` is still called on:
+- `/api/erp/auth/me` — runs on app startup (once per page load)
+- `/api/erp/auth/login` — runs on login
+- `/api/erp/registers` — runs when sidebar loads (once per page load)
+- `/api/erp/reset` — runs on explicit reset
+
+This ensures the DB is seeded on first load but doesn't add overhead to frequent polling.
+
+**Performance impact**: Eliminates ~4 DB queries every 30 seconds (notification poll) + ~4 queries on dashboard load. Over an hour, this saves ~480 DB queries.
+
+### Files Changed
+1. `src/app/api/erp/notifications/route.ts` — removed `seedDatabase` import + call
+2. `src/app/api/erp/dashboard-prefs/route.ts` — removed `seedDatabase` import + call
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
