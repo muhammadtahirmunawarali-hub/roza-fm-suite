@@ -50,7 +50,28 @@ export function SaasManagement() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const loadSafe = async () => {
+      setLoading(true);
+      try {
+        const [tenantsRes, usageRes] = await Promise.all([
+          fetch('/api/erp/saas/tenants'),
+          fetch('/api/erp/saas/usage'),
+        ]);
+        const tData = await tenantsRes.json();
+        const uData = await usageRes.json();
+        if (!cancelled && tData.ok) setTenants(tData.tenants);
+        if (!cancelled && uData.ok) setUsage(uData.usage);
+      } catch (e: any) {
+        if (!cancelled) toast.error('Failed to load SaaS data', { description: e.message });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadSafe();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSignup = async () => {
     setSigningUp(true);

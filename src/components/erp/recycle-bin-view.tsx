@@ -56,7 +56,23 @@ export function RecycleBinView() {
     }
   };
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const loadSafe = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/erp/recycle-bin');
+        const data = await res.json();
+        if (!cancelled && data.ok) setItems(data.items);
+      } catch (e: any) {
+        if (!cancelled) toast.error('Failed to load recycle bin', { description: e.message });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadSafe();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleRestore = async (id: string) => {
     setRestoring(id);

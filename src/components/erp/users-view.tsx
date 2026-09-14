@@ -36,12 +36,25 @@ export function UsersView() {
   const load = async () => {
     setLoading(true);
     try {
-      setUsers(await usersApi.list());
+      const data = await usersApi.list();
+      setUsers(data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const loadSafe = async () => {
+      setLoading(true);
+      try {
+        const data = await usersApi.list();
+        if (!cancelled) setUsers(data);
+      } catch (e) { if (!cancelled) console.error(e); }
+      finally { if (!cancelled) setLoading(false); }
+    };
+    loadSafe();
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = users.filter((u) => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false;
