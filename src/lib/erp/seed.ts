@@ -272,7 +272,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
   const STANDARD_PLUS_APPROVE = ['view', 'create', 'edit', 'approve', 'export'];
   const FULL = ALL_ACTIONS;
 
-  const MODULES = [
+  const MODULES_LIST = [
     'dashboard', 'meetings', 'attendance', 'toolbox',
     'workorders', 'wo_attachments', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp',
     'safety_insp', 'risk_assess', 'ptw', 'incidents', 'accident', 'fire_equip',
@@ -282,6 +282,7 @@ export function getRolePermissions(role: string): { module: string; actions: str
     'housekeeping', 'kpi', 'checklists', 'method_stmt', 'locations',
     'reports', 'audit', 'settings', 'users', 'recycle_bin', 'role_access',
   ];
+  const MODULES = MODULES_LIST;
 
   switch (role) {
     case 'Super Admin':
@@ -353,3 +354,18 @@ export async function getStats() {
 }
 
 export { MASTER_DATA };
+
+// All module codes — used for permission editor in User Management
+export const ALL_MODULE_CODES = [
+  'dashboard', 'meetings', 'attendance', 'toolbox',
+  'workorders', 'wo_attachments', 'pm', 'cm', 'gen_log', 'chiller_log', 'elec_insp',
+  'safety_insp', 'risk_assess', 'ptw', 'incidents', 'accident', 'fire_equip',
+  'assets', 'equipment', 'buildings', 'calibration',
+  'vendors', 'contracts', 'mat_req', 'pur_req', 'inventory', 'siv',
+  'visitors', 'leave', 'training',
+  'housekeeping', 'kpi', 'checklists', 'method_stmt', 'locations',
+  'reports', 'audit', 'settings', 'users', 'recycle_bin', 'role_access',
+];
+
+// All possible actions per module
+export const ALL_MODULE_ACTIONS = ['view', 'create', 'edit', 'delete', 'approve', 'export', 'import'];

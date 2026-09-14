@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { usersApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
 import type { User } from '@/lib/erp/types';
-import { ROLES } from '@/lib/erp/seed';
+import { ROLES, ALL_MODULE_CODES, ALL_MODULE_ACTIONS, getRolePermissions } from '@/lib/erp/seed';
 import { cn } from '@/lib/utils';
 import { formatDate, formatTimeAgo } from '@/lib/erp/utils';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Search, Plus, Pencil, Trash2, Users as UsersIcon, ShieldCheck, Loader2, X, Mail, User as UserIcon, Lock } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Users as UsersIcon, ShieldCheck, Shield, Loader2, X, Mail, User as UserIcon, Lock, ChevronDown, ChevronRight } from 'lucide-react';
 import { EmptyStateIllustration } from './empty-state-illustration';
 
 const ROLE_COLORS: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.id, r.color]));
@@ -367,6 +367,41 @@ function UserFormBody({
   const [role, setRole] = useState(user?.role || 'Viewer');
   const [department, setDepartment] = useState(user?.department || '');
   const [status, setStatus] = useState(user?.status || 'Active');
+  const [showPerms, setShowPerms] = useState(false);
+  // Load user's existing permissions, or generate from role if new user
+  const [permissions, setPermissions] = useState<{ module: string; actions: string[] }[]>(
+    user?.permissions?.length ? user.permissions : getRolePermissions(user?.role || 'Viewer')
+  );
+
+  // When role changes, offer to reset permissions to the role default
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    // Auto-update permissions to match the new role
+    setPermissions(getRolePermissions(newRole));
+  };
+
+  // Toggle a single action for a module
+  const togglePermission = (module: string, action: string) => {
+    setPermissions(prev => prev.map(p => {
+      if (p.module !== module) return p;
+      const has = p.actions.includes(action);
+      return { ...p, actions: has ? p.actions.filter(a => a !== action) : [...p.actions, action] };
+    }));
+  };
+
+  // Toggle all actions for a module (enable/disable entire module)
+  const toggleModule = (module: string, enable: boolean) => {
+    setPermissions(prev => {
+      const existing = prev.find(p => p.module === module);
+      if (enable && !existing) {
+        return [...prev, { module, actions: ['view', 'create', 'edit', 'export'] }];
+      }
+      if (!enable && existing) {
+        return prev.filter(p => p.module !== module);
+      }
+      return prev;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,7 +413,7 @@ function UserFormBody({
       toast.error('Password is required for new users');
       return;
     }
-    const data: any = { name, email, username, role, department, status };
+    const data: any = { name, email, username, role, department, status, permissions };
     if (password) data.password = password;
     onSave(data);
   };
@@ -418,7 +453,7 @@ function UserFormBody({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <Label className="text-[11px] mb-1">Role</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select value={role} onValueChange={handleRoleChange}>
               <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
@@ -449,12 +484,75 @@ function UserFormBody({
           </div>
         </div>
 
-        {role && (
-          <div className="p-2.5 rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] text-[11px]">
-            <div className="font-medium text-[var(--erp-text-secondary)] mb-1">{role} role permissions:</div>
-            <div className="text-[var(--erp-text-muted)]">{ROLES.find((r) => r.id === role)?.description || '—'}</div>
-          </div>
-        )}
+        {/* Module Permissions Editor */}
+        <div className="rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowPerms(!showPerms)}
+            className="w-full flex items-center justify-between p-2.5 hover:bg-[var(--erp-bg-hover)] transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-[var(--erp-accent)]" />
+              <span className="text-[11px] font-semibold text-[var(--erp-text)]">Module Permissions</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium">
+                {permissions.length} modules
+              </span>
+            </div>
+            {showPerms ? <ChevronDown className="w-3.5 h-3.5 text-[var(--erp-text-muted)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--erp-text-muted)]" />}
+          </button>
+          {showPerms && (
+            <div className="border-t border-[var(--erp-border)] p-2 max-h-[280px] overflow-y-auto">
+              <div className="text-[9px] text-[var(--erp-text-muted)] mb-2 px-1">
+                Toggle modules and actions for this user. Changing role above auto-resets to role defaults.
+              </div>
+              <table className="w-full text-[9px]">
+                <thead>
+                  <tr className="border-b border-[var(--erp-border)]">
+                    <th className="text-left py-1 px-1 text-[var(--erp-text-muted)] uppercase">Module</th>
+                    {ALL_MODULE_ACTIONS.map(a => (
+                      <th key={a} className="text-center py-1 px-0.5 text-[var(--erp-text-muted)] uppercase text-[8px]">{a.slice(0, 4)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ALL_MODULE_CODES.map((mod, idx) => {
+                    const perm = permissions.find(p => p.module === mod);
+                    const hasModule = !!perm;
+                    return (
+                      <tr key={mod} className={cn('border-b border-[var(--erp-border)]/30', idx % 2 === 0 && 'bg-[var(--erp-bg-card)]/30')}>
+                        <td className="py-0.5 px-1">
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={hasModule}
+                              onChange={(e) => toggleModule(mod, e.target.checked)}
+                              className="w-2.5 h-2.5 accent-[var(--erp-accent)]"
+                            />
+                            <span className={cn('font-mono text-[9px]', hasModule ? 'text-[var(--erp-text)]' : 'text-[var(--erp-text-muted)]')}>{mod}</span>
+                          </label>
+                        </td>
+                        {ALL_MODULE_ACTIONS.map(action => (
+                          <td key={action} className="text-center py-0.5 px-0.5">
+                            {hasModule ? (
+                              <input
+                                type="checkbox"
+                                checked={perm!.actions.includes(action)}
+                                onChange={() => togglePermission(mod, action)}
+                                className="w-2.5 h-2.5 accent-[var(--erp-accent)] cursor-pointer"
+                              />
+                            ) : (
+                              <span className="text-[var(--erp-text-muted)] opacity-20">—</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </form>
       <DialogFooter className="border-t border-[var(--erp-border)] pt-3">
         <Button variant="outline" onClick={onClose} disabled={saving} className="h-9 text-[12px]">

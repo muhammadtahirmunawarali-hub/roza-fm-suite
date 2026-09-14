@@ -5033,3 +5033,61 @@ None this round — all features verified working, no bugs found.
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 96 — Per-User Module Permission Editor + Brand Rename
+
+### Brand Rename: FMCore ERP → Roza FM Suite
+All user-visible "FMCore ERP" text replaced with "Roza FM Suite" across:
+- Browser tab title, login screen, sidebar, status bar, PWA prompt, AI greeting, print footer, About page
+- (Cookie/storage keys kept as `fmcore_*` to not break sessions)
+
+### New Feature: Per-User Module Permission Editor
+
+**Problem**: The User Management edit dialog only let admins set Name, Email, Role, Department, Status — but NOT individual module permissions. Permissions were hardcoded per role with no customization.
+
+**Fix**: Added an interactive **Module Permissions** editor to the user edit dialog:
+
+1. **Collapsible section**: "Module Permissions" with module count badge — click to expand
+2. **Full permission matrix**: 41 modules × 7 actions (view, create, edit, delete, approve, export, import)
+3. **Module toggle**: Checkbox per module — enable/disable entire module access
+4. **Action toggle**: Individual checkboxes per action within each enabled module
+5. **Role-based defaults**: When role changes, permissions auto-reset to the role's default set
+6. **Custom overrides**: Super Admin can enable/disable any module/action for any user
+7. **Saves to DB**: Permissions array sent in the save request, stored in `User.permissions`
+
+**Use cases enabled**:
+- Company A wants their "Main Contractor" to also see Inventory → Super Admin enables `inventory` module for that user
+- Company B doesn't want Technicians to see Reports → Super Admin disables `reports` for that user
+- Custom access: Give a user view-only access to Audit Logs but full access to Work Orders
+
+### Architecture
+```
+User.permissions = [
+  { module: 'dashboard', actions: ['view', 'create', 'edit', 'export'] },
+  { module: 'workorders', actions: ['view', 'create', 'edit', 'delete', 'approve', 'export'] },
+  { module: 'assets', actions: ['view', 'create', 'edit'] },
+  // ... only modules the user has access to
+]
+```
+
+When a user logs in, `getCurrentUser()` returns these permissions, and `hasPermission(module, action)` checks if the action is in the array.
+
+### Files Changed
+1. `src/lib/erp/seed.ts` — exported `ALL_MODULE_CODES` and `ALL_MODULE_ACTIONS`
+2. `src/components/erp/users-view.tsx` — added permission state, toggle functions, UI table, imports
+
+### Verified
+- ✅ Lint: 0 errors
+- ✅ Module Permissions editor shows 41 modules × 7 actions
+- ✅ Checkboxes work (module toggle + individual action toggle)
+- ✅ Role change auto-resets permissions
+- ✅ No console errors, no infinite loop
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
