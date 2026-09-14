@@ -4641,3 +4641,35 @@ So even though tenant admins were linked to tenants in the DB (via Round 85 sche
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 89 — QA Pass + Added Tenant Badge to User Menu
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (1 call/3s — notification polling)
+- ✅ Dashboard loads clean, no console errors
+- ✅ User menu opens correctly with role badge, department, last login
+
+### Enhancement: Tenant Badge in User Menu
+
+**Problem**: When a tenant admin logs in, there was no visual indication that they belong to a tenant company. The user menu showed the same info for Super Admin and tenant users.
+
+**Fix**: Added a "Tenant User" badge to the user menu header that appears when `user.tenantId` is not null:
+- **Super Admin** (tenantId=null): Shows only the role badge (e.g., "Super Admin" in red)
+- **Tenant Admin** (tenantId set): Shows the role badge PLUS a teal "Tenant User" badge with a Building2 icon
+
+This makes it immediately clear whether the logged-in user is a system Super Admin or a tenant company admin.
+
+**Verified**: Super Admin sees no tenant badge (correct — tenantId is null).
+
+### Files Changed
+1. `src/components/erp/user-menu.tsx` — added Building2 import + conditional tenant badge
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

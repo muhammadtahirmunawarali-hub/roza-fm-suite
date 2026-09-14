@@ -7,7 +7,7 @@ import { authApi } from '@/lib/erp/api';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { LogOut, User as UserIcon, Settings as SettingsIcon, ChevronDown, ShieldCheck, Clock } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings as SettingsIcon, ChevronDown, ShieldCheck, Clock, Building2 } from 'lucide-react';
 import { formatDate, formatTimeAgo } from '@/lib/erp/utils';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -101,9 +101,17 @@ export function UserMenu() {
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-[var(--erp-text)] truncate">{user.name}</div>
                 <div className="text-[11px] text-[var(--erp-text-muted)] truncate">{user.email}</div>
-                <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold text-white" style={{ background: roleColor }}>
-                  <ShieldCheck className="w-2.5 h-2.5" />
-                  {user.role}
+                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold text-white" style={{ background: roleColor }}>
+                    <ShieldCheck className="w-2.5 h-2.5" />
+                    {user.role}
+                  </span>
+                  {user.tenantId && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] border border-[var(--erp-accent-border)]">
+                      <Building2 className="w-2.5 h-2.5" />
+                      Tenant User
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
