@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Register, ColumnDef, RegisterCategory } from '@/lib/erp/types';
+import { getCurrentUser } from '@/lib/erp/auth';
 
 function serialize(r: any): Register {
   return {
@@ -65,18 +66,28 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const r = await db.register.findUnique({ where: { id } });
   if (!r) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
-  if (r.isSystem) {
-    return NextResponse.json({ ok: false, error: 'System registers cannot be deleted' }, { status: 400 });
+
+  // Check permissions — Super Admin can delete ANY register (including system)
+  const user = await getCurrentUser(_req);
+  if (!user) return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
+  if (!['Super Admin', 'Administrator'].includes(user.role)) {
+    return NextResponse.json({ ok: false, error: 'Only admins can delete registers' }, { status: 403 });
   }
+  // System registers can only be deleted by Super Admin
+  if (r.isSystem && user.role !== 'Super Admin') {
+    return NextResponse.json({ ok: false, error: 'System registers can only be deleted by Super Admin' }, { status: 400 });
+  }
+
   // Soft-delete register and all its records
   await db.record.updateMany({ where: { registerId: id }, data: { isDeleted: true } });
   await db.register.update({ where: { id }, data: { isDeleted: true } });
   await db.auditLog.create({
     data: {
+      userId: user.id,
       action: 'Deleted',
       module: r.name,
       registerId: r.id,
-      summary: `Deleted register "${r.name}"`,
+      summary: `Deleted register "${r.name}"${r.isSystem ? ' (SYSTEM)' : ''}`,
       oldValue: JSON.stringify(serialize(r)),
     },
   });

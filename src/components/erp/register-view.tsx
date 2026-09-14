@@ -22,11 +22,12 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import { ColumnEditor } from './column-editor';
 import {
   Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon, AlertTriangle, Loader2,
+  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon, AlertTriangle, Loader2, CopyPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -65,6 +66,9 @@ export function RegisterView({ registerId }: Props) {
   const [columnEditorOpen, setColumnEditorOpen] = useState(false);
   const [confirmRegisterDelete, setConfirmRegisterDelete] = useState(false);
   const [deletingRegister, setDeletingRegister] = useState(false);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const [duplicateForm, setDuplicateForm] = useState({ newName: '', copyRecords: false });
+  const [duplicating, setDuplicating] = useState(false);
 
   // Refs to access latest viewing/editing values without re-triggering loadRecords.
   // CRITICAL FIX: When `viewing`/`editing` were in loadRecords deps, it caused an
@@ -209,6 +213,33 @@ export function RegisterView({ registerId }: Props) {
       loadRecords();
     } catch (e: any) {
       toast.error('Delete failed', { description: e.message });
+    }
+  };
+
+  const handleDuplicateRegister = async () => {
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/erp/registers/${registerId}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newName: duplicateForm.newName || `${register.name} (Copy)`,
+          copyRecords: duplicateForm.copyRecords,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success('Register duplicated', { description: data.message });
+        setConfirmDuplicate(false);
+        setDuplicateForm({ newName: '', copyRecords: false });
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        toast.error('Duplicate failed', { description: data.error });
+      }
+    } catch (e: any) {
+      toast.error('Duplicate failed', { description: e.message });
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -449,8 +480,20 @@ export function RegisterView({ registerId }: Props) {
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Record
               </Button>
             )}
-            {/* Delete Register (Super Admin / Admin only) */}
-            {(user?.role === 'Super Admin' || user?.role === 'Administrator') && !register.isSystem && (
+            {/* Duplicate Register (Super Admin / Admin / Manager) */}
+            {(user?.role === 'Super Admin' || user?.role === 'Administrator' || user?.role === 'Manager') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDuplicate(true)}
+                className="h-8 text-[12px] text-[var(--erp-accent)] border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)]"
+                title="Duplicate this register (structure + optional data)"
+              >
+                <CopyPlus className="w-3.5 h-3.5 mr-1" /> Duplicate
+              </Button>
+            )}
+            {/* Delete Register (Super Admin can delete ALL; Admin can delete non-system) */}
+            {(user?.role === 'Super Admin' || (user?.role === 'Administrator' && !register.isSystem)) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -829,6 +872,55 @@ export function RegisterView({ registerId }: Props) {
             >
               {deletingRegister ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
               Delete Register
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Register dialog */}
+      <AlertDialog open={confirmDuplicate} onOpenChange={(o) => !o && !duplicating && setConfirmDuplicate(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CopyPlus className="w-5 h-5 text-[var(--erp-accent)]" />
+              Duplicate "{register.name}" register?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a copy of the register with all its columns ({register.columns.length} fields).
+              You can optionally copy all {total} records too.
+              The duplicate will be a <strong className="text-[var(--erp-text)]">non-system</strong> register
+              that you can rename, modify, or delete freely.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <label className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] font-semibold">New Register Name</label>
+              <Input
+                value={duplicateForm.newName}
+                onChange={(e) => setDuplicateForm({ ...duplicateForm, newName: e.target.value })}
+                placeholder={`${register.name} (Copy)`}
+                className="h-8 text-[12px] mt-1"
+              />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={duplicateForm.copyRecords}
+                onCheckedChange={(v) => setDuplicateForm({ ...duplicateForm, copyRecords: !!v })}
+              />
+              <span className="text-[12px] text-[var(--erp-text-secondary)]">
+                Copy all {total} records (otherwise structure only)
+              </span>
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={duplicating}
+              onClick={(e) => { e.preventDefault(); handleDuplicateRegister(); }}
+              className="bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
+            >
+              {duplicating ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CopyPlus className="w-3.5 h-3.5 mr-1" />}
+              {duplicating ? 'Duplicating...' : 'Duplicate Register'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
