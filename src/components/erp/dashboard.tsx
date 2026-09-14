@@ -542,25 +542,27 @@ function DoughnutChart({ data }: { data: { label: string; value: number; color?:
     return <div className="h-[240px] flex items-center justify-center text-[var(--erp-text-muted)] text-[12px]">No data</div>;
   }
   return (
-    <PieChart>
-      <Pie
-        data={data}
-        dataKey="value"
-        nameKey="label"
-        cx="50%"
-        cy="50%"
-        innerRadius={55}
-        outerRadius={85}
-        paddingAngle={2}
-        animationDuration={600}
-      >
-        {data.map((d, i) => (
-          <Cell key={i} fill={d.color || '#94A3B8'} />
-        ))}
-      </Pie>
-      <Tooltip contentStyle={tooltipStyle} />
-      <Legend wrapperStyle={{ fontSize: 11 }} />
-    </PieChart>
+    <ResponsiveContainer width="100%" height={240}>
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy="50%"
+          innerRadius={55}
+          outerRadius={85}
+          paddingAngle={2}
+          animationDuration={600}
+        >
+          {data.map((d, i) => (
+            <Cell key={i} fill={d.color || '#94A3B8'} />
+          ))}
+        </Pie>
+        <Tooltip contentStyle={tooltipStyle} />
+        <Legend wrapperStyle={{ fontSize: 11 }} />
+      </PieChart>
+    </ResponsiveContainer>
   );
 }
 
