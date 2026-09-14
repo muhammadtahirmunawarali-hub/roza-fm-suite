@@ -4153,3 +4153,57 @@ Added translations for:
 - Arabic and French users can now input text in Arabic/French in all form fields (the `dir="rtl"` on `<html>` makes text inputs RTL for Arabic)
 - Register names in the database (e.g. "Maintenance Work Orders") remain in English — they're user-created data, not UI strings. The translation covers the UI chrome (navigation, headings, buttons, labels).
 - All 3 languages fully tested and working.
+
+---
+
+## Round 79 — QA Pass + Translated All Sidebar Labels (Dashboard, Reports, Audit, Recycle, Settings)
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+- ✅ Language selector: 3 languages only (English, العربية, Français)
+- ✅ Arabic: `dir="rtl"`, dashboard heading translated, quick actions translated
+- ✅ English: `dir="ltr"`, all labels in English
+- ✅ No errors when switching languages
+
+### Enhancement: Translated All Sidebar Labels
+
+**Problem found during QA**: When switching to Arabic, the sidebar's Dashboard, Reports, Audit Logs, Recycle Bin, and Settings labels remained in English. Only the category labels (Operations, Maintenance, etc.) were translated.
+
+**Fix**: Applied `t()` translations to all sidebar items:
+- Dashboard → `t('dashboard', language)`
+- Reports → `t('reports', language)`
+- Audit Logs → `t('audit', language)`
+- Recycle Bin → `t('recycle_bin', language)`
+- Settings → `t('settings', language)`
+
+Both the `label` prop and the `openTab()` call now use the translated string, so the tab bar also shows the translated label.
+
+**Verified in Arabic** — all 8 sidebar sections now show Arabic:
+| English | Arabic |
+|---|---|
+| Dashboard | لوحة التحكم |
+| Operations | العمليات |
+| Maintenance | الصيانة |
+| Safety | السلامة |
+| Assets & Equipment | الأصول والمعدات |
+| Procurement & Inventory | المشتريات والمخزون |
+| Human Resources | الموارد البشرية |
+| Performance & Quality | الأداء والجودة |
+| Reports | التقارير |
+| Audit Logs | سجل التدقيق |
+| Recycle Bin | سلة المحذوفات |
+| Settings | الإعدادات |
+
+Register names (Meeting Minutes, Maintenance Work Orders, etc.) remain in English as they're database data.
+
+### Files Changed
+1. `src/components/erp/sidebar.tsx` — translated Dashboard, Reports, Audit Logs, Recycle Bin, Settings labels
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

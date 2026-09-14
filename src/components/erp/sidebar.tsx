@@ -159,9 +159,9 @@ export function Sidebar() {
           <SidebarItem
             collapsed={collapsed}
             icon="fa-gauge-high"
-            label="Dashboard"
+            label={t('dashboard', language)}
             active={activeTabId === 'dashboard'}
-            onClick={() => openTab({ id: 'dashboard', type: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' })}
+            onClick={() => openTab({ id: 'dashboard', type: 'dashboard', label: t('dashboard', language), icon: 'fa-gauge-high' })}
           />
 
           {/* Categories */}
@@ -226,36 +226,36 @@ export function Sidebar() {
             <SidebarItem
               collapsed={collapsed}
               icon="fa-chart-bar"
-              label="Reports"
+              label={t('reports', language)}
               active={activeTabId === 'reports'}
-              onClick={() => openTab({ id: 'reports', type: 'reports', label: 'Reports', icon: 'fa-chart-bar' })}
+              onClick={() => openTab({ id: 'reports', type: 'reports', label: t('reports', language), icon: 'fa-chart-bar' })}
             />
           )}
           {hasPermission('audit', 'view') && (
             <SidebarItem
               collapsed={collapsed}
               icon="fa-list-ul"
-              label="Audit Logs"
+              label={t('audit', language)}
               active={activeTabId === 'audit'}
-              onClick={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
+              onClick={() => openTab({ id: 'audit', type: 'audit', label: t('audit', language), icon: 'fa-list-ul' })}
             />
           )}
           {(hasPermission('recycle_bin', 'view') || user?.role === 'Super Admin' || user?.role === 'Administrator' || user?.role === 'Manager') && (
             <SidebarItem
               collapsed={collapsed}
               icon="fa-recycle"
-              label="Recycle Bin"
+              label={t('recycle_bin', language)}
               active={activeTabId === 'recycle'}
-              onClick={() => openTab({ id: 'recycle', type: 'recycle', label: 'Recycle Bin', icon: 'fa-recycle' })}
+              onClick={() => openTab({ id: 'recycle', type: 'recycle', label: t('recycle_bin', language), icon: 'fa-recycle' })}
             />
           )}
           {hasPermission('settings', 'view') && (
             <SidebarItem
               collapsed={collapsed}
               icon="fa-cog"
-              label="Settings"
+              label={t('settings', language)}
               active={activeTabId === 'settings'}
-              onClick={() => openTab({ id: 'settings', type: 'settings', label: 'Settings', icon: 'fa-cog' })}
+              onClick={() => openTab({ id: 'settings', type: 'settings', label: t('settings', language), icon: 'fa-cog' })}
             />
           )}
         </nav>
