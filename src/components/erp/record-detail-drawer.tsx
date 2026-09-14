@@ -14,7 +14,7 @@ import { ApprovalWorkflow } from './approval-workflow';
 import { printRecord } from './print-record';
 import { WOStageWorkflow } from './wo-stage-workflow';
 import { cn } from '@/lib/utils';
-import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
+import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName, colIconFor } from '@/lib/erp/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1321,37 +1321,6 @@ function PriorityPill({ priority }: { priority: string }) {
       {priority}
     </span>
   );
-}
-
-function colIconFor(type: string): string {
-  switch (type) {
-    case 'text': return 'fa-font';
-    case 'long_text': return 'fa-align-left';
-    case 'number': return 'fa-hashtag';
-    case 'currency': return 'fa-coins';
-    case 'percentage': return 'fa-percent';
-    case 'date': return 'fa-calendar';
-    case 'datetime': return 'fa-calendar-days';
-    case 'time': return 'fa-clock';
-    case 'dropdown': return 'fa-list';
-    case 'status': return 'fa-flag';
-    case 'priority': return 'fa-bolt';
-    case 'multi_select': return 'fa-list-check';
-    case 'email': return 'fa-envelope';
-    case 'phone': return 'fa-phone';
-    case 'rating': return 'fa-star';
-    case 'employee': return 'fa-user';
-    case 'department': return 'fa-building-user';
-    case 'building': return 'fa-city';
-    case 'asset': return 'fa-cube';
-    case 'equipment': return 'fa-gears';
-    case 'vendor': return 'fa-truck';
-    case 'image': return 'fa-image';
-    case 'url': return 'fa-link';
-    case 'color': return 'fa-palette';
-    case 'tags': return 'fa-tags';
-    default: return 'fa-circle';
-  }
 }
 
 function formatCurrencyCompact(n: number, currency = 'AED'): string {

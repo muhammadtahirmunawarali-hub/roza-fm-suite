@@ -9,7 +9,7 @@ import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import {
   formatDocNumber, statusVariant, priorityVariant,
-  formatDate, formatTimeAgo, type BadgeVariant, displayColumnName,
+  formatDate, formatTimeAgo, type BadgeVariant, displayColumnName, formatCurrencyCompact, colIconFor,
 } from '@/lib/erp/utils';
 import { RecordForm } from './record-form';
 import { CsvImport } from './csv-import';
@@ -837,46 +837,12 @@ export function RegisterView({ registerId }: Props) {
   );
 }
 
-function colIconFor(type: string): string {
-  switch (type) {
-    case 'auto_increment': return 'fa-hashtag';
-    case 'text': return 'fa-font';
-    case 'long_text': return 'fa-align-left';
-    case 'number': return 'fa-hashtag';
-    case 'currency': return 'fa-coins';
-    case 'percentage': return 'fa-percent';
-    case 'date': return 'fa-calendar';
-    case 'datetime': return 'fa-calendar-days';
-    case 'time': return 'fa-clock';
-    case 'dropdown': return 'fa-list';
-    case 'status': return 'fa-flag';
-    case 'priority': return 'fa-bolt';
-    case 'multi_select': return 'fa-list-check';
-    case 'email': return 'fa-envelope';
-    case 'phone': return 'fa-phone';
-    case 'rating': return 'fa-star';
-    case 'employee': return 'fa-user';
-    case 'department': return 'fa-building-user';
-    case 'building': return 'fa-city';
-    case 'asset': return 'fa-cube';
-    case 'equipment': return 'fa-gears';
-    case 'vendor': return 'fa-truck';
-    default: return 'fa-circle';
-  }
-}
-
 function statusColorFor(status: string): string {
   const s = status.toLowerCase();
   if (['open', 'draft', 'submitted', 'pending', 'scheduled', 'reported', 'due', 'under review', 'on track', 'at risk'].includes(s)) return 'var(--erp-warning)';
   if (['in progress', 'active', 'approved', 'issued', 'on order', 'in stock', 'operational', 'compliant', 'calibrated', 'pass', 'achieved', 'exceeded', 'present', 'completed', 'paid'].includes(s)) return 'var(--erp-success)';
   if (['overdue', 'critical', 'rejected', 'cancelled', 'fail', 'non-compliant', 'expired', 'out of service', 'beyond repair', 'terminated', 'blacklisted', 'suspended', 'absent'].includes(s)) return 'var(--erp-danger)';
   return 'var(--erp-info)';
-}
-
-function formatCurrencyCompact(n: number, currency = 'AED'): string {
-  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
-  return `${currency} ${n.toLocaleString()}`;
 }
 
 function CellContent({ value, col, sequence, registerCode, expanded, currency = 'AED' }: { value: any; col: ColumnDef; sequence: number; registerCode: string; expanded?: boolean; currency?: string }) {

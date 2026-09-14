@@ -223,3 +223,36 @@ export function defaultValue(col: ColumnDef): any {
     default: return '';
   }
 }
+
+// ---------- Column icon mapping (FontAwesome icon names by column type) ----------
+export function colIconFor(type: string): string {
+  switch (type) {
+    case 'auto_increment': return 'fa-hashtag';
+    case 'text': return 'fa-font';
+    case 'long_text': return 'fa-align-left';
+    case 'number': return 'fa-hashtag';
+    case 'currency': return 'fa-coins';
+    case 'percentage': return 'fa-percent';
+    case 'date': return 'fa-calendar';
+    case 'datetime': return 'fa-calendar-days';
+    case 'time': return 'fa-clock';
+    case 'dropdown': return 'fa-list';
+    case 'status': return 'fa-flag';
+    case 'priority': return 'fa-bolt';
+    case 'multi_select': return 'fa-list-check';
+    case 'email': return 'fa-envelope';
+    case 'phone': return 'fa-phone';
+    case 'rating': return 'fa-star';
+    case 'employee': return 'fa-user';
+    case 'department': return 'fa-building-user';
+    case 'building': return 'fa-city';
+    case 'asset': return 'fa-cube';
+    case 'equipment': return 'fa-gears';
+    case 'vendor': return 'fa-truck';
+    case 'image': return 'fa-image';
+    case 'url': return 'fa-link';
+    case 'color': return 'fa-palette';
+    case 'tags': return 'fa-tags';
+    default: return 'fa-circle';
+  }
+}
