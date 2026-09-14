@@ -166,7 +166,7 @@ export function formatCell(value: any, col: ColumnDef): string {
     case 'datetime': return formatDateTime(value);
     case 'multi_select': return Array.isArray(value) ? value.join(', ') : String(value);
     case 'rating': return `${'★'.repeat(Number(value) || 0)}${'☆'.repeat(5 - (Number(value) || 0))}`;
-    case 'auto_increment': return formatDocNumber(col.name.includes('No') ? '' : '', Number(value) || 0);
+    case 'auto_increment': return formatDocNumber(col.name.replace(/\s+/g, '').slice(0, 3), Number(value) || 0);
     default: return String(value);
   }
 }

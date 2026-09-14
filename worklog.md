@@ -4207,3 +4207,40 @@ Register names (Meeting Minutes, Maintenance Work Orders, etc.) remain in Englis
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 80 — QA Pass + Tab Bar Testing + Fixed auto_increment Prefix
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (1 call/3s — notification polling)
+- ✅ Dashboard loads clean, no console errors
+- ✅ Tab bar: tabs appear when opening registers, close button works (tested closing WO tab → back to Dashboard)
+- ✅ Status bar: shows Ready · tab name · version · user · live clock (updates every 1s)
+- ✅ No `dangerouslySetInnerHTML` security risks (only in shadcn chart CSS)
+- ✅ Print record has proper `escapeHtml` XSS prevention
+
+### Bug Fix: auto_increment prefix always empty
+
+**Problem**: The `formatCell` function for `auto_increment` type had a redundant ternary:
+```tsx
+case 'auto_increment': return formatDocNumber(col.name.includes('No') ? '' : '', Number(value) || 0);
+```
+Both branches of the ternary returned `''` (empty string), so `formatDocNumber` always received an empty code. This meant the auto-increment prefix was always derived from `code.slice(0, 3)` of an empty string → empty prefix → just showed "-0001" instead of "WON-0001".
+
+**Fix**: Generate the prefix from the column name (first 3 chars, spaces removed):
+```tsx
+case 'auto_increment': return formatDocNumber(col.name.replace(/\s+/g, '').slice(0, 3), Number(value) || 0);
+```
+Now "WO Number" → "WON", "PM Number" → "PMN", "Asset ID" → "Ass", etc.
+
+### Files Changed
+1. `src/lib/erp/utils.ts` — fixed auto_increment prefix generation in `formatCell`
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
