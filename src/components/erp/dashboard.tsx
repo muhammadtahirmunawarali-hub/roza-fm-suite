@@ -19,8 +19,9 @@ import {
 import {
   TrendingUp, TrendingDown, Activity, Calendar, AlertTriangle,
   Plus, ArrowRight, Zap, FileText, Wrench, ShoppingCart, UserPlus, FileBarChart,
-  Settings2, Pin,
+  Settings2, Pin, RotateCcw,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -88,11 +89,13 @@ export function Dashboard() {
   if (loading) return <DashboardSkeleton />;
   if (error) {
     return (
-      <div className="p-6 flex items-center justify-center text-center">
-        <div>
-          <AlertTriangle className="w-10 h-10 text-[var(--erp-danger)] mx-auto mb-2" />
-          <p className="text-[var(--erp-text-secondary)]">{error}</p>
-        </div>
+      <div className="p-6 flex flex-col items-center justify-center text-center min-h-[400px]">
+        <AlertTriangle className="w-12 h-12 text-[var(--erp-danger)] mx-auto mb-3" />
+        <h2 className="text-[16px] font-semibold text-[var(--erp-text)] mb-1">Failed to load dashboard</h2>
+        <p className="text-[12px] text-[var(--erp-text-muted)] mb-4 max-w-md">{error}</p>
+        <Button onClick={() => { setError(null); setLoading(true); loadAll(); }} className="h-9 text-[12px]">
+          <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Retry
+        </Button>
       </div>
     );
   }
