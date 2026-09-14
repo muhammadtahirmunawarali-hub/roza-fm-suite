@@ -7,12 +7,25 @@ import { useEffect, useMemo, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { REGISTER_CATEGORIES, type Register, type RegisterCategory } from '@/lib/erp/types';
 import { registersApi } from '@/lib/erp/api';
+import { t } from '@/lib/erp/translations';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { Plus, Search, ChevronRight, PanelLeftClose, PanelLeftOpen, X, Lock } from 'lucide-react';
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar, openTab, activeTabId, setBuilderOpen, user, hasPermission } = useErpStore();
+  const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar, openTab, activeTabId, setBuilderOpen, user, hasPermission, language } = useErpStore();
+
+  // Category label translation map
+  const categoryLabels: Record<string, string> = {
+    operations: t('operations', language),
+    maintenance: t('maintenance', language),
+    safety: t('safety', language),
+    assets: t('assets_equipment', language),
+    procurement: t('procurement_inventory', language),
+    hr: t('human_resources', language),
+    performance: t('performance_quality', language),
+    admin: t('settings', language),
+  };
   const [registers, setRegisters] = useState<Register[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -132,9 +145,9 @@ export function Sidebar() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search registers..."
+                placeholder={t('search', language)}
                 className="w-full pl-7 pr-2 py-1.5 text-[12px] rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] focus:ring-1 focus:ring-[var(--erp-accent-border)]"
-                aria-label="Search registers"
+                aria-label={t('search', language)}
               />
             </div>
           </div>
@@ -167,13 +180,13 @@ export function Sidebar() {
                     collapsed ? 'justify-center px-1' : 'px-2',
                   )}
                   style={{ color: cat.color }}
-                  title={collapsed ? cat.name : undefined}
+                  title={collapsed ? (categoryLabels[cat.id] || cat.name) : undefined}
                 >
                   {!collapsed && (
                     <ChevronRight className={cn('w-3 h-3 mr-1 transition-transform', !isCollapsed && 'rotate-90')} />
                   )}
                   <FAIcon name={cat.icon} className="text-[11px] shrink-0" />
-                  {!collapsed && <span className="ml-2 flex-1 truncate">{cat.name}</span>}
+                  {!collapsed && <span className="ml-2 flex-1 truncate">{categoryLabels[cat.id] || cat.name}</span>}
                   {!collapsed && (
                     <span className="text-[10px] text-[var(--erp-text-muted)] bg-[var(--erp-bg-hover)] px-1.5 py-0.5 rounded-full">
                       {regs.length}
@@ -258,7 +271,7 @@ export function Sidebar() {
             title="New register"
           >
             <Plus className="w-3.5 h-3.5" />
-            {!collapsed && <span>New Register</span>}
+            {!collapsed && <span>{t('new_register', language)}</span>}
           </button>
           <button
             onClick={toggleSidebar}

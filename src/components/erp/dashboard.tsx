@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { dashboardApi, dashboardPrefsApi, registersApi, type DashboardPrefs } from '@/lib/erp/api';
 import type { DashboardData, Register } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
+import { t } from '@/lib/erp/translations';
 import { FAIcon } from './icon';
 import { Sparkline } from './sparkline';
 import { DashboardCustomize } from './dashboard-customize';
@@ -33,7 +34,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const { openTab, setBuilderOpen, currency, setPendingAction } = useErpStore();
+  const { openTab, setBuilderOpen, currency, setPendingAction, language } = useErpStore();
 
   const loadAll = async () => {
     setLoading(true);
@@ -103,12 +104,12 @@ export function Dashboard() {
 
   // Top 3 quick action targets
   const quickActions = [
-    { code: 'workorders', label: 'New Work Order', icon: 'fa-wrench', color: '#F59E0B' },
-    { code: 'pur_req', label: 'New Purchase Request', icon: 'fa-cart-shopping', color: '#10B981' },
-    { code: 'incidents', label: 'Report Incident', icon: 'fa-burst', color: '#EF4444' },
-    { code: 'ptw', label: 'Issue Permit', icon: 'fa-file-signature', color: '#EF4444' },
-    { code: 'vendors', label: 'Add Vendor', icon: 'fa-truck-field', color: '#10B981' },
-    { code: 'visitors', label: 'Log Visitor', icon: 'fa-id-card', color: '#EC4899' },
+    { code: 'workorders', label: t('new_work_order', language), icon: 'fa-wrench', color: '#F59E0B' },
+    { code: 'pur_req', label: t('new_purchase_request', language), icon: 'fa-cart-shopping', color: '#10B981' },
+    { code: 'incidents', label: t('report_incident', language), icon: 'fa-burst', color: '#EF4444' },
+    { code: 'ptw', label: t('issue_permit', language), icon: 'fa-file-signature', color: '#EF4444' },
+    { code: 'vendors', label: t('add_user', language), icon: 'fa-truck-field', color: '#10B981' },
+    { code: 'visitors', label: t('new_register', language), icon: 'fa-id-card', color: '#EC4899' },
   ].filter((qa) => registers.some((r) => r.code === qa.code));
 
   return (
@@ -117,7 +118,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[22px] font-semibold text-[var(--erp-text)]" style={{ fontFamily: 'var(--font-display)' }}>
-            Dashboard
+            {t('dashboard', language)}
           </h1>
           <p className="text-[12px] text-[var(--erp-text-muted)] mt-0.5">
             Real-time overview of your facility management operations
@@ -178,7 +179,7 @@ export function Dashboard() {
       <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-[12px] text-[var(--erp-text)] flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-[var(--erp-accent)]" /> Quick Actions
+            <Zap className="w-3.5 h-3.5 text-[var(--erp-accent)]" /> {t('quick_actions', language)}
           </h3>
           <button
             onClick={() => setBuilderOpen(true)}
@@ -212,7 +213,7 @@ export function Dashboard() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {!prefs.hiddenCharts.includes('by-category') && (
-          <ChartCard title="Records by Category" subtitle="Distribution across ERP modules">
+          <ChartCard title={t('records_by_category', language)} subtitle={t('records_by_category', language)}>
             <BarChart data={data.charts.find((c) => c.id === 'by-category')?.data || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-border)" />
               <XAxis dataKey="label" tick={{ fill: 'var(--erp-text-muted)', fontSize: 11 }} />
@@ -228,7 +229,7 @@ export function Dashboard() {
         )}
 
         {!prefs.hiddenCharts.includes('wo-status') && (
-          <ChartCard title="Work Orders by Status" subtitle="Current maintenance workload">
+          <ChartCard title={t('work_orders_by_status', language)} subtitle={t('work_orders_by_status', language)}>
             <DoughnutChart data={data.charts.find((c) => c.id === 'wo-status')?.data || []} />
           </ChartCard>
         )}
@@ -310,7 +311,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <RecentRecordsWidget />
         <Panel
-          title="Recent Activity"
+          title={t('recent_activity', language)}
           icon={<Activity className="w-4 h-4 text-[var(--erp-accent)]" />}
           count={data.recentActivity.length}
           onViewAll={() => openTab({ id: 'audit', type: 'audit', label: 'Audit Logs', icon: 'fa-list-ul' })}
@@ -363,7 +364,7 @@ export function Dashboard() {
         </Panel>
 
         <Panel
-          title="Upcoming & Overdue"
+          title={t('upcoming_overdue', language)}
           icon={<Calendar className="w-4 h-4 text-[var(--erp-accent)]" />}
           count={data.upcomingItems.length}
         >

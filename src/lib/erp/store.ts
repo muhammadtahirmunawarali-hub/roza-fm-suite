@@ -138,7 +138,7 @@ export const useErpStore = create<ErpState>()(
 
       // ---------- Language ----------
       language: 'en',
-      setLanguage: (lang) => set({ language: lang, rtl: lang === 'ar' || lang === 'ur' }),
+      setLanguage: (lang) => set({ language: lang, rtl: lang === 'ar' }),
 
       // ---------- user menu ----------
       userMenuOpen: false,

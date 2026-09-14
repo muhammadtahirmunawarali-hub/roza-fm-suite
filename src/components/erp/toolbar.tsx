@@ -116,13 +116,10 @@ export function Toolbar() {
               { code: 'en', label: '🇬🇧 English' },
               { code: 'ar', label: '🇸🇦 العربية' },
               { code: 'fr', label: '🇫🇷 Français' },
-              { code: 'es', label: '🇪🇸 Español' },
-              { code: 'hi', label: '🇮🇳 हिन्दी' },
-              { code: 'ur', label: '🇵🇰 اردو' },
             ].map((lang) => (
               <button
                 key={lang.code}
-                onClick={() => { setLanguage(lang.code); if (lang.code === 'ar' || lang.code === 'ur') setRtl(true); else setRtl(false); }}
+                onClick={() => { setLanguage(lang.code); setRtl(lang.code === 'ar'); }}
                 className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-[var(--erp-bg-hover)] ${language === lang.code ? 'text-[var(--erp-accent)] font-semibold' : 'text-[var(--erp-text-secondary)]'}`}
               >
                 {lang.label}
