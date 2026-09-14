@@ -1,4 +1,4 @@
-// FMCore ERP — Dashboard API
+// Roza FM Suite — Dashboard API
 // Computes KPIs + charts dynamically from register data (no hardcoded totals)
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';

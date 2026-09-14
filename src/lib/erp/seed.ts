@@ -1,4 +1,4 @@
-// FMCore ERP — Server-side seed helper
+// Roza FM Suite — Server-side seed helper
 // Seeds the database with all the FMCore registers + sample records from sample-data.ts
 import { db } from '@/lib/db';
 import { REGISTER_SEEDS, MASTER_DATA } from './sample-data';
@@ -182,7 +182,7 @@ export async function seedDatabase(force = false) {
   const defaultSettings: { key: string; value: string; category: string }[] = [
     { key: 'theme', value: 'dark', category: 'appearance' },
     { key: 'currency', value: 'AED', category: 'currency' },
-    { key: 'company.name', value: 'FMCore Facilities Management', category: 'company' },
+    { key: 'company.name', value: 'Roza FM Facilities', category: 'company' },
     { key: 'company.address', value: 'Sheikh Zayed Road, Dubai, UAE', category: 'company' },
     { key: 'company.phone', value: '+971-4-XXX-XXXX', category: 'company' },
     { key: 'company.email', value: 'info@fmcore.ae', category: 'company' },
@@ -212,7 +212,7 @@ export async function seedDatabase(force = false) {
     { type: 'work_order_overdue', title: 'Work Order Open', message: 'WO-0002 Elevator-03 door fault — Critical priority', severity: 'critical', link: '/?tab=workorders' },
     { type: 'maintenance_due', title: 'PM Due', message: 'Chiller CH-01 monthly PM due 2025-02-15', severity: 'warning', link: '/?tab=pm' },
     { type: 'pending_approval', title: 'PTW Pending Approval', message: 'PTW-0002 Welding at Block D Roof awaiting approval', severity: 'info', link: '/?tab=ptw' },
-    { type: 'system', title: 'System Initialized', message: 'FMCore ERP initialized with sample data', severity: 'success', link: '/' },
+    { type: 'system', title: 'System Initialized', message: 'Roza FM Suite initialized with sample data', severity: 'success', link: '/' },
   ];
 
   for (const n of notifications) {

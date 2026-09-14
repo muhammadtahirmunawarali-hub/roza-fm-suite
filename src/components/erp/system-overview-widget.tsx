@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — System Overview Widget (for Dashboard)
+// Roza FM Suite — System Overview Widget (for Dashboard)
 // Compact card showing key system statistics at a glance.
 import { useEffect, useState } from 'react';
 import { statsApi, type SystemStats } from '@/lib/erp/api';

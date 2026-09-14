@@ -14,7 +14,7 @@ export default function GlobalError({
       <body style={{ fontFamily: 'system-ui, sans-serif', padding: '40px', background: '#0a0e1a', color: '#e2e8f0', maxWidth: '800px', margin: '0 auto' }}>
         <div style={{ marginBottom: '20px' }}>
           <h2 style={{ fontSize: '20px', color: '#ef4444', marginBottom: '8px' }}>
-            ⚠️ FMCore ERP Error
+            ⚠️ Roza FM Suite Error
           </h2>
           <p style={{ fontSize: '14px', color: '#94a3b8' }}>
             An error occurred while loading the application.

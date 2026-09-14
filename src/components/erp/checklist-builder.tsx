@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Checklist Builder
+// Roza FM Suite — Checklist Builder
 // A specialized builder for creating checklist templates with scope-based
 // presets (Marine, Soft Services, Landscape, MEP, Civil, Security, Fire
 // Protection) plus fully custom scopes. Used alongside the Checklist

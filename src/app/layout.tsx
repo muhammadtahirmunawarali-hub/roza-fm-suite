@@ -28,12 +28,12 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "FMCore ERP — Dynamic Register & Form Builder",
+  title: "Roza FM Suite — Dynamic Register & Form Builder",
   description: "Enterprise Facility Management ERP with dynamic registers, dashboard, audit logs, AI assistant, and more.",
   keywords: ["ERP", "FMCore", "Facility Management", "Maintenance", "Safety", "Assets", "Inventory"],
   authors: [{ name: "FMCore" }],
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FMCore ERP" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Roza FM Suite" },
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

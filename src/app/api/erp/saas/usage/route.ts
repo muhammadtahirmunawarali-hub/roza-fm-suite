@@ -1,4 +1,4 @@
-// FMCore ERP — SaaS Usage Stats API
+// Roza FM Suite — SaaS Usage Stats API
 // GET /api/erp/saas/usage → current tenant usage (users, records, storage)
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';

@@ -1,4 +1,4 @@
-// FMCore ERP — Master Data (for dropdowns: employees, departments, buildings, etc.)
+// Roza FM Suite — Master Data (for dropdowns: employees, departments, buildings, etc.)
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { MASTER_DATA } from '@/lib/erp/seed';

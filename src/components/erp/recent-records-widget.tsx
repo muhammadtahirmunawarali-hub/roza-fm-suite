@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Recent Records Widget (for Dashboard)
+// Roza FM Suite — Recent Records Widget (for Dashboard)
 // Shows the most recently created/updated records across all registers.
 import { useEffect, useState } from 'react';
 import { auditApi, registersApi } from '@/lib/erp/api';

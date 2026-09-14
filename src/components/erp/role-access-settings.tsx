@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Role Access Settings
+// Roza FM Suite — Role Access Settings
 // Shows all roles and their permissions. Super Admin can manage what each role sees.
 import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';

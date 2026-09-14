@@ -1,4 +1,4 @@
-// FMCore ERP — Core Type Definitions
+// Roza FM Suite — Core Type Definitions
 // ============================================================
 
 // ---------- Column Types (Form Builder) ----------

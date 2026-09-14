@@ -1,4 +1,4 @@
-// FMCore ERP — API client (typed fetch wrappers around /api/erp/*)
+// Roza FM Suite — API client (typed fetch wrappers around /api/erp/*)
 import type {
   Register, RecordData, AuditLog, Setting, NotificationItem, User,
   DashboardData, ApiResponse, PaginatedResponse, ColumnDef,

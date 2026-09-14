@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Go-Live & Deployment Guide
+// Roza FM Suite — Go-Live & Deployment Guide
 // How to deploy to Vercel, set up a public website, enable multi-company SaaS,
 // and sell the product to customers.
 import { useState } from 'react';
@@ -56,7 +56,7 @@ export function GoLiveGuide() {
             <Section icon={<Cloud className="w-4 h-4" />} title="Deploy to Vercel (Easiest — 5 minutes)">
               <ol className="ml-4 list-decimal space-y-1.5">
                 <li><strong>Push code to GitHub</strong> — create a repo and push your project:
-                  <CodeBlock title="Push to GitHub" code={`git init\ngit add .\ngit commit -m "FMCore ERP production"\ngit remote add origin https://github.com/YOUR_USERNAME/fmcore-erp.git\ngit push -u origin main`} onCopy={() => copy('git init\ngit add .\ngit commit -m "FMCore ERP"\ngit push origin main', 'Git push')} />
+                  <CodeBlock title="Push to GitHub" code={`git init\ngit add .\ngit commit -m "Roza FM Suite production"\ngit remote add origin https://github.com/YOUR_USERNAME/fmcore-erp.git\ngit push -u origin main`} onCopy={() => copy('git init\ngit add .\ngit commit -m "Roza FM Suite"\ngit push origin main', 'Git push')} />
                 </li>
                 <li><strong>Go to Vercel</strong> — visit <a href="https://vercel.com/new" target="_blank" rel="noopener noreferrer" className="text-[var(--erp-accent)] hover:underline inline-flex items-center gap-0.5">vercel.com/new <ExternalLink className="w-3 h-3" /></a></li>
                 <li><strong>Import your repo</strong> — click "Import" next to your GitHub repository</li>

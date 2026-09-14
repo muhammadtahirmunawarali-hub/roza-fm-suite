@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Empty State SVG Illustrations
+// Roza FM Suite — Empty State SVG Illustrations
 // Replaces plain Lucide icons with custom SVG illustrations for empty states.
 import { cn } from '@/lib/utils';
 

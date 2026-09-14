@@ -1,4 +1,4 @@
-// FMCore ERP — Translation Engine
+// Roza FM Suite — Translation Engine
 // Client-side translations for common UI strings.
 // Supports: English (en), Arabic (ar), French (fr)
 

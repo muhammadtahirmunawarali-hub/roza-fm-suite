@@ -1,4 +1,4 @@
-// FMCore ERP — Shared utilities
+// Roza FM Suite — Shared utilities
 import type { ColumnDef, ColumnType } from './types';
 
 // ---------- Document Numbering ----------

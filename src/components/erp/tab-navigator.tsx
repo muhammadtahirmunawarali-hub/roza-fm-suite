@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Tab Navigator Dropdown (Excel-like sheet tab picker)
+// Roza FM Suite — Tab Navigator Dropdown (Excel-like sheet tab picker)
 // A small dropdown button at the right edge of the tab bar that lists all open tabs
 // for quick navigation, similar to Excel's worksheet navigation arrows.
 import { useEffect, useRef, useState } from 'react';

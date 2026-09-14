@@ -1,4 +1,4 @@
-// FMCore ERP — AI Predictive Insights API
+// Roza FM Suite — AI Predictive Insights API
 // GET /api/erp/ai/insights → returns predictive analytics (overdue predictions, stock-out alerts)
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';

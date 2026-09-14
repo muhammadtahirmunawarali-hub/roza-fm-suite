@@ -1,4 +1,4 @@
-// FMCore ERP — AI Assistant (z-ai-web-dev-sdk)
+// Roza FM Suite — AI Assistant (z-ai-web-dev-sdk)
 // Context-aware AI with CRUD actions: open/create/update/delete records + guided help
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .map((c) => `${c.name} (${c.id})`)
     .join(', ');
 
-  const systemPrompt = `You are the FMCore ERP AI Assistant — an enterprise Facility Management ERP with FULL CRUD capabilities.
+  const systemPrompt = `You are the Roza FM Suite AI Assistant — an enterprise Facility Management ERP with FULL CRUD capabilities.
 
 Available registers and current data:
 ${ctx}

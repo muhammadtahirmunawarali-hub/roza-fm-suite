@@ -1,4 +1,4 @@
-// FMCore ERP — Saved Views API (per-user saved filters)
+// Roza FM Suite — Saved Views API (per-user saved filters)
 // GET  /api/erp/saved-views?registerId=...   → list views for a register
 // POST /api/erp/saved-views                  → save a new view
 // PUT  /api/erp/saved-views                  → update an existing view { id, name, filters, isShared }

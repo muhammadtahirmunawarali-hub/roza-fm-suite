@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Register View (grid mode with bulk actions, CSV import, print, workflow, saved views)
+// Roza FM Suite — Register View (grid mode with bulk actions, CSV import, print, workflow, saved views)
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { recordsApi, registersApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef } from '@/lib/erp/types';
@@ -60,7 +60,7 @@ export function RegisterView({ registerId }: Props) {
   const [workflowTarget, setWorkflowTarget] = useState<RecordData | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecordData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [company, setCompany] = useState({ name: 'FMCore Facilities Management', address: '', phone: '', email: '', tax_number: '' });
+  const [company, setCompany] = useState({ name: 'Roza FM Facilities', address: '', phone: '', email: '', tax_number: '' });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const [columnEditorOpen, setColumnEditorOpen] = useState(false);
@@ -122,7 +122,7 @@ export function RegisterView({ registerId }: Props) {
           const map: Record<string, string> = {};
           settings.forEach((s: any) => (map[s.key] = s.value));
           setCompany({
-            name: map['company.name'] || 'FMCore Facilities Management',
+            name: map['company.name'] || 'Roza FM Facilities',
             address: map['company.address'] || '',
             phone: map['company.phone'] || '',
             email: map['company.email'] || '',

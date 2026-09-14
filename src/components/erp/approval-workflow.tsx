@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Approval Workflow Panel
+// Roza FM Suite — Approval Workflow Panel
 // Shows current status + available transitions (Approve/Reject/Submit/etc.)
 // based on the user's role permissions.
 import { useEffect, useState } from 'react';

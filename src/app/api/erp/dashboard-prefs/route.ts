@@ -1,4 +1,4 @@
-// FMCore ERP — Dashboard Preferences API
+// Roza FM Suite — Dashboard Preferences API
 // GET  /api/erp/dashboard-prefs           → get current user's dashboard preferences
 // POST /api/erp/dashboard-prefs           → save dashboard preferences
 import { NextRequest, NextResponse } from 'next/server';

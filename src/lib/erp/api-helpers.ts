@@ -1,4 +1,4 @@
-// FMCore ERP — API Helpers
+// Roza FM Suite — API Helpers
 // Reusable utilities for API route handlers: error wrapping, validation, responses.
 import { NextResponse } from 'next/server';
 import { getCurrentUser, hasPermission, type AuthUser } from './auth';

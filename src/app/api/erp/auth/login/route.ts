@@ -1,4 +1,4 @@
-// FMCore ERP — Auth: Login
+// Roza FM Suite — Auth: Login
 // POST /api/erp/auth/login  { username, password }
 // Sets a session cookie (fmcore_session) and returns the user
 import { NextResponse } from 'next/server';

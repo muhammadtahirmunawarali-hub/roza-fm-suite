@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — WO Stage Workflow Component
+// Roza FM Suite — WO Stage Workflow Component
 // Visual lifecycle tracker for Work Orders / Preventive Maintenance.
 // Shows the 7-stage workflow (Open → Assigned → In Progress → On Hold → Completion → Closed → Cancelled)
 // with auto-timestamps, completion notes, and quick transition buttons.

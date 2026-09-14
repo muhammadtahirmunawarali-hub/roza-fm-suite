@@ -1,4 +1,4 @@
-// FMCore ERP — SaaS Tenant Management API (Super Admin only)
+// Roza FM Suite — SaaS Tenant Management API (Super Admin only)
 // GET /api/erp/saas/tenants → list all tenants with usage stats
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';

@@ -1,4 +1,4 @@
-// FMCore ERP — Audit Logs API
+// Roza FM Suite — Audit Logs API
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 

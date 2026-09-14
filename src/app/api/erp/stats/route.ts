@@ -1,4 +1,4 @@
-// FMCore ERP — System Stats API
+// Roza FM Suite — System Stats API
 // GET /api/erp/stats → returns global system statistics
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';

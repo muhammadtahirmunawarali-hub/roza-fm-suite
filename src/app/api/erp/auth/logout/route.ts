@@ -1,4 +1,4 @@
-// FMCore ERP — Auth: Logout
+// Roza FM Suite — Auth: Logout
 // POST /api/erp/auth/logout
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';

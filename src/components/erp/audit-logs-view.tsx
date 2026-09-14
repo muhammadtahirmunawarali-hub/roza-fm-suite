@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Audit Logs view (with proper Dialog + styling polish)
+// Roza FM Suite — Audit Logs view (with proper Dialog + styling polish)
 import { useEffect, useState } from 'react';
 import { auditApi } from '@/lib/erp/api';
 import type { AuditLog } from '@/lib/erp/types';

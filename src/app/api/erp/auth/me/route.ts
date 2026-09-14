@@ -1,4 +1,4 @@
-// FMCore ERP — Auth: Current user (GET /api/erp/auth/me)
+// Roza FM Suite — Auth: Current user (GET /api/erp/auth/me)
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';

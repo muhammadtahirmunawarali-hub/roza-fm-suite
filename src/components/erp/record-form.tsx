@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Record Form Modal (create / edit) with sectioned layout
+// Roza FM Suite — Record Form Modal (create / edit) with sectioned layout
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';

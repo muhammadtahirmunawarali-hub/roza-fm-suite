@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Project Status Panel
+// Roza FM Suite — Project Status Panel
 // Visual breakdown of WebApp vs SaaS readiness, module completion table,
 // phased recommendations, and image management recommendations.
 import { FAIcon } from './icon';
@@ -423,7 +423,7 @@ export function ProjectStatusPanel() {
               </div>
               <div>
                 <h1 className="text-[16px] font-bold text-[var(--erp-text)] leading-tight">
-                  FMCore ERP — Project Status
+                  Roza FM Suite — Project Status
                 </h1>
                 <p className="text-[11px] text-[var(--erp-text-muted)] mt-0.5">
                   {today}
@@ -725,7 +725,7 @@ export function ProjectStatusPanel() {
           {/* Footer */}
           {/* ----------------------------------------------------------------- */}
           <div className="pt-2 border-t border-[var(--erp-border)] flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
-            <span>FMCore ERP · Internal Status Report · Generated {today}</span>
+            <span>Roza FM Suite · Internal Status Report · Generated {today}</span>
             <span className="flex items-center gap-1">
               <Shield className="w-3 h-3" />
               Confidential

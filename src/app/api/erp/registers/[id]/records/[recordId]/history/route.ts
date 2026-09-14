@@ -1,4 +1,4 @@
-// FMCore ERP — Record history (audit log entries for a specific record)
+// Roza FM Suite — Record history (audit log entries for a specific record)
 // GET /api/erp/registers/[id]/records/[recordId]/history
 // Returns all audit log entries for this record, sorted by date descending.
 import { NextRequest, NextResponse } from 'next/server';

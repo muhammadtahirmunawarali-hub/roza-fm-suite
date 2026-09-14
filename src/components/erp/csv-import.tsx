@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — CSV Import Modal
+// Roza FM Suite — CSV Import Modal
 // Workflow: Select file → preview first 10 rows → map columns → validate → import
 import { useState, useRef, useCallback } from 'react';
 import { recordsApi } from '@/lib/erp/api';

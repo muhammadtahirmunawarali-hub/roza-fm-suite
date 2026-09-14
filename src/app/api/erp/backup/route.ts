@@ -1,4 +1,4 @@
-// FMCore ERP — Backup / Restore
+// Roza FM Suite — Backup / Restore
 // GET  /api/erp/backup  → JSON export of all data
 // POST /api/erp/backup  → { data } restore from JSON
 import { NextRequest, NextResponse } from 'next/server';

@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Register Builder Modal
+// Roza FM Suite — Register Builder Modal
 // Lets users create new registers with custom columns (Form Builder pattern)
 import { useState } from 'react';
 import { registersApi, COLUMN_TYPE_META } from '@/lib/erp/api';

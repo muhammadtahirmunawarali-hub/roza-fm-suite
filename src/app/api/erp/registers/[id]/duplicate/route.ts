@@ -1,4 +1,4 @@
-// FMCore ERP — Duplicate Register API
+// Roza FM Suite — Duplicate Register API
 // POST /api/erp/registers/[id]/duplicate → create a copy of an existing register
 // Options: { copyRecords: boolean, newName?: string }
 import { NextRequest, NextResponse } from 'next/server';

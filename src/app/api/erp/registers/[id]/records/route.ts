@@ -1,4 +1,4 @@
-// FMCore ERP — Records API (paginated, searchable, sortable, filterable)
+// Roza FM Suite — Records API (paginated, searchable, sortable, filterable)
 // GET  /api/erp/registers/[id]/records?page=1&pageSize=25&search=&sortField=&sortDir=asc&f_Status=
 // POST /api/erp/registers/[id]/records   { data: {...} }
 // Server-side permission checks: POST requires 'create' permission.

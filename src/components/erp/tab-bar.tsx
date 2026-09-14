@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Tab Bar (with Excel-like Tab Navigator dropdown)
+// Roza FM Suite — Tab Bar (with Excel-like Tab Navigator dropdown)
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { TabNavigator } from './tab-navigator';

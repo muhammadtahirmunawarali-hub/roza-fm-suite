@@ -1,4 +1,4 @@
-// FMCore ERP — Single Record
+// Roza FM Suite — Single Record
 // GET    /api/erp/registers/[id]/records/[recordId]
 // PUT    /api/erp/registers/[id]/records/[recordId]   (requires 'edit' permission)
 // DELETE /api/erp/registers/[id]/records/[recordId]   (requires 'delete' permission, soft-delete)

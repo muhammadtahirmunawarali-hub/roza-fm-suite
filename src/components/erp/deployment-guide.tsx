@@ -13,7 +13,7 @@ export function DeploymentGuide() {
         <Rocket className="w-5 h-5 text-[var(--erp-accent)]" />
         <div>
           <h2 className="text-[15px] font-semibold text-[var(--erp-text)]">Deployment & Installation Guide</h2>
-          <p className="text-[11px] text-[var(--erp-text-muted)]">How to install, run, and deploy FMCore ERP</p>
+          <p className="text-[11px] text-[var(--erp-text-muted)]">How to install, run, and deploy Roza FM Suite</p>
         </div>
       </div>
       <div className="flex gap-1 px-3 py-2 border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)]">

@@ -1,4 +1,4 @@
-// FMCore ERP — Related Records API
+// Roza FM Suite — Related Records API
 // GET /api/erp/registers/[id]/records/[recordId]/related
 // Finds records in OTHER registers that reference the same entity (employee, building, asset, etc.)
 // For example, if viewing a Work Order assigned to "Ahmed Ali" on "Building A",

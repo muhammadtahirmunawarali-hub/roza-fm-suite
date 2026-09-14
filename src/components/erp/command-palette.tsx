@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Command Palette (Ctrl+K) — global search + quick actions
+// Roza FM Suite — Command Palette (Ctrl+K) — global search + quick actions
 import { useEffect, useState, useMemo } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { registersApi, searchApi, backupApi } from '@/lib/erp/api';

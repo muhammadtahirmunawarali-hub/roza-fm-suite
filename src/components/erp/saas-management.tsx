@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — SaaS Management Panel
+// Roza FM Suite — SaaS Management Panel
 // Shows all tenants, usage stats, plan limits, and onboarding flow.
 import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';

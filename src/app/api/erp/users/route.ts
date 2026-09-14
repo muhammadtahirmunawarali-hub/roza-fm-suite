@@ -1,4 +1,4 @@
-// FMCore ERP — Users API (admin management)
+// Roza FM Suite — Users API (admin management)
 // GET  /api/erp/users           → list all users
 // POST /api/erp/users           → create a new user (requires 'create' permission on 'users' module)
 import { NextResponse } from 'next/server';

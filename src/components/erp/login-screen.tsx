@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Login Screen
+// Roza FM Suite — Login Screen
 import { useEffect, useState } from 'react';
 import { authApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
@@ -90,7 +90,7 @@ export function LoginScreen() {
             </div>
             <div>
               <div className="text-[26px] font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-                FMCore <span className="text-[var(--erp-accent)]">ERP</span>
+                Roza <span className="text-[var(--erp-accent)]">FM Suite</span>
               </div>
               <div className="text-[12px] text-[var(--erp-text-muted)]">Facility Management Suite</div>
             </div>
@@ -132,7 +132,7 @@ export function LoginScreen() {
             </div>
             <div>
               <div className="text-[20px] font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-                FMCore <span className="text-[var(--erp-accent)]">ERP</span>
+                Roza <span className="text-[var(--erp-accent)]">FM Suite</span>
               </div>
               <div className="text-[10px] text-[var(--erp-text-muted)]">Facility Management Suite</div>
             </div>
@@ -247,7 +247,7 @@ export function LoginScreen() {
           </div>
 
           <div className="mt-6 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
-            <span>FMCore ERP v1.0.0 · Schema v2</span>
+            <span>Roza FM Suite v1.0.0 · Schema v2</span>
             <button
               type="button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

@@ -8,9 +8,9 @@ export const GET = apiHandler(async (req: NextRequest) => {
   const branding: Record<string, string> = {};
   settings.forEach((s) => { branding[s.key] = s.value; });
   const defaults = {
-    'branding.app_name': 'FMCore ERP', 'branding.tagline': 'Facility Management Suite',
+    'branding.app_name': 'Roza FM Suite', 'branding.tagline': 'Facility Management Suite',
     'branding.primary_color': '#00D4AA', 'branding.accent_color': '#8B5CF6',
-    'branding.logo_url': '/icon.svg', 'branding.footer_text': 'FMCore ERP v1.0.0',
+    'branding.logo_url': '/icon.svg', 'branding.footer_text': 'Roza FM Suite v1.0.0',
   };
   return NextResponse.json({ ok: true, branding: { ...defaults, ...branding } });
 });

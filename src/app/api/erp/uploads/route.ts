@@ -1,4 +1,4 @@
-// FMCore ERP — Uploads API
+// Roza FM Suite — Uploads API
 // POST   /api/erp/uploads          → upload an image/file, returns { url, filename, size, mimeType }
 // GET    /api/erp/uploads          → list all uploaded files (Super Admin / Manager only)
 // DELETE /api/erp/uploads?filename → remove an uploaded file

@@ -1,4 +1,4 @@
-// FMCore ERP — Bulk record creation (for CSV import)
+// Roza FM Suite — Bulk record creation (for CSV import)
 // POST /api/erp/registers/[id]/records/bulk  { records: [{...}, {...}] }
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';

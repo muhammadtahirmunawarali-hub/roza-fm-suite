@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Flow Guidance (A>B>C>D for each page)
+// Roza FM Suite — Flow Guidance (A>B>C>D for each page)
 // Shows step-by-step workflow for each major section of the ERP.
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Workflow, ClipboardList, Wrench, Shield, Package, Users, BarChart3 } from 'lucide-react';

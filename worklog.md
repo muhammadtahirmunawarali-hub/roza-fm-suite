@@ -4973,3 +4973,63 @@ None this round — all features verified working, no bugs found.
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 95 — Brand Rename (FMCore ERP → Roza FM Suite) + Multi-Image Support
+
+### Brand Rename: FMCore ERP → Roza FM Suite
+
+**What changed**: Replaced "FMCore ERP" → "Roza FM Suite" and "FMCore Facilities Management" → "Roza FM Facilities" across all user-visible text:
+- Browser tab title
+- Login screen heading + footer
+- Sidebar logo
+- Status bar
+- PWA install prompt
+- AI Assistant greeting
+- Print record footer
+- Settings → About
+- Error pages
+- All component comments
+
+**What didn't change** (intentional):
+- Cookie name `fmcore_session` (changing would break existing sessions)
+- Storage key `fmcore-erp-state` (would lose user preferences)
+- Webhook headers `X-FMCore-Event` (API contract)
+- API route paths `/api/erp/` (URL structure)
+
+**Verified**: Login page, sidebar, status bar all show "Roza FM Suite" ✅
+
+### Multi-Image Support (NEW)
+
+**Problem**: Each image field (Before Image, After Image, Completion Image) only supported ONE image. Users need to upload multiple before/after photos for work orders.
+
+**Fix**: Upgraded `DrawerImageField` to support multiple images:
+1. **Multi-select upload**: File input now has `multiple` attribute — users can select several images at once
+2. **Image gallery**: Displays a grid of thumbnails (3-4 per row) with numbered badges
+3. **Individual delete**: Each image has an X button (visible on hover) to remove just that image
+4. **Add more**: A "+" tile at the end of the gallery to add more images
+5. **Backward compatible**: Single existing images (string) are automatically wrapped in an array for display; new uploads with 1 image stored as string (backward compat), 2+ stored as array
+
+**Storage format**:
+- 0 images: `""` (empty string)
+- 1 image: `"url"` (string — backward compatible with old data)
+- 2+ images: `["url1", "url2", "url3"]` (array)
+
+**Also updated**: Details tab (read-only view) now shows a multi-image gallery with numbered badges (1/3, 2/3, etc.) instead of a single image.
+
+### Files Changed
+1. All `src/**/*.tsx` and `src/**/*.ts` files — brand rename via sed
+2. `prisma/schema.prisma` — brand rename in comments
+3. `src/lib/erp/seed.ts` — brand rename in default company name
+4. `src/components/erp/record-detail-drawer.tsx`:
+   - `DrawerImageField` — completely rewritten for multi-image support
+   - Details tab `FieldCard` — multi-image gallery display
+   - Added `useMemo`, `Plus`, `ImageIcon` imports
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

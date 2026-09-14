@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Sparkline (mini trend chart for KPI cards)
+// Roza FM Suite — Sparkline (mini trend chart for KPI cards)
 import { useMemo } from 'react';
 
 interface Props {

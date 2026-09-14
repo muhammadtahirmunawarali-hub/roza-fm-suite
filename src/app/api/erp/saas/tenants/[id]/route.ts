@@ -1,4 +1,4 @@
-// FMCore ERP — SaaS Tenant Management by ID (Super Admin only)
+// Roza FM Suite — SaaS Tenant Management by ID (Super Admin only)
 // DELETE /api/erp/saas/tenants/[id] → delete tenant + all its users
 // PUT /api/erp/saas/tenants/[id] → update tenant (plan, limits, status)
 import { NextRequest, NextResponse } from 'next/server';

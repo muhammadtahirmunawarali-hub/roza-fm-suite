@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Maintenance & Update Guide
+// Roza FM Suite — Maintenance & Update Guide
 // How to add features, fix bugs, and update the app after deployment.
 // Also includes Desktop App (.exe) plan and Final Audit Checklist.
 import { useState } from 'react';
@@ -139,7 +139,7 @@ bunx tauri init
 # → Build command: bun run build
 
 # 3. Configure tauri.conf.json
-# Set window title: "FMCore ERP"
+# Set window title: "Roza FM Suite"
 # Set width: 1400, height: 900
 # Set fullscreen: false
 

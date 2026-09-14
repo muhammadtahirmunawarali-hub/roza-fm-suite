@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Saved Views dropdown
+// Roza FM Suite — Saved Views dropdown
 // Shows a dropdown to save/load/delete named filter views for a register.
 import { useEffect, useState, useRef } from 'react';
 import { savedViewsApi } from '@/lib/erp/api';

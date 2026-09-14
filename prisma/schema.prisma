@@ -1,4 +1,4 @@
-// FMCore ERP — Prisma Schema
+// Roza FM Suite — Prisma Schema
 // Dynamic Register & Form Builder architecture.
 // Registers are schema-driven (columns stored as JSON), records are JSON blobs.
 // This keeps the FMCore DNA while giving us a real relational DB ready for SaaS migration.

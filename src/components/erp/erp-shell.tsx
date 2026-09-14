@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Main Shell
+// Roza FM Suite — Main Shell
 // Composes: Sidebar + (Toolbar + TabBar + Content + StatusBar) + AI panel + Notifications + Command Palette + Builder + Shortcuts
 // Handles auth gating — shows LoginScreen if user not authenticated.
 import { useEffect, useState } from 'react';
@@ -171,7 +171,7 @@ export function ErpShell() {
           <div className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center text-white font-bold text-xl animate-pulse" style={{ background: 'linear-gradient(135deg, var(--erp-accent), #009975)' }}>
             F
           </div>
-          <div className="text-[13px]">Loading FMCore ERP...</div>
+          <div className="text-[13px]">Loading Roza FM Suite...</div>
         </div>
       </div>
     );

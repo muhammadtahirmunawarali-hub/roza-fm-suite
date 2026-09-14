@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Settings view (with Saved Views management tab)
+// Roza FM Suite — Settings view (with Saved Views management tab)
 import { useEffect, useState } from 'react';
 import { settingsApi, backupApi, savedViewsApi, statsApi, type SavedViewMeta, type SystemStats } from '@/lib/erp/api';
 import type { Setting } from '@/lib/erp/types';
@@ -632,7 +632,7 @@ export function SettingsView() {
           {activeTab === 'about' && (
             <div className="space-y-4 max-w-2xl">
               <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
-                <Info className="w-4 h-4 text-[var(--erp-accent)]" /> About FMCore ERP
+                <Info className="w-4 h-4 text-[var(--erp-accent)]" /> About Roza FM Suite
               </h2>
               <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3 text-[12px]">
@@ -642,7 +642,7 @@ export function SettingsView() {
                   <div><span className="text-[var(--erp-text-muted)]">Database:</span> <span className="text-[var(--erp-text)]">SQLite (Prisma)</span></div>
                 </div>
                 <div className="text-[12px] text-[var(--erp-text-secondary)] pt-3 border-t border-[var(--erp-border)]">
-                  FMCore ERP is a dynamic register & form builder for enterprise facility management.
+                  Roza FM Suite is a dynamic register & form builder for enterprise facility management.
                   Built with a SaaS-ready architecture — every record carries tenant/company/branch fields
                   ready for future multi-tenant migration.
                 </div>

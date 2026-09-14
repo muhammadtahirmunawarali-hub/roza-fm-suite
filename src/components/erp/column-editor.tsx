@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Column Editor Modal (with drag-and-drop reordering)
+// Roza FM Suite — Column Editor Modal (with drag-and-drop reordering)
 // Allows editing columns of an existing register (rename, retype, add, delete, drag-reorder)
 import { useState, useCallback, useRef } from 'react';
 import { registersApi, COLUMN_TYPE_META } from '@/lib/erp/api';

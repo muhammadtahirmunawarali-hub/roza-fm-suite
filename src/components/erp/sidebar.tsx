@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Sidebar (with permission filtering)
+// Roza FM Suite — Sidebar (with permission filtering)
 // Shows logo, search, navigation tree (categories → registers), and footer actions.
 // Registers the user can't view are hidden from the sidebar.
 import { useEffect, useMemo, useState } from 'react';
@@ -123,7 +123,7 @@ export function Sidebar() {
           {!collapsed && (
             <div className="flex-1 min-w-0 overflow-hidden">
               <div className="font-semibold text-[14px] truncate" style={{ fontFamily: 'var(--font-display)' }}>
-                FMCore <span className="text-[var(--erp-accent)]">ERP</span>
+                Roza <span className="text-[var(--erp-accent)]">FM Suite</span>
               </div>
               <div className="text-[10px] text-[var(--erp-text-muted)] truncate">Facility Management Suite</div>
             </div>

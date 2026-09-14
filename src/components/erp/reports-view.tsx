@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Reports view
+// Roza FM Suite — Reports view
 // Generates dynamic reports from register data.
 import { useEffect, useMemo, useState } from 'react';
 import { registersApi } from '@/lib/erp/api';

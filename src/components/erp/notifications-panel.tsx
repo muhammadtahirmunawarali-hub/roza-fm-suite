@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Notifications Panel
+// Roza FM Suite — Notifications Panel
 import { useEffect, useState } from 'react';
 import { notificationsApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';

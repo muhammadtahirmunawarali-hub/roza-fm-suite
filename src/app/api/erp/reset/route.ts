@@ -1,4 +1,4 @@
-// FMCore ERP — Reset endpoint (wipes everything, then re-seeds)
+// Roza FM Suite — Reset endpoint (wipes everything, then re-seeds)
 import { NextResponse } from 'next/server';
 import { resetDatabase, seedDatabase } from '@/lib/erp/seed';
 

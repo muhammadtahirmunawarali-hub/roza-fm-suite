@@ -1,4 +1,4 @@
-// FMCore ERP — Server-side auth + permission helpers
+// Roza FM Suite — Server-side auth + permission helpers
 // Shared across all API routes that need permission checks.
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';

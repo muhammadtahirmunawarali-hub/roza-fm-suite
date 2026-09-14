@@ -1,4 +1,4 @@
-// FMCore ERP — Seed endpoint (manual trigger)
+// Roza FM Suite — Seed endpoint (manual trigger)
 import { NextResponse } from 'next/server';
 import { seedDatabase } from '@/lib/erp/seed';
 

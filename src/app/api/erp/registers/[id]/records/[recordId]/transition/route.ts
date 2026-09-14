@@ -1,4 +1,4 @@
-// FMCore ERP — Record status transition (approval workflow)
+// Roza FM Suite — Record status transition (approval workflow)
 // POST /api/erp/registers/[id]/records/[recordId]/transition
 //   { action: 'approve' | 'reject' | 'submit' | 'cancel' | 'reopen', comment?: string }
 // Returns the updated record.

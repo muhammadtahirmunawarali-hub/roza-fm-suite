@@ -1,4 +1,4 @@
-// FMCore ERP — Registers API
+// Roza FM Suite — Registers API
 // GET  /api/erp/registers          → list all registers (grouped by category)
 // POST /api/erp/registers          → create a new register
 import { NextRequest, NextResponse } from 'next/server';

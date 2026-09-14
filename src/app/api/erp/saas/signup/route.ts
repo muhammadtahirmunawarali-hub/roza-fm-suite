@@ -1,4 +1,4 @@
-// FMCore ERP — SaaS Tenant Signup API
+// Roza FM Suite — SaaS Tenant Signup API
 // POST /api/erp/saas/signup → create a new tenant + admin user
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';

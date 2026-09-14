@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Dashboard Customize Modal
+// Roza FM Suite — Dashboard Customize Modal
 // Lets users pin/hide KPIs and charts, and reorder them.
 import { useEffect, useState } from 'react';
 import { dashboardApi, dashboardPrefsApi, type DashboardPrefs } from '@/lib/erp/api';

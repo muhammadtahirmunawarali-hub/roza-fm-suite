@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Bulk Actions bar
+// Roza FM Suite — Bulk Actions bar
 // Shown when one or more rows are selected in the register view.
 // Provides: Select All, Clear Selection, Bulk Delete, Bulk Export, Print Selected
 import { useState } from 'react';

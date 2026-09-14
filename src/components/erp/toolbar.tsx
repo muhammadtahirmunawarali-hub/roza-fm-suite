@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Top Toolbar
+// Roza FM Suite — Top Toolbar
 import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';

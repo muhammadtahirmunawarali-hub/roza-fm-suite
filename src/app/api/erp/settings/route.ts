@@ -1,4 +1,4 @@
-// FMCore ERP — Settings API
+// Roza FM Suite — Settings API
 // GET  /api/erp/settings          → list all settings
 // POST /api/erp/settings         → set one setting { key, value, category }
 // PUT  /api/erp/settings         → bulk set [{ key, value, category? }]

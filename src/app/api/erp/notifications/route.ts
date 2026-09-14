@@ -1,4 +1,4 @@
-// FMCore ERP — Notifications API
+// Roza FM Suite — Notifications API
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { apiHandler } from '@/lib/erp/api-helpers';

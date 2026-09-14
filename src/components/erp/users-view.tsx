@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Users Management view (admin only)
+// Roza FM Suite — Users Management view (admin only)
 import { useEffect, useState } from 'react';
 import { usersApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';

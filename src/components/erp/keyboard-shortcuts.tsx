@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Keyboard Shortcuts Help Modal
+// Roza FM Suite — Keyboard Shortcuts Help Modal
 // Documents all available keyboard shortcuts in the app.
 import { useErpStore } from '@/lib/erp/store';
 import { cn } from '@/lib/utils';

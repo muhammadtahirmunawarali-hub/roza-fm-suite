@@ -1,4 +1,4 @@
-// FMCore ERP — Register by ID
+// Roza FM Suite — Register by ID
 // GET    /api/erp/registers/[id]   → get one register
 // PUT    /api/erp/registers/[id]   → update a register
 // DELETE /api/erp/registers/[id]   → soft-delete a register

@@ -1,4 +1,4 @@
-// FMCore ERP — All Saved Views API (for management page)
+// Roza FM Suite — All Saved Views API (for management page)
 // GET /api/erp/saved-views/all  → list all saved views across all registers
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';

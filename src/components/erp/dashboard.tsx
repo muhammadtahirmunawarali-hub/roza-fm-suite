@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Dashboard (with clickable KPIs, quick actions, recent records, custom widgets)
+// Roza FM Suite — Dashboard (with clickable KPIs, quick actions, recent records, custom widgets)
 import { useEffect, useState, useMemo } from 'react';
 import { dashboardApi, dashboardPrefsApi, registersApi, type DashboardPrefs } from '@/lib/erp/api';
 import type { DashboardData, Register } from '@/lib/erp/types';

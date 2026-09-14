@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — User Menu (dropdown from toolbar profile)
+// Roza FM Suite — User Menu (dropdown from toolbar profile)
 import { useEffect, useRef, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';
 import { authApi } from '@/lib/erp/api';

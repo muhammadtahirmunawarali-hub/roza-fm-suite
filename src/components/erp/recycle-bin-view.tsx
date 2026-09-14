@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Recycle Bin View
+// Roza FM Suite — Recycle Bin View
 // Shows all soft-deleted records with restore + permanent delete options.
 import { useEffect, useState } from 'react';
 import { useErpStore } from '@/lib/erp/store';

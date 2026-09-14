@@ -1,4 +1,4 @@
-// FMCore ERP — Stock Movements API
+// Roza FM Suite — Stock Movements API
 // GET  /api/erp/stock-movements          → list all movements (optional ?woRecordId= or ?movementType=)
 // POST /api/erp/stock-movements          → create a new stock movement (issue material to WO, return, adjust)
 import { NextRequest, NextResponse } from 'next/server';

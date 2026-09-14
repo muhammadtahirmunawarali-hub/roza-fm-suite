@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — AI Assistant Panel
+// Roza FM Suite — AI Assistant Panel
 import { useEffect, useRef, useState } from 'react';
 import { aiApi, registersApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
@@ -24,7 +24,7 @@ const SUGGESTIONS = [
 export function AiAssistant() {
   const { aiPanelOpen, setAiPanel, openTab, setBuilderOpen } = useErpStore();
   const [messages, setMessages] = useState<Msg[]>([
-    { role: 'assistant', content: "Hello! I'm your FMCore ERP AI Assistant with full CRUD capabilities. I can:\n\n📊 **Answer questions** — \"How many open work orders?\"\n✨ **Create records** — \"Create a work order for Pump-05 leakage\"\n✏️ **Update records** — \"Update WO-0001 status to Completed\"\n🗑️ **Delete records** — \"Delete WO-0003\"\n📖 **Guide you** — \"How do I change the currency?\"\n\nTry asking me anything!" },
+    { role: 'assistant', content: "Hello! I'm your Roza FM Suite AI Assistant with full CRUD capabilities. I can:\n\n📊 **Answer questions** — \"How many open work orders?\"\n✨ **Create records** — \"Create a work order for Pump-05 leakage\"\n✏️ **Update records** — \"Update WO-0001 status to Completed\"\n🗑️ **Delete records** — \"Delete WO-0003\"\n📖 **Guide you** — \"How do I change the currency?\"\n\nTry asking me anything!" },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

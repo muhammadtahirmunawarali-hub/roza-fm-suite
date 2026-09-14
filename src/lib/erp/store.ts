@@ -1,6 +1,6 @@
 'use client';
 
-// FMCore ERP — Client state (Zustand)
+// Roza FM Suite — Client state (Zustand)
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Tab, User } from './types';

@@ -1,4 +1,4 @@
-// FMCore ERP — Sample Data
+// Roza FM Suite — Sample Data
 // All registers extracted & preserved from the original DD.html reference file.
 // Each register has columns + sample records so the app feels alive on first launch.
 

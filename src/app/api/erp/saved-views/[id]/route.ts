@@ -1,4 +1,4 @@
-// FMCore ERP — Saved View by ID (DELETE)
+// Roza FM Suite — Saved View by ID (DELETE)
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 

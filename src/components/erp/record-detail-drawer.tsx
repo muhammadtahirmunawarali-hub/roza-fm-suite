@@ -1,9 +1,9 @@
 'use client';
 
-// FMCore ERP — Record Detail Drawer (slide-in panel from right)
+// Roza FM Suite — Record Detail Drawer (slide-in panel from right)
 // Replaces the View modal with a richer UX: tabs for Details / History / Activity,
 // inline workflow actions, inline field editing, and a timeline of status transitions.
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useErpStore } from '@/lib/erp/store';
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   X, Printer, Pencil, Workflow as WorkflowIcon, History as HistoryIcon,
   FileText, Activity, Clock, CheckCircle2, ArrowRight, Loader2,
-  Check, XCircle, AlertCircle, Star, Download, Link2, Upload,
+  Check, XCircle, AlertCircle, Star, Download, Link2, Upload, Plus, Image as ImageIcon,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -814,12 +814,28 @@ function DrawerImageField({ value, onChange }: { value: any; onChange: (v: any) 
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Support both single URL (string) and multiple URLs (array)
+  // Backward-compatible: if value is a string, treat as single-image array
+  const images: string[] = useMemo(() => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string' && value.startsWith('[')) {
+      try { return JSON.parse(value).filter(Boolean); } catch { return [value]; }
+    }
+    return [String(value)];
+  }, [value]);
+
+  const updateImages = (newImages: string[]) => {
+    // Store as array if more than 1, or as string if only 1 (backward compat)
+    onChange(newImages.length === 1 ? newImages[0] : newImages.length === 0 ? '' : newImages);
+  };
+
   const handleFile = async (file: File) => {
     if (!file) return;
     setUploading(true);
     try {
       const result = await uploadsApi.upload(file);
-      onChange(result.url);
+      updateImages([...images, result.url]);
       toast.success('Image uploaded');
     } catch (e: any) {
       toast.error('Upload failed', { description: e.message });
@@ -828,42 +844,93 @@ function DrawerImageField({ value, onChange }: { value: any; onChange: (v: any) 
     }
   };
 
+  const handleMultipleFiles = async (files: FileList) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        const result = await uploadsApi.upload(file);
+        newUrls.push(result.url);
+      }
+      updateImages([...images, ...newUrls]);
+      toast.success(`${newUrls.length} image(s) uploaded`);
+    } catch (e: any) {
+      toast.error('Upload failed', { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    updateImages(images.filter((_, i) => i !== idx));
+  };
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="space-y-2">
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+        onChange={(e) => { const files = e.target.files; if (files && files.length > 0) { if (files.length === 1) handleFile(files[0]); else handleMultipleFiles(files); } e.target.value = ''; }}
       />
-      {value ? (
-        <div className="relative">
-          <img src={String(value)} alt="preview" className="w-16 h-16 object-cover rounded-md border border-[var(--erp-border)]" />
+      {/* Image gallery */}
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map((url, idx) => (
+            <div key={idx} className="relative group">
+              <img src={url} alt={`Image ${idx + 1}`} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)]" />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
+                aria-label={`Remove image ${idx + 1}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+              <span className="absolute bottom-0.5 left-0.5 text-[8px] bg-black/60 text-white px-1 rounded">
+                {idx + 1}
+              </span>
+            </div>
+          ))}
+          {/* Add more button */}
           <button
             type="button"
-            onClick={() => onChange('')}
-            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center hover:scale-110 transition-transform"
-            aria-label="Remove image"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full aspect-square rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)] hover:border-[var(--erp-accent-border)] hover:text-[var(--erp-accent)] transition-colors disabled:opacity-50"
+            aria-label="Add more images"
           >
-            <X className="w-3 h-3" />
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
           </button>
         </div>
-      ) : (
-        <div className="w-16 h-16 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)]">
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+      )}
+      {/* Upload button (when no images) */}
+      {images.length === 0 && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-20 h-20 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)] hover:border-[var(--erp-accent-border)] hover:text-[var(--erp-accent)] transition-colors disabled:opacity-50"
+            aria-label="Upload images"
+          >
+            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+          </button>
+          <div className="text-[10px] text-[var(--erp-text-muted)]">
+            Click to upload<br />
+            <span className="text-[var(--erp-accent)]">Multiple images supported</span>
+          </div>
         </div>
       )}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="h-8 text-[11px]"
-      >
-        {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...</> : <><Upload className="w-3.5 h-3.5 mr-1" /> {value ? 'Replace' : 'Upload'}</>}
-      </Button>
+      {images.length > 0 && (
+        <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+          <ImageIcon className="w-3 h-3" />
+          {images.length} image{images.length !== 1 ? 's' : ''} · Click + to add more
+        </div>
+      )}
     </div>
   );
 }
@@ -984,10 +1051,26 @@ function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef
           ))}
         </div>
       ) : col.type === 'image' ? (
-        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="block group">
-          <img src={String(value)} alt={col.name} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)] group-hover:border-[var(--erp-accent)] transition-colors" />
-          <div className="text-[9px] text-[var(--erp-text-muted)] mt-1 truncate">{col.name}</div>
-        </a>
+        // Multi-image gallery: supports both single URL (string) and array of URLs
+        (() => {
+          const imgs: string[] = !value ? [] :
+            Array.isArray(value) ? value.filter(Boolean) :
+            (typeof value === 'string' && value.startsWith('[')) ? ((() => { try { return JSON.parse(value); } catch { return [value]; } })().filter(Boolean)) :
+            [String(value)];
+          if (imgs.length === 0) return <span className="text-[12px] text-[var(--erp-text-muted)] italic">—</span>;
+          return (
+            <div className="grid grid-cols-2 gap-1.5">
+              {imgs.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group relative">
+                  <img src={url} alt={`${col.name} ${i + 1}`} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)] group-hover:border-[var(--erp-accent)] transition-colors" />
+                  {imgs.length > 1 && (
+                    <span className="absolute top-1 left-1 text-[8px] bg-black/60 text-white px-1 rounded">{i + 1}/{imgs.length}</span>
+                  )}
+                </a>
+              ))}
+            </div>
+          );
+        })()
       ) : col.type === 'url' ? (
         <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[var(--erp-accent)] hover:underline break-all">
           {String(value)}

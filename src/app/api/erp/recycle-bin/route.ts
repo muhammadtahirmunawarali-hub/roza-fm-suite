@@ -1,4 +1,4 @@
-// FMCore ERP — Recycle Bin API
+// Roza FM Suite — Recycle Bin API
 // GET  /api/erp/recycle-bin → list all soft-deleted records
 // POST /api/erp/recycle-bin?id=...&action=restore → restore a record
 // DELETE /api/erp/recycle-bin?id=... → permanently delete a record

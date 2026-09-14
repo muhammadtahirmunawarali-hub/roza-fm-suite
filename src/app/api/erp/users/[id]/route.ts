@@ -1,4 +1,4 @@
-// FMCore ERP — User by ID (GET / PUT / DELETE)
+// Roza FM Suite — User by ID (GET / PUT / DELETE)
 // PUT requires 'edit' permission on 'users' module.
 // DELETE requires 'delete' permission on 'users' module.
 import { NextRequest, NextResponse } from 'next/server';
