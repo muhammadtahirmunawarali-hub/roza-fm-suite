@@ -35,7 +35,12 @@ export const POST = apiHandler(async (req: NextRequest) => {
     });
     
     const initials = adminName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-    const username = adminEmail.split('@')[0];
+    // Generate unique username — append number if collision (e.g. john → john2 → john3)
+    let username = adminEmail.split('@')[0];
+    let suffix = 1;
+    while (await tx.user.findUnique({ where: { username } })) {
+      username = `${adminEmail.split('@')[0]}${++suffix}`;
+    }
     
     const user = await tx.user.create({
       data: {
