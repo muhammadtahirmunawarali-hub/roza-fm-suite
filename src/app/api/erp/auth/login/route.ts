@@ -80,6 +80,7 @@ export const POST = apiHandler(async (req) => {
       avatar: user.avatar,
       status: user.status,
       permissions: JSON.parse(user.permissions),
+      tenantId: user.tenantId, // SaaS: links user to their tenant company (null = Super Admin)
       lastLoginAt: user.lastLoginAt?.toISOString() || null,
     },
   });

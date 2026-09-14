@@ -13,6 +13,7 @@ export interface AuthUser {
   avatar: string | null;
   status: string;
   permissions: { module: string; actions: string[] }[];
+  tenantId: string | null; // SaaS: null = Super Admin / system user, otherwise links to Tenant
 }
 
 /**
@@ -47,6 +48,7 @@ export async function getCurrentUser(req: NextRequest): Promise<AuthUser | null>
     avatar: session.user.avatar,
     status: session.user.status,
     permissions: JSON.parse(session.user.permissions),
+    tenantId: session.user.tenantId,
   };
 }
 

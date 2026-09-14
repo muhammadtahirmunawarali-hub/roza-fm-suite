@@ -167,6 +167,7 @@ export interface User {
   avatar?: string | null;
   status: string;
   permissions: any[];
+  tenantId?: string | null; // SaaS: null = Super Admin / system user, otherwise links to Tenant
   lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;

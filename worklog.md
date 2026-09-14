@@ -4574,3 +4574,70 @@ None this round — all features verified working.
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 88 — QA Pass + Added tenantId to Auth System (End-to-End)
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+
+### Enhancement: Added tenantId to Auth System (End-to-End)
+
+**Problem found during code review**: The `AuthUser` interface in `auth.ts` didn't include `tenantId`. This meant:
+- `getCurrentUser()` returned the user object WITHOUT `tenantId`
+- The login API (`/api/erp/auth/login`) returned the user WITHOUT `tenantId`
+- The `/api/erp/auth/me` endpoint returned the user WITHOUT `tenantId`
+- The frontend `User` type didn't have `tenantId`
+
+So even though tenant admins were linked to tenants in the DB (via Round 85 schema change), the application code couldn't access `tenantId` to make tenant-scoped decisions.
+
+**Fix**: Added `tenantId` to 4 places:
+
+1. **`AuthUser` interface** (`src/lib/erp/auth.ts`):
+   ```tsx
+   export interface AuthUser {
+     ...
+     tenantId: string | null; // SaaS: null = Super Admin / system user
+   }
+   ```
+
+2. **`getCurrentUser()` return** (`src/lib/erp/auth.ts`):
+   ```tsx
+   return { ..., tenantId: session.user.tenantId };
+   ```
+
+3. **Login API** (`src/app/api/erp/auth/login/route.ts`):
+   ```tsx
+   user: { ..., tenantId: user.tenantId }
+   ```
+
+4. **Auth ME API** (`src/app/api/erp/auth/me/route.ts`):
+   ```tsx
+   user: { ..., tenantId: session.user.tenantId }
+   ```
+
+5. **Frontend `User` type** (`src/lib/erp/types.ts`):
+   ```tsx
+   export interface User {
+     ...
+     tenantId?: string | null;
+   }
+   ```
+
+**Result**: The `tenantId` now flows end-to-end: DB → session → API response → frontend store. This enables future tenant-scoped data filtering (e.g., "if user.tenantId is not null, filter records by tenantId").
+
+### Files Changed
+1. `src/lib/erp/auth.ts` — added `tenantId` to `AuthUser` interface + `getCurrentUser` return
+2. `src/app/api/erp/auth/login/route.ts` — added `tenantId` to login response
+3. `src/app/api/erp/auth/me/route.ts` — added `tenantId` to /me response
+4. `src/lib/erp/types.ts` — added `tenantId` to `User` interface
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

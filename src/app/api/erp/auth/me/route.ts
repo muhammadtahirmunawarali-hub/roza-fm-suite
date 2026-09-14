@@ -40,6 +40,7 @@ export const GET = apiHandler(async (req) => {
       avatar: session.user.avatar,
       status: session.user.status,
       permissions: JSON.parse(session.user.permissions),
+      tenantId: session.user.tenantId, // SaaS: null = Super Admin, otherwise tenant ID
       lastLoginAt: session.user.lastLoginAt?.toISOString() || null,
     },
   });
