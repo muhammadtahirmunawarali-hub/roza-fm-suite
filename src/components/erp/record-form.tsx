@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Save, X, AlertCircle, Upload, Loader2, Link as LinkIcon, Palette } from 'lucide-react';
+import { Save, X, AlertCircle, Upload, Loader2, Link as LinkIcon, Palette, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -567,12 +567,26 @@ function ImageField({ value, onChange, label, errorEl }: { value: any; onChange:
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Support both single URL (string) and multiple URLs (array)
+  const images: string[] = useMemo(() => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string' && value.startsWith('[')) {
+      try { return JSON.parse(value).filter(Boolean); } catch { return [value]; }
+    }
+    return [String(value)];
+  }, [value]);
+
+  const updateImages = (newImages: string[]) => {
+    onChange(newImages.length === 1 ? newImages[0] : newImages.length === 0 ? '' : newImages);
+  };
+
   const handleFile = async (file: File) => {
     if (!file) return;
     setUploading(true);
     try {
       const result = await uploadsApi.upload(file);
-      onChange(result.url);
+      updateImages([...images, result.url]);
       toast.success('Image uploaded');
     } catch (e: any) {
       toast.error('Upload failed', { description: e.message });
@@ -581,45 +595,89 @@ function ImageField({ value, onChange, label, errorEl }: { value: any; onChange:
     }
   };
 
+  const handleMultipleFiles = async (files: FileList) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        const result = await uploadsApi.upload(file);
+        newUrls.push(result.url);
+      }
+      updateImages([...images, ...newUrls]);
+      toast.success(`${newUrls.length} image(s) uploaded`);
+    } catch (e: any) {
+      toast.error('Upload failed', { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    updateImages(images.filter((_, i) => i !== idx));
+  };
+
   return (
     <div className="flex flex-col">
       {label}
-      <div className="flex items-center gap-3">
-        {value ? (
-          <div className="relative">
-            <img src={value} alt="preview" className="w-16 h-16 object-cover rounded-md border border-[var(--erp-border)]" />
-            <button
-              type="button"
-              onClick={() => onChange('')}
-              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center text-[10px] hover:scale-110 transition-transform"
-              aria-label="Remove image"
-            >
-              <X className="w-3 h-3" />
-            </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => { const files = e.target.files; if (files && files.length > 0) { if (files.length === 1) handleFile(files[0]); else handleMultipleFiles(files); } e.target.value = ''; }}
+      />
+      {/* Image gallery */}
+      {images.length > 0 ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map((url, idx) => (
+            <div key={idx} className="relative group">
+              <img src={url} alt={`Image ${idx + 1}`} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)]" />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
+                aria-label={`Remove image ${idx + 1}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+              <span className="absolute bottom-0.5 left-0.5 text-[8px] bg-black/60 text-white px-1 rounded">{idx + 1}</span>
+            </div>
+          ))}
+          {/* Add more button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full aspect-square rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)] hover:border-[var(--erp-accent-border)] hover:text-[var(--erp-accent)] transition-colors disabled:opacity-50"
+            aria-label="Add more images"
+          >
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-20 h-20 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)] hover:border-[var(--erp-accent-border)] hover:text-[var(--erp-accent)] transition-colors disabled:opacity-50"
+            aria-label="Upload images"
+          >
+            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+          </button>
+          <div className="text-[10px] text-[var(--erp-text-muted)]">
+            Click to upload<br />
+            <span className="text-[var(--erp-accent)]">Multiple images supported</span>
           </div>
-        ) : (
-          <div className="w-16 h-16 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)]">
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="h-8 text-[11px]"
-        >
-          {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...</> : <><Upload className="w-3.5 h-3.5 mr-1" /> {value ? 'Replace' : 'Upload'}</>}
-        </Button>
-      </div>
+        </div>
+      )}
+      {images.length > 0 && (
+        <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1 mt-1">
+          {images.length} image{images.length !== 1 ? 's' : ''} · Click + to add more
+        </div>
+      )}
       {errorEl}
     </div>
   );
