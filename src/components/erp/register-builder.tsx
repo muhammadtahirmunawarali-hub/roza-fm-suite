@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useErpStore } from '@/lib/erp/store';
 import { toast } from 'sonner';
 import { Plus, Trash2, GripVertical, Wand2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { FAIcon } from './icon';
 
 interface Props {
@@ -52,6 +53,9 @@ export function RegisterBuilder({ open, onClose, initialName, initialCategory }:
     { name: 'Status', type: 'status', width: 100, options: ['Open', 'In Progress', 'Completed'] },
   ]);
   const [saving, setSaving] = useState(false);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [dragPosition, setDragPosition] = useState<'before' | 'after' | null>(null);
 
   const addColumn = () => {
     setColumns((c) => [...c, { name: `Column ${c.length + 1}`, type: 'text', width: 120 }]);
@@ -74,6 +78,26 @@ export function RegisterBuilder({ open, onClose, initialName, initialCategory }:
       return next;
     });
   };
+
+  // Drag and drop reorder
+  const handleDragStart = (idx: number) => setDraggedIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number, rowEl: HTMLElement) => {
+    e.preventDefault();
+    if (draggedIdx !== null && draggedIdx !== idx) {
+      setDragOverIdx(idx);
+      const rect = rowEl.getBoundingClientRect();
+      setDragPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+    }
+  };
+  const handleDrop = (idx: number) => {
+    if (draggedIdx === null || draggedIdx === idx) { resetDrag(); return; }
+    let insertAt = idx;
+    if (dragPosition === 'after') insertAt += 1;
+    if (draggedIdx < insertAt) insertAt -= 1;
+    setColumns((cols) => { const n = [...cols]; const [m] = n.splice(draggedIdx, 1); n.splice(insertAt, 0, m); return n; });
+    resetDrag();
+  };
+  const resetDrag = () => { setDraggedIdx(null); setDragOverIdx(null); setDragPosition(null); };
 
   const handleCreate = async () => {
     if (!name.trim()) { toast.error('Please enter a register name'); return; }
@@ -194,7 +218,17 @@ export function RegisterBuilder({ open, onClose, initialName, initialCategory }:
               {columns.map((col, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-2 items-start p-2 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)]"
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx, e.currentTarget as HTMLElement)}
+                  onDrop={() => handleDrop(idx)}
+                  onDragEnd={resetDrag}
+                  className={cn(
+                    "grid grid-cols-12 gap-2 items-start p-2 rounded-md border bg-[var(--erp-bg-card)] transition-all",
+                    draggedIdx === idx ? "opacity-40 border-[var(--erp-accent)]" : "border-[var(--erp-border)]",
+                    dragOverIdx === idx && dragPosition === 'before' && "border-t-2 border-t-[var(--erp-accent)]",
+                    dragOverIdx === idx && dragPosition === 'after' && "border-b-2 border-b-[var(--erp-accent)]",
+                  )}
                 >
                   <div className="col-span-1 flex flex-col items-center gap-0.5 pt-2">
                     <button

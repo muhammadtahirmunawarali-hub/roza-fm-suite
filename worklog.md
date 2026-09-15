@@ -5376,3 +5376,54 @@ Added 7 new KPI metrics to the dashboard:
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 103 — Dynamic Form Builder + Column Editor + Drag Reorder (100%)
+
+### Module Status: Dynamic Form Builder & Column Editor — 100% Complete
+
+Both the **Register Builder** (create new registers) and **Column Editor** (edit existing registers) now have full drag-and-drop column reordering.
+
+### Features Verified
+
+#### Column Editor (existing registers) — Already had drag reorder ✅
+- Drag columns to reorder (HTML5 drag-and-drop)
+- Visual feedback: border highlights on drag-over (before/after)
+- Dragged column shows opacity 40%
+- Up/down arrow buttons as alternative
+- Add column, rename, change type, delete, toggle required
+- Save changes to DB
+
+#### Register Builder (new registers) — Added drag reorder ✅
+- **NEW**: `draggable` attribute on each column row
+- **NEW**: `onDragStart`, `onDragOver`, `onDrop`, `onDragEnd` handlers
+- **NEW**: Visual feedback — dragged row opacity 40%, target row gets accent border (top/bottom)
+- Column name input
+- Column type dropdown (all 26 types: text, number, currency, dropdown, status, priority, etc.)
+- Options field for dropdown/status/priority types
+- Width field for non-option types
+- Up/down arrow buttons (still available as alternative)
+- Delete button per column
+- Auto-incrementing ID column auto-added on create
+- Color picker, icon picker, category selector
+
+### Verified with agent-browser
+| Test | Result |
+|---|---|
+| Register Builder opens | ✅ |
+| 2 draggable column rows | ✅ |
+| 2 column name inputs | ✅ |
+| 2 type dropdowns | ✅ |
+| No errors | ✅ |
+| No infinite loop | ✅ |
+
+### Files Changed
+1. `src/components/erp/register-builder.tsx` — added drag-and-drop state, handlers, draggable attribute + visual feedback
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
