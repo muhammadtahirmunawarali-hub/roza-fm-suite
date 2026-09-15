@@ -24,6 +24,10 @@ interface ErpState {
   setTheme: (t: 'dark' | 'light') => void;
   toggleTheme: () => void;
 
+  // Accent color (overrides theme accent)
+  accentColor: string;
+  setAccentColor: (c: string) => void;
+
   // AI assistant
   aiPanelOpen: boolean;
   setAiPanel: (open: boolean) => void;
@@ -112,6 +116,10 @@ export const useErpStore = create<ErpState>()(
       setTheme: (t) => set({ theme: t }),
       toggleTheme: () => set((s) => { const themes = ['dark', 'light', 'midnight', 'ocean', 'forest', 'sunset'] as const; const idx = themes.indexOf(s.theme as any); return { theme: themes[(idx + 1) % themes.length] }; }),
 
+      // ---------- accent color ----------
+      accentColor: '', // empty = use theme default
+      setAccentColor: (c) => set({ accentColor: c }),
+
       // ---------- AI ----------
       aiPanelOpen: false,
       setAiPanel: (open) => set({ aiPanelOpen: open }),
@@ -171,6 +179,7 @@ export const useErpStore = create<ErpState>()(
       partialize: (s) => ({
         sidebarCollapsed: s.sidebarCollapsed,
         theme: s.theme,
+        accentColor: s.accentColor,
         tabs: s.tabs,
         activeTabId: s.activeTabId,
         user: s.user,

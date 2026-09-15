@@ -6,7 +6,7 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { UserMenu } from './user-menu';
 import { cn } from '@/lib/utils';
-import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, Globe } from 'lucide-react';
+import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, Globe, Palette } from 'lucide-react';
 import { notificationsApi } from '@/lib/erp/api';
 
 export function Toolbar() {
@@ -16,6 +16,7 @@ export function Toolbar() {
     setNotifPanel, notifPanelOpen,
     setCommandOpen, tabs, activeTabId,
     language, setLanguage, rtl, setRtl,
+    accentColor, setAccentColor,
   } = useErpStore();
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -102,6 +103,79 @@ export function Toolbar() {
           title="Toggle theme"
           onClick={toggleTheme}
         />
+        {/* Accent Color Picker */}
+        <div className="relative group">
+          <button
+            className="flex items-center gap-1 px-2 h-8 rounded-md text-[12px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors"
+            title="Accent color"
+          >
+            <Palette className="w-4 h-4" style={{ color: accentColor || 'var(--erp-accent)' }} />
+          </button>
+          <div className="absolute right-0 top-full mt-1 w-48 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)] shadow-xl z-50 hidden group-hover:block py-2 px-2">
+            <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] font-semibold mb-1.5 px-1">Accent Color</div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {/* Default (theme) */}
+              <button
+                onClick={() => setAccentColor('')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${!accentColor ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: 'var(--erp-accent)' }}
+                title="Theme Default"
+              />
+              {/* Grey */}
+              <button
+                onClick={() => setAccentColor('#64748B')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#64748B' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#64748B' }}
+                title="Grey"
+              />
+              {/* Aqua (default teal) */}
+              <button
+                onClick={() => setAccentColor('#00D4AA')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#00D4AA' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#00D4AA' }}
+                title="Aqua"
+              />
+              {/* Pink */}
+              <button
+                onClick={() => setAccentColor('#EC4899')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#EC4899' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#EC4899' }}
+                title="Pink"
+              />
+              {/* Emerald */}
+              <button
+                onClick={() => setAccentColor('#10B981')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#10B981' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#10B981' }}
+                title="Emerald"
+              />
+              {/* Gold */}
+              <button
+                onClick={() => setAccentColor('#F59E0B')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#F59E0B' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#F59E0B' }}
+                title="Gold"
+              />
+              {/* Blue */}
+              <button
+                onClick={() => setAccentColor('#3B82F6')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#3B82F6' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#3B82F6' }}
+                title="Blue"
+              />
+              {/* Purple */}
+              <button
+                onClick={() => setAccentColor('#8B5CF6')}
+                className={`w-8 h-8 rounded-md border-2 transition-all ${accentColor === '#8B5CF6' ? 'border-[var(--erp-text)] scale-110' : 'border-transparent hover:scale-105'}`}
+                style={{ background: '#8B5CF6' }}
+                title="Purple"
+              />
+            </div>
+            <div className="text-[9px] text-[var(--erp-text-muted)] mt-1.5 px-1">
+              {accentColor ? `Custom: ${accentColor}` : 'Using theme default'}
+            </div>
+          </div>
+        </div>
         {/* Language Picker */}
         <div className="relative group">
           <button

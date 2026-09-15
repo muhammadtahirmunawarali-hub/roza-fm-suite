@@ -5254,3 +5254,62 @@ None this round — all features verified working.
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 101 — Accent Color Picker in Toolbar (Grey/Aqua/Pink/Emerald/Gold/Blue/Purple)
+
+### New Feature: Accent Color Picker
+
+**What was added**: A color palette button in the toolbar (between the theme toggle and language picker) that lets users choose from 8 accent colors:
+
+| Color | Hex | Name |
+|---|---|---|
+| (theme default) | — | Theme Default |
+| #64748B | Grey | Slate grey |
+| #00D4AA | Aqua | Teal/cyan (default) |
+| #EC4899 | Pink | Hot pink |
+| #10B981 | Emerald | Green |
+| #F59E0B | Gold | Amber/yellow |
+| #3B82F6 | Blue | Royal blue |
+| #8B5CF6 | Purple | Violet |
+
+**How it works**:
+1. Click the palette icon in toolbar → dropdown shows 8 color swatches
+2. Click any color → `--erp-accent` CSS variable updates instantly across the ENTIRE app
+3. The selected swatch gets a border ring + scale-up to show it's active
+4. Bottom of dropdown shows "Custom: #EC4899" or "Using theme default"
+5. Selection is persisted in localStorage (survives page refresh)
+6. "Theme Default" option resets to whatever the current theme's accent is
+
+**What changes visually**: All elements using `var(--erp-accent)` — buttons, links, active states, highlights, sidebar icons, KPI accents, etc. — change color instantly.
+
+**Accent CSS variables updated**:
+- `--erp-accent` (main color)
+- `--erp-accent-hover` (hover state)
+- `--erp-accent-dim` (10% opacity background)
+- `--erp-accent-border` (33% opacity border)
+
+### Verified with agent-browser
+
+| Test | Result |
+|---|---|
+| Palette button visible in toolbar | ✅ |
+| Click Pink → accent = #EC4899 | ✅ |
+| Click Gold → accent = #F59E0B | ✅ |
+| Click Theme Default → accent = #00D4AA | ✅ |
+| Changes apply instantly | ✅ |
+| No console errors | ✅ |
+| No infinite loop | ✅ |
+
+### Files Changed
+1. `src/lib/erp/store.ts` — added `accentColor` + `setAccentColor` + persisted in localStorage
+2. `src/components/erp/erp-shell.tsx` — applies accent CSS variables when `accentColor` is set
+3. `src/components/erp/toolbar.tsx` — palette button + dropdown with 8 color swatches
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |

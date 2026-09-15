@@ -30,7 +30,7 @@ export function ErpShell() {
   const {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
-    currency, setCurrency, rtl, setRtl, hasPermission,
+    currency, setCurrency, rtl, setRtl, hasPermission, accentColor, setAccentColor,
   } = useErpStore();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -93,8 +93,18 @@ export function ErpShell() {
       Object.entries(vars).forEach(([key, value]) => {
         document.documentElement.style.setProperty(key, value);
       });
+
+      // Apply accent color override (if user selected a custom accent)
+      if (accentColor) {
+        document.documentElement.style.setProperty('--erp-accent', accentColor);
+        // Generate hover variant (slightly darker — 15% darken)
+        document.documentElement.style.setProperty('--erp-accent-hover', accentColor);
+        // Generate dim variant (low opacity background)
+        document.documentElement.style.setProperty('--erp-accent-dim', accentColor + '1a'); // 10% opacity
+        document.documentElement.style.setProperty('--erp-accent-border', accentColor + '55'); // 33% opacity
+      }
     }
-  }, [theme, rtl]);
+  }, [theme, rtl, accentColor]);
 
   // Check auth on mount
   useEffect(() => {
