@@ -46,6 +46,8 @@ export const GET = apiHandler(async () => {
     return s === 'Open' || s === 'In Progress';
   }).length;
   const criticalWOs = woRecords.filter((r) => get(r, 'Priority', []) === 'Critical').length;
+  const completedWOs = woRecords.filter((r) => get(r, 'Status', []) === 'Completed').length;
+  const woCompletionRate = woRecords.length > 0 ? Math.round((completedWOs / woRecords.length) * 100) : 0;
 
   const pm = findReg('pm');
   const pmRecords = pm?.records || [];
@@ -53,6 +55,8 @@ export const GET = apiHandler(async () => {
     const s = get(r, 'Status', []);
     return s === 'Due' || s === 'Overdue';
   }).length;
+  const pmCompleted = pmRecords.filter((r) => get(r, 'Status', []) === 'Completed').length;
+  const pmCompletionRate = pmRecords.length > 0 ? Math.round((pmCompleted / pmRecords.length) * 100) : 0;
 
   const inv = findReg('inventory');
   const invRecords = inv?.records || [];
@@ -60,15 +64,11 @@ export const GET = apiHandler(async () => {
     const s = get(r, 'Status', []);
     return s === 'Low Stock' || s === 'Out of Stock';
   }).length;
-  const totalInvValue = invRecords.reduce((sum, r) => {
-    const qty = Number(get(r, 'Qty In Stock', [])) || 0;
-    // Approximate average unit value — uses Max Level as proxy if available
-    return sum + qty;
-  }, 0);
 
   const assets = findReg('assets');
   const assetRecords = assets?.records || [];
   const activeAssets = assetRecords.filter((r) => get(r, 'Status', []) === 'Active').length;
+  const assetsUnderMaintenance = assetRecords.filter((r) => get(r, 'Status', []) === 'Under Maintenance').length;
   const assetValue = assetRecords.reduce((sum, r) => sum + (Number(get(r, 'Value (AED)', [])) || 0), 0);
 
   const contracts = findReg('contracts');
@@ -89,9 +89,33 @@ export const GET = apiHandler(async () => {
     const s = get(r, 'Status', []);
     return s === 'Submitted' || s === 'Draft';
   }).length;
+  const approvedPTW = ptwRecords.filter((r) => get(r, 'Status', []) === 'Approved').length;
 
   const vendors = findReg('vendors');
   const activeVendors = (vendors?.records || []).filter((r) => get(r, 'Status', []) === 'Active').length;
+
+  // Safety inspections
+  const safetyInsp = findReg('safety_insp');
+  const safetyRecords = safetyInsp?.records || [];
+  const pendingSafety = safetyRecords.filter((r) => {
+    const s = get(r, 'Status', []);
+    return s === 'Scheduled' || s === 'Open' || s === 'Pending';
+  }).length;
+
+  // Visitors
+  const visitors = findReg('visitors');
+  const visitorRecords = visitors?.records || [];
+  const todayVisitors = visitorRecords.filter((r) => {
+    const d = get(r, 'Date', []) || get(r, 'Visit Date', []);
+    if (!d) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return String(d).slice(0, 10) === today;
+  }).length;
+
+  // Training records
+  const training = findReg('training');
+  const trainingRecords = training?.records || [];
+  const completedTraining = trainingRecords.filter((r) => get(r, 'Status', []) === 'Completed').length;
 
   const employees = new Set<string>();
   registers.forEach((r) => {
@@ -111,15 +135,22 @@ export const GET = apiHandler(async () => {
   const kpis: DashboardKPI[] = [
     { id: 'open-wo',     label: 'Open Work Orders',  value: openWOs,         rawValue: openWOs, icon: 'fa-wrench',          color: '#F59E0B', link: '?tab=workorders' },
     { id: 'critical-wo', label: 'Critical Priority',  value: criticalWOs,     rawValue: criticalWOs, icon: 'fa-triangle-exclamation', color: '#EF4444', link: '?tab=workorders' },
+    { id: 'wo-completion', label: 'WO Completion %',   value: `${woCompletionRate}%`, rawValue: woCompletionRate, icon: 'fa-check-circle', color: '#10B981', link: '?tab=workorders' },
     { id: 'pm-due',      label: 'PM Due / Overdue',   value: pmDue,           rawValue: pmDue, icon: 'fa-clock-rotate-left', color: '#F59E0B', link: '?tab=pm' },
+    { id: 'pm-completion', label: 'PM Completion %',  value: `${pmCompletionRate}%`, rawValue: pmCompletionRate, icon: 'fa-clipboard-check', color: '#10B981', link: '?tab=pm' },
     { id: 'low-stock',   label: 'Low Stock Items',    value: lowStock,        rawValue: lowStock, icon: 'fa-boxes-stacked',   color: '#10B981', link: '?tab=inventory' },
     { id: 'active-assets', label: 'Active Assets',    value: activeAssets,    rawValue: activeAssets, icon: 'fa-building', color: '#8B5CF6', link: '?tab=assets' },
+    { id: 'assets-maintenance', label: 'Assets Under Maintenance', value: assetsUnderMaintenance, rawValue: assetsUnderMaintenance, icon: 'fa-screwdriver-wrench', color: '#F59E0B', link: '?tab=assets' },
     { id: 'asset-value', label: 'Asset Value',        value: formatAED(assetValue, currency), icon: 'fa-coins', color: '#8B5CF6', link: '?tab=assets' },
     { id: 'active-contracts', label: 'Active Contracts', value: activeContracts, rawValue: activeContracts, icon: 'fa-file-contract', color: '#10B981', link: '?tab=contracts' },
     { id: 'contract-value', label: 'Contract Value',  value: formatAED(contractValue, currency), icon: 'fa-file-invoice-dollar', color: '#10B981', link: '?tab=contracts' },
     { id: 'open-incidents', label: 'Open Incidents',  value: openIncidents,   rawValue: openIncidents, icon: 'fa-burst', color: '#EF4444', link: '?tab=incidents' },
     { id: 'pending-ptw', label: 'Pending PTW',         value: pendingPTW,      rawValue: pendingPTW, icon: 'fa-file-signature', color: '#EF4444', link: '?tab=ptw' },
+    { id: 'approved-ptw', label: 'Approved PTW',       value: approvedPTW,     rawValue: approvedPTW, icon: 'fa-check', color: '#10B981', link: '?tab=ptw' },
+    { id: 'pending-safety', label: 'Pending Safety Insp.', value: pendingSafety, rawValue: pendingSafety, icon: 'fa-shield-halved', color: '#EF4444', link: '?tab=safety_insp' },
     { id: 'active-vendors', label: 'Active Vendors',  value: activeVendors,   rawValue: activeVendors, icon: 'fa-truck-field', color: '#10B981', link: '?tab=vendors' },
+    { id: 'today-visitors', label: 'Today Visitors',  value: todayVisitors,   rawValue: todayVisitors, icon: 'fa-id-card', color: '#EC4899' },
+    { id: 'completed-training', label: 'Completed Training', value: completedTraining, rawValue: completedTraining, icon: 'fa-graduation-cap', color: '#3B82F6' },
     { id: 'employees',   label: 'People (Referenced)', value: employees.size,  rawValue: employees.size, icon: 'fa-users', color: '#3B82F6' },
     { id: 'total-records', label: 'Total Records',     value: totalRecords,    rawValue: totalRecords, icon: 'fa-database', color: '#06B6D4' },
     { id: 'registers',   label: 'Active Registers',   value: registers.length, rawValue: registers.length, icon: 'fa-table-list', color: '#64748B' },
