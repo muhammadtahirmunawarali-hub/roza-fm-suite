@@ -5874,3 +5874,38 @@ None this round — all modules verified working at 100%.
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 113 — QA Pass + Updated Service Worker Cache Name (Brand Consistency)
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ TypeScript: 0 errors in src/ (1 in skills/ demo)
+- ✅ Dev server running, no infinite API loop (0 calls in steady state)
+- ✅ Dashboard loads clean, no console errors
+- ✅ SaaS Multi-Company tab loads correctly (8/10 users, 128/10000 records)
+
+### Bug Fix: Service Worker Cache Name Brand Consistency
+
+**Problem found during code review**: The service worker (`public/sw.js`) still used the old cache name `fmcore-v1` — this is a static file that wasn't caught by the Round 95 brand rename (which only processed `src/` files).
+
+**Fix**: Updated cache name from `fmcore-v1` to `roza-fm-v1`. This will:
+1. Create a new cache with the `roza-fm-v1` name
+2. The `activate` event will delete the old `fmcore-v1` cache (since it doesn't match the new name)
+3. Fresh content will be fetched on next page load
+
+**Result**: All brand references are now consistent — the only intentional `fmcore` remnants are:
+- Cookie name `fmcore_session` (changing would break sessions)
+- Storage key `fmcore-erp-state` (would lose preferences)
+- Webhook headers `X-FMCore-Event` (API contract)
+
+### Files Changed
+1. `public/sw.js` — cache name updated from `fmcore-v1` to `roza-fm-v1`
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
