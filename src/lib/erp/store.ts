@@ -188,6 +188,7 @@ export const useErpStore = create<ErpState>()(
         sidebarCollapsed: s.sidebarCollapsed,
         theme: s.theme,
         accentColor: s.accentColor,
+        blurMode: s.blurMode,
         tabs: s.tabs,
         activeTabId: s.activeTabId,
         user: s.user,
