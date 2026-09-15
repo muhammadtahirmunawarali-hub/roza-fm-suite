@@ -28,6 +28,10 @@ interface ErpState {
   accentColor: string;
   setAccentColor: (c: string) => void;
 
+  // Blur/Screenshot privacy mode (eye toggle — blurs sensitive data fields)
+  blurMode: boolean;
+  toggleBlurMode: () => void;
+
   // AI assistant
   aiPanelOpen: boolean;
   setAiPanel: (open: boolean) => void;
@@ -119,6 +123,10 @@ export const useErpStore = create<ErpState>()(
       // ---------- accent color ----------
       accentColor: '', // empty = use theme default
       setAccentColor: (c) => set({ accentColor: c }),
+
+      // ---------- blur mode ----------
+      blurMode: false,
+      toggleBlurMode: () => set((s) => ({ blurMode: !s.blurMode })),
 
       // ---------- AI ----------
       aiPanelOpen: false,

@@ -6,7 +6,7 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { UserMenu } from './user-menu';
 import { cn } from '@/lib/utils';
-import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, Globe, Palette } from 'lucide-react';
+import { Menu, Search, RefreshCw, Sun, Moon, Bell, Wand2, Globe, Palette, Eye, EyeOff } from 'lucide-react';
 import { notificationsApi } from '@/lib/erp/api';
 
 export function Toolbar() {
@@ -17,6 +17,7 @@ export function Toolbar() {
     setCommandOpen, tabs, activeTabId,
     language, setLanguage, rtl, setRtl,
     accentColor, setAccentColor,
+    blurMode, toggleBlurMode,
   } = useErpStore();
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -103,6 +104,19 @@ export function Toolbar() {
           title="Toggle theme"
           onClick={toggleTheme}
         />
+        {/* Blur/Screenshot privacy mode toggle */}
+        <button
+          onClick={toggleBlurMode}
+          className={cn(
+            'flex items-center gap-1 px-2 h-8 rounded-md text-[12px] transition-colors',
+            blurMode
+              ? 'bg-[var(--erp-warning)]/20 text-[var(--erp-warning)]'
+              : 'text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)]'
+          )}
+          title={blurMode ? 'Privacy mode ON — sensitive data is blurred. Click to disable.' : 'Enable privacy mode — blurs sensitive data for screenshots'}
+        >
+          {blurMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
         {/* Accent Color Picker */}
         <div className="relative group">
           <button

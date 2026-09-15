@@ -31,6 +31,7 @@ export function ErpShell() {
     tabs, activeTabId, theme, builderOpen, setBuilderOpen,
     user, authLoading, authChecked, setUser, setAuthLoading, setAuthChecked,
     currency, setCurrency, rtl, setRtl, hasPermission, accentColor, setAccentColor,
+    blurMode,
   } = useErpStore();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -105,6 +106,17 @@ export function ErpShell() {
       }
     }
   }, [theme, rtl, accentColor]);
+
+  // Apply blur mode CSS class to body
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (blurMode) {
+        document.body.classList.add('erp-blur-mode');
+      } else {
+        document.body.classList.remove('erp-blur-mode');
+      }
+    }
+  }, [blurMode]);
 
   // Check auth on mount
   useEffect(() => {

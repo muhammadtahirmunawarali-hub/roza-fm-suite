@@ -19,6 +19,8 @@ const SUGGESTIONS = [
   'Show overdue maintenance',
   'Update WO-0001 status to Completed',
   'How do I add a new asset?',
+  'Guide me through the PTW approval process',
+  'Delete WO-0003',
 ];
 
 export function AiAssistant() {
@@ -198,7 +200,13 @@ export function AiAssistant() {
                     onClick={() => handleAction(msg.action)}
                     className="mt-2 ml-1 px-2 py-0.5 rounded text-[10px] bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent)] hover:text-white transition-colors"
                   >
-                    {msg.action.type === 'open_register' ? '→ Open register' : '→ Create register'}
+                    {msg.action.type === 'open_register' ? '→ Open register' :
+                     msg.action.type === 'create_register' ? '→ Create register' :
+                     msg.action.type === 'create_record' ? '→ Create record' :
+                     msg.action.type === 'update_record' ? '→ Update record' :
+                     msg.action.type === 'delete_record' ? '→ Delete record' :
+                     msg.action.type === 'guide' ? '→ Guide shown' :
+                     '→ Execute action'}
                   </button>
                 )}
               </div>

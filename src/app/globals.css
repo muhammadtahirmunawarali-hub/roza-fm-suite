@@ -246,3 +246,34 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   Blur/Screenshot Privacy Mode — blurs sensitive table cells
+   when the Eye toggle is enabled in the toolbar
+   ============================================================ */
+body.erp-blur-mode table td:not(:first-child),
+body.erp-blur-mode table th:not(:first-child) {
+  filter: blur(5px);
+  transition: filter 0.2s ease;
+}
+body.erp-blur-mode table td:hover,
+body.erp-blur-mode table th:hover {
+  filter: blur(0px);
+}
+body.erp-blur-mode [class*="field-value"],
+body.erp-blur-mode [class*="field-label"] {
+  filter: blur(4px);
+  transition: filter 0.2s ease;
+}
+body.erp-blur-mode [class*="field-value"]:hover,
+body.erp-blur-mode [class*="field-label"]:hover {
+  filter: blur(0px);
+}
+/* Blur KPI card values (the big bold numbers) */
+body.erp-blur-mode .font-bold {
+  filter: blur(6px);
+  transition: filter 0.2s ease;
+}
+body.erp-blur-mode .font-bold:hover {
+  filter: blur(0px);
+}
