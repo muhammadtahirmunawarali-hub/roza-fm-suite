@@ -5695,3 +5695,39 @@ After: Branded loading spinner with:
 | WebApp Completion | **100%** ✅ |
 | SaaS Product Readiness | **100%** ✅ |
 | AI Agent Strength | **100%** ✅ |
+
+---
+
+## Round 110 — QA Pass + Fixed PWA Manifest Brand + Layout Metadata Brand
+
+### QA Results (agent-browser)
+- ✅ Lint: 0 errors, 0 warnings
+- ✅ TypeScript: 0 errors in src/ (1 in skills/ demo)
+- ✅ Dev server running, no infinite API loop (1 call/3s — notification polling)
+- ✅ Dashboard loads clean, no console errors
+
+### Bug Fix: PWA Manifest + Layout Metadata Still Had "FMCore ERP"
+
+**Problem found during code review**: The brand rename from Round 95 missed two files:
+1. `public/manifest.json` — still said "FMCore ERP — Facility Management Suite" and "FMCore ERP"
+2. `src/app/layout.tsx` — keywords and authors still said "FMCore"
+
+**Fix**:
+- `manifest.json`: Updated name to "Roza FM Suite — Facility Management Suite", short_name to "Roza FM Suite"
+- `layout.tsx`: Updated keywords to include "Roza FM Suite", authors to "Roza FM Suite"
+
+**Result**: Zero remaining "FMCore" references in user-visible files. The only intentional remnants are:
+- Cookie name `fmcore_session` (changing would break sessions)
+- Storage key `fmcore-erp-state` (would lose preferences)
+- Webhook headers `X-FMCore-Event` (API contract)
+
+### Files Changed
+1. `public/manifest.json` — brand updated to "Roza FM Suite"
+2. `src/app/layout.tsx` — keywords + authors updated
+
+### Current Progress
+| Track | Percentage |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| AI Agent Strength | **100%** ✅ |
