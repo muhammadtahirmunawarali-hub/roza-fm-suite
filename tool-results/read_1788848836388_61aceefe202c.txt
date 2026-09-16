@@ -1,0 +1,1036 @@
+     1→'use client';
+     2→
+     3→// FMCore ERP — Register View (grid mode with bulk actions, CSV import, print, workflow, saved views)
+     4→import { useEffect, useMemo, useState, useCallback } from 'react';
+     5→import { recordsApi, registersApi } from '@/lib/erp/api';
+     6→import type { Register, RecordData, ColumnDef } from '@/lib/erp/types';
+     7→import { useErpStore } from '@/lib/erp/store';
+     8→import { FAIcon } from './icon';
+     9→import { cn } from '@/lib/utils';
+    10→import {
+    11→  formatDocNumber, statusVariant, priorityVariant,
+    12→  formatDate, formatTimeAgo, type BadgeVariant, displayColumnName,
+    13→} from '@/lib/erp/utils';
+    14→import { RecordForm } from './record-form';
+    15→import { CsvImport } from './csv-import';
+    16→import { BulkActions } from './bulk-actions';
+    17→import { printRecord } from './print-record';
+    18→import { ApprovalWorkflow } from './approval-workflow';
+    19→import { SavedViews } from './saved-views';
+    20→import { RecordDetailDrawer } from './record-detail-drawer';
+    21→import { EmptyStateIllustration } from './empty-state-illustration';
+    22→import { ColumnEditor } from './column-editor';
+    23→import {
+    24→  Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown,
+    25→  ChevronLeft, ChevronRight, Download, Upload, Printer, Trash2, Pencil, Eye, X, Inbox, FileText, Workflow, ChevronDown, Braces, Columns3, Settings2, Link as LinkIcon,
+    26→} from 'lucide-react';
+    27→import { toast } from 'sonner';
+    28→import { Button } from '@/components/ui/button';
+    29→import { Checkbox } from '@/components/ui/checkbox';
+    30→import {
+    31→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    32→} from '@/components/ui/dialog';
+    33→import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+    34→
+    35→interface Props {
+    36→  registerId: string;
+    37→}
+    38→
+    39→const PAGE_SIZES = [10, 25, 50, 100];
+    40→
+    41→export function RegisterView({ registerId }: Props) {
+    42→  const { hasPermission, user, currency } = useErpStore();
+    43→  const [register, setRegister] = useState<Register | null>(null);
+    44→  const [records, setRecords] = useState<RecordData[]>([]);
+    45→  const [total, setTotal] = useState(0);
+    46→  const [page, setPage] = useState(1);
+    47→  const [pageSize, setPageSize] = useState(25);
+    48→  const [search, setSearch] = useState('');
+    49→  const [debouncedSearch, setDebouncedSearch] = useState('');
+    50→  const [sortField, setSortField] = useState<string>('');
+    51→  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    52→  const [filters, setFilters] = useState<Record<string, string>>({});
+    53→  const [showFilters, setShowFilters] = useState(false);
+    54→  const [loading, setLoading] = useState(true);
+    55→  const [formOpen, setFormOpen] = useState(false);
+    56→  const [importOpen, setImportOpen] = useState(false);
+    57→  const [editing, setEditing] = useState<RecordData | null>(null);
+    58→  const [viewing, setViewing] = useState<RecordData | null>(null);
+    59→  const [workflowTarget, setWorkflowTarget] = useState<RecordData | null>(null);
+    60→  const [deleteTarget, setDeleteTarget] = useState<RecordData | null>(null);
+    61→  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    62→  const [company, setCompany] = useState({ name: 'FMCore Facilities Management', address: '', phone: '', email: '', tax_number: '' });
+    63→  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+    64→  const [showColumnToggle, setShowColumnToggle] = useState(false);
+    65→  const [columnEditorOpen, setColumnEditorOpen] = useState(false);
+    66→
+    67→  // Permission flags (register may be null initially)
+    68→  const regCode = register?.code || '';
+    69→  const canView = hasPermission(regCode || registerId, 'view');
+    70→  const canCreate = hasPermission(regCode, 'create');
+    71→  const canEdit = hasPermission(regCode, 'edit');
+    72→  const canDelete = hasPermission(regCode, 'delete');
+    73→  const canExport = hasPermission(regCode, 'export');
+    74→  const canImport = hasPermission(regCode, 'import');
+    75→  const canApprove = hasPermission(regCode, 'approve');
+    76→  const hasStatusCol = register?.columns.some((c) => c.type === 'status');
+    77→
+    78→  // Visible columns (filtered by user's column visibility preferences)
+    79→  const visibleColumns = useMemo(() => {
+    80→    if (!register) return [];
+    81→    return register.columns.filter((c) => !hiddenColumns.has(c.name));
+    82→  }, [register, hiddenColumns]);
+    83→
+    84→  const toggleColumn = (colName: string) => {
+    85→    setHiddenColumns((prev) => {
+    86→      const next = new Set(prev);
+    87→      if (next.has(colName)) next.delete(colName);
+    88→      else next.add(colName);
+    89→      return next;
+    90→    });
+    91→  };
+    92→
+    93→  // Load register meta + company settings
+    94→  useEffect(() => {
+    95→    let cancelled = false;
+    96→    (async () => {
+    97→      try {
+    98→        const [regs, settings] = await Promise.all([registersApi.list(), fetch('/api/erp/settings').then((r) => r.json())]);
+    99→        const r = regs.find((x) => x.id === registerId);
+   100→        if (!cancelled && r) {
+   101→          setRegister(r);
+   102→          const autoCol = r.columns.find((c) => c.type === 'auto_increment');
+   103→          if (autoCol) { setSortField(autoCol.name); setSortDir('asc'); }
+   104→        }
+   105→        if (!cancelled && Array.isArray(settings)) {
+   106→          const map: Record<string, string> = {};
+   107→          settings.forEach((s: any) => (map[s.key] = s.value));
+   108→          setCompany({
+   109→            name: map['company.name'] || 'FMCore Facilities Management',
+   110→            address: map['company.address'] || '',
+   111→            phone: map['company.phone'] || '',
+   112→            email: map['company.email'] || '',
+   113→            tax_number: map['company.tax_number'] || '',
+   114→          });
+   115→        }
+   116→      } catch (e) { console.error(e); }
+   117→    })();
+   118→    return () => { cancelled = true; };
+   119→  }, [registerId]);
+   120→
+   121→  // Debounce search
+   122→  useEffect(() => {
+   123→    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
+   124→    return () => clearTimeout(t);
+   125→  }, [search]);
+   126→
+   127→  // Clear selection when page/filters change
+   128→  useEffect(() => { setSelectedIds(new Set()); }, [page, debouncedSearch, filters, sortField, sortDir]);
+   129→
+   130→  const loadRecords = useCallback(async () => {
+   131→    if (!register) return;
+   132→    setLoading(true);
+   133→    try {
+   134→      const res = await recordsApi.list(registerId, {
+   135→        page, pageSize, search: debouncedSearch, sortField, sortDir, filters,
+   136→      });
+   137→      setRecords(res.data);
+   138→      setTotal(res.total);
+   139→      // If a record is currently being viewed or edited, update it with the fresh data
+   140→      if (viewing) {
+   141→        const updated = res.data.find((r) => r.id === viewing.id);
+   142→        if (updated) setViewing(updated);
+   143→      }
+   144→      if (editing) {
+   145→        const updated = res.data.find((r) => r.id === editing.id);
+   146→        if (updated) setEditing(updated);
+   147→      }
+   148→    } catch (e: any) {
+   149→      toast.error('Failed to load records', { description: e.message });
+   150→    } finally {
+   151→      setLoading(false);
+   152→    }
+   153→  }, [register, registerId, page, pageSize, debouncedSearch, sortField, sortDir, filters, viewing, editing]);
+   154→
+   155→  useEffect(() => { loadRecords(); }, [loadRecords]);
+   156→
+   157→  const toggleSort = (field: string) => {
+   158→    if (sortField === field) {
+   159→      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+   160→    } else {
+   161→      setSortField(field);
+   162→      setSortDir('asc');
+   163→    }
+   164→  };
+   165→
+   166→  const handleSaved = () => {
+   167→    setFormOpen(false);
+   168→    setEditing(null);
+   169→    loadRecords();
+   170→  };
+   171→
+   172→  const handleDelete = async () => {
+   173→    if (!deleteTarget) return;
+   174→    try {
+   175→      await recordsApi.remove(registerId, deleteTarget.id);
+   176→      toast.success('Record deleted');
+   177→      setDeleteTarget(null);
+   178→      loadRecords();
+   179→    } catch (e: any) {
+   180→      toast.error('Delete failed', { description: e.message });
+   181→    }
+   182→  };
+   183→
+   184→  const exportCsv = () => {
+   185→    if (!register || records.length === 0) return;
+   186→    const headers = register.columns.map((c) => c.name);
+   187→    const rows = records.map((r) =>
+   188→      register.columns.map((c) => {
+   189→        const v = r.data[c.name];
+   190→        if (Array.isArray(v)) return `"${v.join(', ')}"`;
+   191→        if (v === undefined || v === null) return '';
+   192→        return `"${String(v).replace(/"/g, '""')}"`;
+   193→      }),
+   194→    );
+   195→    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+   196→    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+   197→    const url = URL.createObjectURL(blob);
+   198→    const a = document.createElement('a');
+   199→    a.href = url;
+   200→    a.download = `${register.code}_${new Date().toISOString().slice(0, 10)}.csv`;
+   201→    a.click();
+   202→    URL.revokeObjectURL(url);
+   203→    toast.success(`Exported ${records.length} records to CSV`);
+   204→  };
+   205→
+   206→  const exportJson = () => {
+   207→    if (!register || records.length === 0) return;
+   208→    const exportData = {
+   209→      register: {
+   210→        name: register.name,
+   211→        code: register.code,
+   212→        category: register.category,
+   213→        columns: register.columns,
+   214→      },
+   215→      exportedAt: new Date().toISOString(),
+   216→      recordCount: records.length,
+   217→      records: records.map((r) => ({
+   218→        id: r.id,
+   219→        sequence: r.sequence,
+   220→        data: r.data,
+   221→        createdAt: r.createdAt,
+   222→        updatedAt: r.updatedAt,
+   223→        createdBy: r.createdBy,
+   224→        updatedBy: r.updatedBy,
+   225→      })),
+   226→    };
+   227→    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+   228→    const url = URL.createObjectURL(blob);
+   229→    const a = document.createElement('a');
+   230→    a.href = url;
+   231→    a.download = `${register.code}_${new Date().toISOString().slice(0, 10)}.json`;
+   232→    a.click();
+   233→    URL.revokeObjectURL(url);
+   234→    toast.success(`Exported ${records.length} records to JSON`);
+   235→  };
+   236→
+   237→  const handlePrint = (recs: RecordData[]) => {
+   238→    if (!register) return;
+   239→    if (recs.length === 1) {
+   240→      printRecord(register, recs[0], company, currency);
+   241→    } else {
+   242→      // For multiple, print first one (limitation noted in UI)
+   243→      recs.slice(0, 5).forEach((r, i) => {
+   244→        setTimeout(() => printRecord(register, r, company, currency), i * 400);
+   245→      });
+   246→    }
+   247→  };
+   248→
+   249→  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+   250→
+   251→  // Selection helpers
+   252→  const toggleSelect = (id: string) => {
+   253→    setSelectedIds((s) => {
+   254→      const next = new Set(s);
+   255→      if (next.has(id)) next.delete(id); else next.add(id);
+   256→      return next;
+   257→    });
+   258→  };
+   259→  const toggleSelectAll = () => {
+   260→    if (selectedIds.size === records.length) {
+   261→      setSelectedIds(new Set());
+   262→    } else {
+   263→      setSelectedIds(new Set(records.map((r) => r.id)));
+   264→    }
+   265→  };
+   266→  const selectedRecords = records.filter((r) => selectedIds.has(r.id));
+   267→
+   268→  // Compute quick stats per register
+   269→  const stats = useMemo(() => {
+   270→    if (!register) return null;
+   271→    const statusCol = register.columns.find((c) => c.type === 'status');
+   272→    const priorityCol = register.columns.find((c) => c.type === 'priority');
+   273→    const currencyCol = register.columns.find((c) => c.type === 'currency');
+   274→    const out: { label: string; value: string | number; color: string }[] = [];
+   275→    out.push({ label: 'Total', value: total, color: 'var(--erp-text-secondary)' });
+   276→    if (statusCol && statusCol.options) {
+   277→      statusCol.options.slice(0, 3).forEach((opt) => {
+   278→        const count = records.filter((r) => r.data[statusCol.name] === opt).length;
+   279→        out.push({ label: opt, value: count, color: statusColorFor(opt) });
+   280→      });
+   281→    }
+   282→    if (priorityCol && priorityCol.options) {
+   283→      const critical = records.filter((r) => r.data[priorityCol.name] === 'Critical').length;
+   284→      if (critical > 0) out.push({ label: 'Critical', value: critical, color: 'var(--erp-danger)' });
+   285→    }
+   286→    if (currencyCol) {
+   287→      const sum = records.reduce((s, r) => s + (Number(r.data[currencyCol.name]) || 0), 0);
+   288→      out.push({ label: displayColumnName(currencyCol.name, currency) + ' (Σ)', value: formatCurrencyCompact(sum, currency), color: 'var(--erp-accent)' });
+   289→    }
+   290→    return out.slice(0, 6);
+   291→  }, [register, records, total]);
+   292→
+   293→  if (!register) {
+   294→    return <div className="p-6 text-[var(--erp-text-muted)]">Loading register...</div>;
+   295→  }
+   296→
+   297→  const filterableCols = register.columns.filter((c) =>
+   298→    ['status', 'priority', 'dropdown'].includes(c.type) && c.options && c.options.length > 0
+   299→  );
+   300→
+   301→  return (
+   302→    <div className="flex flex-col h-full">
+   303→      {/* Header */}
+   304→      <div className="px-4 md:px-6 py-3 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)]">
+   305→        <div className="flex items-start justify-between flex-wrap gap-3">
+   306→          <div className="flex items-start gap-3">
+   307→            <div
+   308→              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+   309→              style={{ background: `linear-gradient(135deg, ${register.color}30, ${register.color}10)`, color: register.color }}
+   310→            >
+   311→              <FAIcon name={register.icon} className="text-[16px]" />
+   312→            </div>
+   313→            <div>
+   314→              <h1 className="text-[18px] font-semibold text-[var(--erp-text)]" style={{ fontFamily: 'var(--font-display)' }}>
+   315→                {register.name}
+   316→              </h1>
+   317→              {register.description && (
+   318→                <p className="text-[11px] text-[var(--erp-text-muted)] mt-0.5">{register.description}</p>
+   319→              )}
+   320→              <div className="flex items-center gap-2 mt-1 text-[10px] text-[var(--erp-text-muted)]">
+   321→                <span className="px-1.5 py-0.5 rounded font-medium" style={{ background: register.color + '20', color: register.color }}>{register.category}</span>
+   322→                <span>·</span>
+   323→                <span>{register.columns.length} columns</span>
+   324→                <span>·</span>
+   325→                <span>{total} records</span>
+   326→              </div>
+   327→            </div>
+   328→          </div>
+   329→
+   330→          <div className="flex items-center gap-1.5 flex-wrap">
+   331→            <SavedViews
+   332→              registerId={register.id}
+   333→              registerName={register.name}
+   334→              currentFilters={{ search: debouncedSearch, filters, sortField, sortDir }}
+   335→              onApply={(v) => {
+   336→                setSearch(v.search || '');
+   337→                setFilters(v.filters || {});
+   338→                setSortField(v.sortField || '');
+   339→                setSortDir(v.sortDir || 'asc');
+   340→                setPage(1);
+   341→              }}
+   342→            />
+   343→            <Button variant="outline" size="sm" onClick={() => setShowFilters((v) => !v)} className="h-8 text-[12px]">
+   344→              <Filter className="w-3.5 h-3.5 mr-1" /> Filters
+   345→              {Object.values(filters).filter(Boolean).length > 0 && (
+   346→                <span className="ml-1 px-1.5 rounded-full bg-[var(--erp-accent)] text-white text-[9px]">
+   347→                  {Object.values(filters).filter(Boolean).length}
+   348→                </span>
+   349→              )}
+   350→            </Button>
+   351→            {/* Column Visibility Toggle */}
+   352→            <div className="relative">
+   353→              <Button variant="outline" size="sm" onClick={() => setShowColumnToggle((v) => !v)} className="h-8 text-[12px]">
+   354→                <Columns3 className="w-3.5 h-3.5 mr-1" /> Columns
+   355→                {hiddenColumns.size > 0 && (
+   356→                  <span className="ml-1 px-1.5 rounded-full bg-[var(--erp-accent)] text-white text-[9px]">
+   357→                    {hiddenColumns.size}
+   358→                  </span>
+   359→                )}
+   360→              </Button>
+   361→              {showColumnToggle && (
+   362→                <div className="absolute top-full left-0 mt-1 w-56 max-h-[300px] overflow-y-auto bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md shadow-xl z-30 p-1.5">
+   363→                  <div className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] px-2 py-1 mb-1 border-b border-[var(--erp-border)]">Toggle Columns</div>
+   364→                  {register.columns.map((col) => (
+   365→                    <label key={col.name} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--erp-bg-hover)] cursor-pointer text-[11px]">
+   366→                      <Checkbox
+   367→                        checked={!hiddenColumns.has(col.name)}
+   368→                        onCheckedChange={() => toggleColumn(col.name)}
+   369→                      />
+   370→                      <span className="text-[var(--erp-text-secondary)] flex-1 truncate">{displayColumnName(col.name, currency)}</span>
+   371→                      <span className="text-[9px] text-[var(--erp-text-muted)]">{col.type.replace('_', ' ')}</span>
+   372→                    </label>
+   373→                  ))}
+   374→                  {hiddenColumns.size > 0 && (
+   375→                    <button
+   376→                      onClick={() => setHiddenColumns(new Set())}
+   377→                      className="w-full text-[10px] text-[var(--erp-accent)] hover:underline py-1.5 mt-1 border-t border-[var(--erp-border)]"
+   378→                    >
+   379→                      Show all columns
+   380→                    </button>
+   381→                  )}
+   382→                </div>
+   383→              )}
+   384→            </div>
+   385→            {/* Edit Columns (rename/retype/add/delete) */}
+   386→            {canEdit && (
+   387→              <Button variant="outline" size="sm" onClick={() => setColumnEditorOpen(true)} className="h-8 text-[12px]" title="Edit column structure">
+   388→                <Settings2 className="w-3.5 h-3.5 mr-1" /> Edit
+   389→              </Button>
+   390→            )}
+   391→            {canImport && (
+   392→              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-8 text-[12px]">
+   393→                <Upload className="w-3.5 h-3.5 mr-1" /> Import
+   394→              </Button>
+   395→            )}
+   396→            {canExport && (
+   397→              <div className="relative group">
+   398→                <Button variant="outline" size="sm" className="h-8 text-[12px]">
+   399→                  <Download className="w-3.5 h-3.5 mr-1" /> Export
+   400→                  <ChevronDown className="w-3 h-3 ml-0.5" />
+   401→                </Button>
+   402→                <div className="absolute top-full right-0 mt-1 w-40 bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md shadow-lg z-30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+   403→                  <button onClick={exportCsv} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors border-b border-[var(--erp-border)]">
+   404→                    <FileText className="w-3 h-3" /> Export as CSV
+   405→                  </button>
+   406→                  <button onClick={exportJson} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors">
+   407→                    <Braces className="w-3 h-3" /> Export as JSON
+   408→                  </button>
+   409→                </div>
+   410→              </div>
+   411→            )}
+   412→            {canCreate && (
+   413→              <Button
+   414→                size="sm"
+   415→                onClick={() => { setEditing(null); setFormOpen(true); }}
+   416→                className="h-8 text-[12px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
+   417→              >
+   418→                <Plus className="w-3.5 h-3.5 mr-1" /> Add Record
+   419→              </Button>
+   420→            )}
+   421→          </div>
+   422→        </div>
+   423→
+   424→        {/* Permission notice for read-only users */}
+   425→        {!canCreate && !canEdit && !canDelete && canView && (
+   426→          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[var(--erp-text-muted)]">
+   427→            <FAIcon name="fa-eye" className="text-[9px]" />
+   428→            <span>Read-only access — you can view records but not modify them</span>
+   429→          </div>
+   430→        )}
+   431→
+   432→        {/* Stats strip */}
+   433→        {stats && stats.length > 0 && (
+   434→          <div className="flex items-center gap-4 mt-3 text-[11px] flex-wrap">
+   435→            {stats.map((s, i) => (
+   436→              <div key={i} className="flex items-center gap-1.5">
+   437→                <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+   438→                <span className="text-[var(--erp-text-muted)]">{s.label}:</span>
+   439→                <span className="font-semibold text-[var(--erp-text)]">{s.value}</span>
+   440→              </div>
+   441→            ))}
+   442→          </div>
+   443→        )}
+   444→
+   445→        {/* Quick Status Filter Pills */}
+   446→        {hasStatusCol && filterableCols.length > 0 && (() => {
+   447→          const statusCol = register.columns.find((c) => c.type === 'status');
+   448→          if (!statusCol?.options) return null;
+   449→          const activeFilter = filters[statusCol.name];
+   450→          return (
+   451→            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+   452→              <span className="text-[10px] uppercase tracking-wide text-[var(--erp-text-muted)] mr-1">Quick Filter:</span>
+   453→              <button
+   454→                onClick={() => { setFilters((f) => { const n = { ...f }; delete n[statusCol.name]; return n; }); setPage(1); }}
+   455→                className={cn(
+   456→                  'px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors',
+   457→                  !activeFilter
+   458→                    ? 'bg-[var(--erp-accent)] text-white'
+   459→                    : 'bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
+   460→                )}
+   461→              >
+   462→                All
+   463→              </button>
+   464→              {statusCol.options.map((opt) => {
+   465→                const count = records.filter((r) => r.data[statusCol.name] === opt).length;
+   466→                if (count === 0) return null;
+   467→                return (
+   468→                  <button
+   469→                    key={opt}
+   470→                    onClick={() => { setFilters((f) => ({ ...f, [statusCol.name]: activeFilter === opt ? '' : opt })); setPage(1); }}
+   471→                    className={cn(
+   472→                      'px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors flex items-center gap-1',
+   473→                      activeFilter === opt
+   474→                        ? 'bg-[var(--erp-accent)] text-white'
+   475→                        : 'bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
+   476→                    )}
+   477→                  >
+   478→                    {opt}
+   479→                    <span className={cn('text-[8px] px-1 rounded-full', activeFilter === opt ? 'bg-white/20' : 'bg-[var(--erp-bg-hover)]')}>
+   480→                      {count}
+   481→                    </span>
+   482→                  </button>
+   483→                );
+   484→              })}
+   485→            </div>
+   486→          );
+   487→        })()}
+   488→
+   489→        {/* Search + Filters row */}
+   490→        <div className="mt-3 flex items-center gap-2 flex-wrap">
+   491→          <div className="relative flex-1 min-w-[200px] max-w-md">
+   492→            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)]" />
+   493→            <input
+   494→              value={search}
+   495→              onChange={(e) => setSearch(e.target.value)}
+   496→              placeholder="Search records..."
+   497→              className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] focus:ring-1 focus:ring-[var(--erp-accent-border)]"
+   498→            />
+   499→            {search && (
+   500→              <button
+   501→                onClick={() => setSearch('')}
+   502→                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--erp-text-muted)] hover:text-[var(--erp-text)]"
+   503→                aria-label="Clear search"
+   504→              >
+   505→                <X className="w-3.5 h-3.5" />
+   506→              </button>
+   507→            )}
+   508→          </div>
+   509→          {showFilters && filterableCols.length > 0 && (
+   510→            <div className="flex items-center gap-1.5 flex-wrap">
+   511→              {filterableCols.map((col) => (
+   512→                <select
+   513→                  key={col.name}
+   514→                  value={filters[col.name] || ''}
+   515→                  onChange={(e) => {
+   516→                    setFilters((f) => ({ ...f, [col.name]: e.target.value }));
+   517→                    setPage(1);
+   518→                  }}
+   519→                  className="text-[11px] py-1 px-2 rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)]"
+   520→                >
+   521→                  <option value="">{displayColumnName(col.name, currency)}: All</option>
+   522→                  {col.options?.map((o) => (
+   523→                    <option key={o} value={o}>{o}</option>
+   524→                  ))}
+   525→                </select>
+   526→              ))}
+   527→              {Object.values(filters).filter(Boolean).length > 0 && (
+   528→                <button
+   529→                  onClick={() => { setFilters({}); setPage(1); }}
+   530→                  className="text-[11px] text-[var(--erp-danger)] hover:underline px-2"
+   531→                >
+   532→                  Clear filters
+   533→                </button>
+   534→              )}
+   535→            </div>
+   536→          )}
+   537→        </div>
+   538→      </div>
+   539→
+   540→      {/* Bulk actions bar (only when rows are selected) */}
+   541→      <BulkActions
+   542→        register={register}
+   543→        selectedIds={selectedIds}
+   544→        selectedRecords={selectedRecords}
+   545→        totalRecords={records.length}
+   546→        onClear={() => setSelectedIds(new Set())}
+   547→        onRefresh={loadRecords}
+   548→        onPrint={handlePrint}
+   549→      />
+   550→
+   551→      {/* Table */}
+   552→      <div className="flex-1 overflow-auto">
+   553→        {loading ? (
+   554→          <TableSkeleton cols={register.columns.length} />
+   555→        ) : records.length === 0 ? (
+   556→          <EmptyState
+   557→            onAdd={() => { setEditing(null); setFormOpen(true); }}
+   558→            onImport={() => setImportOpen(true)}
+   559→            registerName={register.name}
+   560→            hasSearch={!!search || Object.values(filters).some(Boolean)}
+   561→          />
+   562→        ) : (
+   563→          <table className="w-full text-[12px] border-collapse">
+   564→            <thead className="sticky top-0 z-10">
+   565→              <tr className="bg-[var(--erp-bg-elevated)] border-b border-[var(--erp-border)]">
+   566→                <th className="w-9 px-2 py-2 border-r border-[var(--erp-border)] sticky left-0 bg-[var(--erp-bg-elevated)] z-20">
+   567→                  <Checkbox
+   568→                    checked={selectedIds.size === records.length && records.length > 0}
+   569→                    onCheckedChange={toggleSelectAll}
+   570→                    aria-label="Select all rows"
+   571→                  />
+   572→                </th>
+   573→                {visibleColumns.map((col) => (
+   574→                  <th
+   575→                    key={col.name}
+   576→                    onClick={() => toggleSort(col.name)}
+   577→                    className="px-3 py-2 text-left font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide cursor-pointer hover:bg-[var(--erp-bg-hover)] select-none whitespace-nowrap"
+   578→                    style={{ minWidth: col.width || 120 }}
+   579→                  >
+   580→                    <div className="flex items-center gap-1">
+   581→                      <span>{displayColumnName(col.name, currency)}</span>
+   582→                      {sortField === col.name ? (
+   583→                        sortDir === 'asc' ? <ArrowUp className="w-3 h-3 text-[var(--erp-accent)]" /> : <ArrowDown className="w-3 h-3 text-[var(--erp-accent)]" />
+   584→                      ) : (
+   585→                        <ArrowUpDown className="w-3 h-3 opacity-30" />
+   586→                      )}
+   587→                    </div>
+   588→                  </th>
+   589→                ))}
+   590→                <th className="px-3 py-2 text-right font-semibold text-[var(--erp-text-secondary)] text-[11px] uppercase tracking-wide sticky right-0 bg-[var(--erp-bg-elevated)] border-l border-[var(--erp-border)] z-20 min-w-[200px]">
+   591→                  Actions
+   592→                </th>
+   593→              </tr>
+   594→            </thead>
+   595→            <tbody>
+   596→              {records.map((rec, idx) => {
+   597→                const isSelected = selectedIds.has(rec.id);
+   598→                return (
+   599→                  <tr
+   600→                    key={rec.id}
+   601→                    className={cn(
+   602→                      'border-b border-[var(--erp-border)] hover:bg-[var(--erp-bg-hover)] transition-colors',
+   603→                      idx % 2 === 1 && !isSelected && 'bg-[var(--erp-bg)]/40',
+   604→                      isSelected && 'bg-[var(--erp-accent-dim)] hover:bg-[var(--erp-accent-dim)]',
+   605→                    )}
+   606→                  >
+   607→                    <td className="w-9 px-2 py-2 border-r border-[var(--erp-border)] sticky left-0 bg-inherit z-10">
+   608→                      <Checkbox
+   609→                        checked={isSelected}
+   610→                        onCheckedChange={() => toggleSelect(rec.id)}
+   611→                        aria-label={`Select record ${rec.sequence}`}
+   612→                      />
+   613→                    </td>
+   614→                    {visibleColumns.map((col) => (
+   615→                      <td key={col.name} className="px-3 py-2 text-[var(--erp-text)] align-top">
+   616→                        <CellContent value={rec.data[col.name]} col={col} sequence={rec.sequence} registerCode={register.code} currency={currency} />
+   617→                      </td>
+   618→                    ))}
+   619→                    <td className="px-3 py-2 text-right sticky right-0 bg-inherit border-l border-[var(--erp-border)] z-10">
+   620→                      <div className="flex items-center justify-end gap-1">
+   621→                        <ActionBtn title="View record" onClick={() => setViewing(rec)} icon={<Eye className="w-3.5 h-3.5" />} label="View" />
+   622→                        {hasStatusCol && (canApprove || canEdit) && (
+   623→                          <ActionBtn title="Workflow" onClick={() => setWorkflowTarget(rec)} icon={<Workflow className="w-3.5 h-3.5" />} label="Flow" accent />
+   624→                        )}
+   625→                        {canEdit && (
+   626→                          <ActionBtn title="Edit record" onClick={() => { setEditing(rec); setFormOpen(true); }} icon={<Pencil className="w-3.5 h-3.5" />} label="Edit" />
+   627→                        )}
+   628→                        <IconBtn title="Print" onClick={() => handlePrint([rec])}><Printer className="w-3.5 h-3.5" /></IconBtn>
+   629→                        {canDelete && (
+   630→                          <IconBtn title="Delete" danger onClick={() => setDeleteTarget(rec)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+   631→                        )}
+   632→                      </div>
+   633→                    </td>
+   634→                  </tr>
+   635→                );
+   636→              })}
+   637→            </tbody>
+   638→          </table>
+   639→        )}
+   640→      </div>
+   641→
+   642→      {/* Pagination */}
+   643→      {!loading && records.length > 0 && (
+   644→        <div className="flex items-center justify-between px-4 py-2 border-t border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px] text-[var(--erp-text-secondary)] flex-wrap gap-2">
+   645→          <div className="flex items-center gap-2">
+   646→            <span>
+   647→              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+   648→            </span>
+   649→            <span className="text-[var(--erp-text-muted)]">|</span>
+   650→            <span>Page {page} of {totalPages}</span>
+   651→            {selectedIds.size > 0 && (
+   652→              <>
+   653→                <span className="text-[var(--erp-text-muted)]">|</span>
+   654→                <span className="text-[var(--erp-accent)] font-medium">{selectedIds.size} selected</span>
+   655→              </>
+   656→            )}
+   657→          </div>
+   658→          <div className="flex items-center gap-2">
+   659→            <select
+   660→              value={pageSize}
+   661→              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+   662→              className="text-[11px] py-1 px-2 rounded bg-[var(--erp-bg-input)] border border-[var(--erp-border)]"
+   663→            >
+   664→              {PAGE_SIZES.map((s) => <option key={s} value={s}>{s} / page</option>)}
+   665→            </select>
+   666→            <div className="flex items-center gap-0.5">
+   667→              <IconBtn title="First page" onClick={() => setPage(1)} disabled={page === 1}>
+   668→                <ChevronLeft className="w-3.5 h-3.5" />
+   669→                <ChevronLeft className="w-3.5 h-3.5 -ml-2" />
+   670→              </IconBtn>
+   671→              <IconBtn title="Previous page" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+   672→                <ChevronLeft className="w-3.5 h-3.5" />
+   673→              </IconBtn>
+   674→              <IconBtn title="Next page" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+   675→                <ChevronRight className="w-3.5 h-3.5" />
+   676→              </IconBtn>
+   677→              <IconBtn title="Last page" onClick={() => setPage(totalPages)} disabled={page === totalPages}>
+   678→                <ChevronRight className="w-3.5 h-3.5" />
+   679→                <ChevronRight className="w-3.5 h-3.5 -ml-2" />
+   680→              </IconBtn>
+   681→            </div>
+   682→          </div>
+   683→        </div>
+   684→      )}
+   685→
+   686→      {/* Record form modal */}
+   687→      <RecordForm
+   688→        open={formOpen}
+   689→        register={register}
+   690→        record={editing}
+   691→        onClose={() => { setFormOpen(false); setEditing(null); }}
+   692→        onSaved={handleSaved}
+   693→      />
+   694→
+   695→      {/* CSV Import modal */}
+   696→      <CsvImport
+   697→        open={importOpen}
+   698→        register={register}
+   699→        onClose={() => setImportOpen(false)}
+   700→        onImported={() => { loadRecords(); }}
+   701→      />
+   702→
+   703→      {/* Record detail drawer (replaces View modal) */}
+   704→      <RecordDetailDrawer
+   705→        key={viewing?.id || 'none'}
+   706→        open={!!viewing}
+   707→        register={register}
+   708→        record={viewing}
+   709→        company={company}
+   710→        onClose={() => setViewing(null)}
+   711→        onEdit={() => { if (viewing) { setEditing(viewing); setViewing(null); setFormOpen(true); } }}
+   712→        onRefresh={loadRecords}
+   713→      />
+   714→
+   715→      {/* Approval workflow modal */}
+   716→      <ApprovalWorkflow
+   717→        open={!!workflowTarget}
+   718→        register={register}
+   719→        record={workflowTarget}
+   720→        onClose={() => setWorkflowTarget(null)}
+   721→        onTransition={() => { setWorkflowTarget(null); loadRecords(); }}
+   722→      />
+   723→
+   724→      {/* Column Editor modal */}
+   725→      <ColumnEditor
+   726→        open={columnEditorOpen}
+   727→        register={register}
+   728→        onClose={() => setColumnEditorOpen(false)}
+   729→        onSaved={() => { loadRecords(); }}
+   730→      />
+   731→
+   732→      {/* Delete confirmation */}
+   733→      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+   734→        <AlertDialogContent>
+   735→          <AlertDialogHeader>
+   736→            <AlertDialogTitle>Delete this record?</AlertDialogTitle>
+   737→            <AlertDialogDescription>
+   738→              This will soft-delete record #{deleteTarget?.sequence} from "{register.name}".
+   739→              The record will be hidden but preserved in the audit log. This action can be reversed by an administrator.
+   740→            </AlertDialogDescription>
+   741→          </AlertDialogHeader>
+   742→          <AlertDialogFooter>
+   743→            <AlertDialogCancel>Cancel</AlertDialogCancel>
+   744→            <AlertDialogAction
+   745→              onClick={handleDelete}
+   746→              className="bg-[var(--erp-danger)] hover:bg-[var(--erp-danger)]/90"
+   747→            >
+   748→              Delete Record
+   749→            </AlertDialogAction>
+   750→          </AlertDialogFooter>
+   751→        </AlertDialogContent>
+   752→      </AlertDialog>
+   753→    </div>
+   754→  );
+   755→}
+   756→
+   757→function colIconFor(type: string): string {
+   758→  switch (type) {
+   759→    case 'auto_increment': return 'fa-hashtag';
+   760→    case 'text': return 'fa-font';
+   761→    case 'long_text': return 'fa-align-left';
+   762→    case 'number': return 'fa-hashtag';
+   763→    case 'currency': return 'fa-coins';
+   764→    case 'percentage': return 'fa-percent';
+   765→    case 'date': return 'fa-calendar';
+   766→    case 'datetime': return 'fa-calendar-days';
+   767→    case 'time': return 'fa-clock';
+   768→    case 'dropdown': return 'fa-list';
+   769→    case 'status': return 'fa-flag';
+   770→    case 'priority': return 'fa-bolt';
+   771→    case 'multi_select': return 'fa-list-check';
+   772→    case 'email': return 'fa-envelope';
+   773→    case 'phone': return 'fa-phone';
+   774→    case 'rating': return 'fa-star';
+   775→    case 'employee': return 'fa-user';
+   776→    case 'department': return 'fa-building-user';
+   777→    case 'building': return 'fa-city';
+   778→    case 'asset': return 'fa-cube';
+   779→    case 'equipment': return 'fa-gears';
+   780→    case 'vendor': return 'fa-truck';
+   781→    default: return 'fa-circle';
+   782→  }
+   783→}
+   784→
+   785→function statusColorFor(status: string): string {
+   786→  const s = status.toLowerCase();
+   787→  if (['open', 'draft', 'submitted', 'pending', 'scheduled', 'reported', 'due', 'under review', 'on track', 'at risk'].includes(s)) return 'var(--erp-warning)';
+   788→  if (['in progress', 'active', 'approved', 'issued', 'on order', 'in stock', 'operational', 'compliant', 'calibrated', 'pass', 'achieved', 'exceeded', 'present', 'completed', 'paid'].includes(s)) return 'var(--erp-success)';
+   789→  if (['overdue', 'critical', 'rejected', 'cancelled', 'fail', 'non-compliant', 'expired', 'out of service', 'beyond repair', 'terminated', 'blacklisted', 'suspended', 'absent'].includes(s)) return 'var(--erp-danger)';
+   790→  return 'var(--erp-info)';
+   791→}
+   792→
+   793→function formatCurrencyCompact(n: number, currency = 'AED'): string {
+   794→  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
+   795→  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
+   796→  return `${currency} ${n.toLocaleString()}`;
+   797→}
+   798→
+   799→function CellContent({ value, col, sequence, registerCode, expanded, currency = 'AED' }: { value: any; col: ColumnDef; sequence: number; registerCode: string; expanded?: boolean; currency?: string }) {
+   800→  if (col.type === 'auto_increment') {
+   801→    const prefix = guessPrefix(col.name, registerCode);
+   802→    return <span className="font-mono text-[11px] text-[var(--erp-accent)] font-medium">{formatDocNumber(prefix, Number(value) || sequence)}</span>;
+   803→  }
+   804→  if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
+   805→    return <span className="text-[var(--erp-text-muted)]">—</span>;
+   806→  }
+   807→  if (col.type === 'status') {
+   808→    return <Badge variant={statusVariant(String(value))} icon={statusIcon(String(value))}>{String(value)}</Badge>;
+   809→  }
+   810→  if (col.type === 'priority') {
+   811→    return <Badge variant={priorityVariant(String(value))} icon={priorityIcon(String(value))}>{String(value)}</Badge>;
+   812→  }
+   813→  if (col.type === 'multi_select') {
+   814→    const arr = Array.isArray(value) ? value : [value];
+   815→    return (
+   816→      <div className="flex flex-wrap gap-1">
+   817→        {arr.map((v, i) => (
+   818→          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-hover)] text-[var(--erp-text-secondary)]">
+   819→            {String(v)}
+   820→          </span>
+   821→        ))}
+   822→      </div>
+   823→    );
+   824→  }
+   825→  if (col.type === 'rating') {
+   826→    const n = Number(value) || 0;
+   827→    return (
+   828→      <span className="text-[var(--erp-warning)] text-[12px]" title={`${n}/5`}>
+   829→        {'★'.repeat(n)}<span className="text-[var(--erp-text-muted)]">{'☆'.repeat(5 - n)}</span>
+   830→      </span>
+   831→    );
+   832→  }
+   833→  if (col.type === 'currency') {
+   834→    const n = Number(value) || 0;
+   835→    return <span className="font-mono text-[var(--erp-text)]">{formatCurrencyCompact(n, currency)}</span>;
+   836→  }
+   837→  if (col.type === 'percentage') {
+   838→    const n = Number(value) || 0;
+   839→    return (
+   840→      <span className="inline-flex items-center gap-1.5">
+   841→        <span className="font-mono">{n}%</span>
+   842→        <span className="w-12 h-1.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
+   843→          <span className="block h-full rounded-full" style={{ width: `${Math.min(100, n)}%`, background: 'var(--erp-accent)' }} />
+   844→        </span>
+   845→      </span>
+   846→    );
+   847→  }
+   848→  if (col.type === 'number') {
+   849→    return <span className="font-mono">{String(value)}</span>;
+   850→  }
+   851→  if (col.type === 'date') {
+   852→    return <span>{formatDate(String(value))}</span>;
+   853→  }
+   854→  if (col.type === 'datetime') {
+   855→    return <span>{formatDate(String(value))}</span>;
+   856→  }
+   857→  if (col.type === 'email') {
+   858→    return <a href={`mailto:${value}`} className="text-[var(--erp-accent)] hover:underline">{String(value)}</a>;
+   859→  }
+   860→  if (col.type === 'phone') {
+   861→    return <a href={`tel:${value}`} className="text-[var(--erp-accent)] hover:underline">{String(value)}</a>;
+   862→  }
+   863→  if (col.type === 'long_text') {
+   864→    return (
+   865→      <div className={cn('text-[var(--erp-text)]', !expanded && 'line-clamp-2 max-w-[260px]')}>
+   866→        {String(value)}
+   867→      </div>
+   868→    );
+   869→  }
+   870→  if (col.type === 'image') {
+   871→    const src = String(value);
+   872→    return (
+   873→      <a href={src} target="_blank" rel="noopener noreferrer" className="inline-block">
+   874→        <img src={src} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-[var(--erp-border)] hover:border-[var(--erp-accent)] transition-colors" />
+   875→      </a>
+   876→    );
+   877→  }
+   878→  if (col.type === 'url') {
+   879→    const url = String(value);
+   880→    const display = url.replace(/^https?:\/\//, '').slice(0, 30);
+   881→    return (
+   882→      <a href={url} target="_blank" rel="noopener noreferrer" className="text-[var(--erp-accent)] hover:underline inline-flex items-center gap-1 max-w-[180px]">
+   883→        <LinkIcon className="w-3 h-3 shrink-0" />
+   884→        <span className="truncate">{display}{url.length > 30 ? '…' : ''}</span>
+   885→      </a>
+   886→    );
+   887→  }
+   888→  if (col.type === 'color') {
+   889→    const c = String(value);
+   890→    return (
+   891→      <span className="inline-flex items-center gap-1.5">
+   892→        <span className="w-5 h-5 rounded border border-[var(--erp-border)]" style={{ background: c }} />
+   893→        <span className="font-mono text-[10px] text-[var(--erp-text-secondary)]">{c}</span>
+   894→      </span>
+   895→    );
+   896→  }
+   897→  if (col.type === 'tags') {
+   898→    const arr = Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim()).filter(Boolean);
+   899→    return (
+   900→      <div className="flex flex-wrap gap-1">
+   901→        {arr.map((v, i) => (
+   902→          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium border border-[var(--erp-accent-border)]">
+   903→            #{String(v)}
+   904→          </span>
+   905→        ))}
+   906→      </div>
+   907→    );
+   908→  }
+   909→  return <span className="text-[var(--erp-text)]">{String(value)}</span>;
+   910→}
+   911→
+   912→function statusIcon(status: string): string {
+   913→  const s = status.toLowerCase();
+   914→  if (['open', 'draft', 'submitted', 'pending', 'scheduled', 'reported', 'due'].includes(s)) return 'fa-clock';
+   915→  if (['in progress', 'active', 'approved', 'issued', 'on order', 'in stock', 'operational', 'compliant', 'pass'].includes(s)) return 'fa-circle-check';
+   916→  if (['overdue', 'critical', 'rejected', 'cancelled', 'fail', 'expired', 'out of service', 'terminated', 'suspended', 'absent'].includes(s)) return 'fa-circle-xmark';
+   917→  if (['closed', 'completed', 'achieved', 'exceeded'].includes(s)) return 'fa-flag-checkered';
+   918→  return 'fa-circle';
+   919→}
+   920→
+   921→function priorityIcon(priority: string): string {
+   922→  const p = priority.toLowerCase();
+   923→  if (p === 'critical') return 'fa-triangle-exclamation';
+   924→  if (p === 'high') return 'fa-arrow-up';
+   925→  if (p === 'medium') return 'fa-equals';
+   926→  if (p === 'low') return 'fa-arrow-down';
+   927→  return 'fa-circle';
+   928→}
+   929→
+   930→function guessPrefix(colName: string, registerCode: string): string {
+   931→  // Prefer register code (more accurate) — take first 3 letters uppercase
+   932→  const codePrefix = registerCode.slice(0, 3).toUpperCase();
+   933→  if (codePrefix) return codePrefix;
+   934→  const n = colName.toLowerCase();
+   935→  if (n.includes('wo')) return 'WO';
+   936→  if (n.includes('pm')) return 'PM';
+   937→  if (n.includes('cm')) return 'CM';
+   938→  return 'REC';
+   939→}
+   940→
+   941→function Badge({ variant, children, icon }: { variant: BadgeVariant; children: React.ReactNode; icon?: string }) {
+   942→  const styles: Record<BadgeVariant, React.CSSProperties> = {
+   943→    success: { background: 'rgba(16,185,129,0.15)', color: 'var(--erp-success)' },
+   944→    warning: { background: 'rgba(245,158,11,0.15)', color: 'var(--erp-warning)' },
+   945→    danger:  { background: 'rgba(239,68,68,0.15)', color: 'var(--erp-danger)' },
+   946→    info:    { background: 'rgba(6,182,212,0.15)', color: 'var(--erp-info)' },
+   947→    accent:  { background: 'var(--erp-accent-dim)', color: 'var(--erp-accent)' },
+   948→    neutral: { background: 'var(--erp-bg-hover)', color: 'var(--erp-text-secondary)' },
+   949→    default: { background: 'var(--erp-bg-hover)', color: 'var(--erp-text-secondary)' },
+   950→  };
+   951→  return (
+   952→    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium whitespace-nowrap" style={styles[variant]}>
+   953→      {icon && <FAIcon name={icon} className="text-[9px]" />}
+   954→      {children}
+   955→    </span>
+   956→  );
+   957→}
+   958→
+   959→function IconBtn({ children, title, onClick, disabled, danger, accent }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean; danger?: boolean; accent?: boolean }) {
+   960→  return (
+   961→    <button
+   962→      title={title}
+   963→      onClick={onClick}
+   964→      disabled={disabled}
+   965→      className={cn(
+   966→        'p-1.5 rounded transition-colors',
+   967→        disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--erp-bg-hover)]',
+   968→        danger ? 'text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)]'
+   969→          : accent ? 'text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]'
+   970→          : 'text-[var(--erp-text-secondary)] hover:text-[var(--erp-text)]',
+   971→      )}
+   972→    >
+   973→      {children}
+   974→    </button>
+   975→  );
+   976→}
+   977→
+   978→// Action button with icon + explicit text label (View / Edit / Flow)
+   979→function ActionBtn({ title, onClick, icon, label, accent }: { title: string; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean }) {
+   980→  return (
+   981→    <button
+   982→      title={title}
+   983→      onClick={onClick}
+   984→      className={cn(
+   985→        'inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] font-medium transition-colors border',
+   986→        accent
+   987→          ? 'border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]'
+   988→          : 'border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] hover:border-[var(--erp-accent-border)]',
+   989→      )}
+   990→    >
+   991→      {icon}
+   992→      <span>{label}</span>
+   993→    </button>
+   994→  );
+   995→}
+   996→
+   997→function TableSkeleton({ cols }: { cols: number }) {
+   998→  return (
+   999→    <div className="p-4 space-y-2">
+  1000→      {Array.from({ length: 10 }).map((_, i) => (
+  1001→        <div key={i} className="flex gap-2">
+  1002→          {Array.from({ length: cols + 2 }).map((_, j) => (
+  1003→            <div key={j} className="h-8 bg-[var(--erp-bg-hover)] rounded animate-pulse flex-1" style={{ animationDelay: `${i * 50 + j * 20}ms` }} />
+  1004→          ))}
+  1005→        </div>
+  1006→      ))}
+  1007→    </div>
+  1008→  );
+  1009→}
+  1010→
+  1011→function EmptyState({ onAdd, onImport, registerName, hasSearch }: { onAdd: () => void; onImport: () => void; registerName: string; hasSearch?: boolean }) {
+  1012→  return (
+  1013→    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+  1014→      <EmptyStateIllustration type={hasSearch ? 'no-results' : 'no-records'} size={120} className="mb-4" />
+  1015→      <h3 className="text-[15px] font-semibold text-[var(--erp-text)] mb-1">
+  1016→        {hasSearch ? 'No records match your search' : 'No records yet'}
+  1017→      </h3>
+  1018→      <p className="text-[12px] text-[var(--erp-text-muted)] mb-4 max-w-sm">
+  1019→        {hasSearch
+  1020→          ? `Try adjusting your search or filters to find what you're looking for.`
+  1021→          : `There are no records in the "${registerName}" register. Add your first record or import from CSV.`}
+  1022→      </p>
+  1023→      <div className="flex items-center gap-2 flex-wrap justify-center">
+  1024→        <Button onClick={onAdd} className="bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)] text-[12px] h-9">
+  1025→          <Plus className="w-4 h-4 mr-1" /> Add First Record
+  1026→        </Button>
+  1027→        {!hasSearch && (
+  1028→          <Button variant="outline" onClick={onImport} className="text-[12px] h-9">
+  1029→            <Upload className="w-4 h-4 mr-1" /> Import CSV
+  1030→          </Button>
+  1031→        )}
+  1032→      </div>
+  1033→    </div>
+  1034→  );
+  1035→}
+  1036→

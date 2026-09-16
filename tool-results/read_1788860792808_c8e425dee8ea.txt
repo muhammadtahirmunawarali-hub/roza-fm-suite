@@ -1,0 +1,703 @@
+     1→'use client';
+     2→
+     3→// FMCore ERP — Settings view (with Saved Views management tab)
+     4→import { useEffect, useState } from 'react';
+     5→import { settingsApi, backupApi, savedViewsApi, statsApi, type SavedViewMeta, type SystemStats } from '@/lib/erp/api';
+     6→import type { Setting } from '@/lib/erp/types';
+     7→import { useErpStore } from '@/lib/erp/store';
+     8→import { FAIcon } from './icon';
+     9→import { EmptyStateIllustration } from './empty-state-illustration';
+    10→import {
+    11→  Download, Upload, RotateCcw, Save, Building2, Palette, FileText,
+    12→  Hash, Bell, Database, Shield, Info, Bookmark, Trash2, Globe, Lock, Pencil,
+    13→  Search, Filter as FilterIcon, ArrowUpDown, Check, X, Loader2, Rocket,
+    14→} from 'lucide-react';
+    15→import { Button } from '@/components/ui/button';
+    16→import { Input } from '@/components/ui/input';
+    17→import { Label } from '@/components/ui/label';
+    18→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    19→import { toast } from 'sonner';
+    20→import { cn } from '@/lib/utils';
+    21→import { formatTimeAgo } from '@/lib/erp/utils';
+    22→import { ProjectStatusPanel } from './project-status-panel';
+    23→
+    24→export function SettingsView() {
+    25→  const { theme, setTheme, currency, setCurrency, rtl, setRtl, user, hasPermission } = useErpStore();
+    26→  const [settings, setSettings] = useState<Record<string, string>>({});
+    27→  const [saving, setSaving] = useState(false);
+    28→  const [activeTab, setActiveTab] = useState('company');
+    29→  const [savedViews, setSavedViews] = useState<SavedViewMeta[]>([]);
+    30→  const [viewsLoading, setViewsLoading] = useState(false);
+    31→  const [viewSearch, setViewSearch] = useState('');
+    32→  const [editTarget, setEditTarget] = useState<SavedViewMeta | null>(null);
+    33→  const [editName, setEditName] = useState('');
+    34→  const [editShared, setEditShared] = useState(false);
+    35→  const [editSaving, setEditSaving] = useState(false);
+    36→  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+    37→
+    38→  useEffect(() => {
+    39→    settingsApi.list().then((list: Setting[]) => {
+    40→      const map: Record<string, string> = {};
+    41→      list.forEach((s) => (map[s.key] = s.value));
+    42→      setSettings(map);
+    43→    }).catch(() => {});
+    44→  }, []);
+    45→
+    46→  const loadSavedViews = () => {
+    47→    setViewsLoading(true);
+    48→    savedViewsApi.listAll().then((views) => {
+    49→      setSavedViews(views);
+    50→    }).catch(() => {}).finally(() => setViewsLoading(false));
+    51→  };
+    52→
+    53→  useEffect(() => {
+    54→    if (activeTab === 'saved-views') loadSavedViews();
+    55→    if (activeTab === 'about') {
+    56→      statsApi.get().then(setSystemStats).catch(() => {});
+    57→    }
+    58→  }, [activeTab]);
+    59→
+    60→  const handleDeleteView = async (id: string, name: string) => {
+    61→    try {
+    62→      await savedViewsApi.remove(id);
+    63→      toast.success(`Deleted view "${name}"`);
+    64→      setSavedViews((v) => v.filter((x) => x.id !== id));
+    65→    } catch (e: any) {
+    66→      toast.error('Failed to delete view', { description: e.message });
+    67→    }
+    68→  };
+    69→
+    70→  const handleEditView = (view: SavedViewMeta) => {
+    71→    setEditTarget(view);
+    72→    setEditName(view.name);
+    73→    setEditShared(view.isShared);
+    74→  };
+    75→
+    76→  const handleSaveEdit = async () => {
+    77→    if (!editTarget) return;
+    78→    if (!editName.trim()) {
+    79→      toast.error('View name cannot be empty');
+    80→      return;
+    81→    }
+    82→    setEditSaving(true);
+    83→    try {
+    84→      await savedViewsApi.update({
+    85→        id: editTarget.id,
+    86→        name: editName.trim(),
+    87→        isShared: editShared,
+    88→      });
+    89→      toast.success(`Updated view "${editName}"`);
+    90→      setEditTarget(null);
+    91→      setEditName('');
+    92→      setEditShared(false);
+    93→      loadSavedViews();
+    94→    } catch (e: any) {
+    95→      toast.error('Failed to update view', { description: e.message });
+    96→    } finally {
+    97→      setEditSaving(false);
+    98→    }
+    99→  };
+   100→
+   101→  useEffect(() => {
+   102→    settingsApi.list().then((list: Setting[]) => {
+   103→      const map: Record<string, string> = {};
+   104→      list.forEach((s) => (map[s.key] = s.value));
+   105→      setSettings(map);
+   106→    }).catch(() => {});
+   107→  }, []);
+   108→
+   109→  const update = (key: string, value: string) => {
+   110→    setSettings((s) => ({ ...s, [key]: value }));
+   111→  };
+   112→
+   113→  const saveAll = async () => {
+   114→    setSaving(true);
+   115→    try {
+   116→      const items = Object.entries(settings).map(([key, value]) => ({ key, value }));
+   117→      await settingsApi.bulkSet(items);
+   118→      toast.success(`${items.length} settings saved`);
+   119→    } catch (e: any) {
+   120→      toast.error('Failed to save settings', { description: e.message });
+   121→    } finally {
+   122→      setSaving(false);
+   123→    }
+   124→  };
+   125→
+   126→  const exportBackup = async () => {
+   127→    try {
+   128→      const backup = await backupApi.export();
+   129→      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+   130→      const url = URL.createObjectURL(blob);
+   131→      const a = document.createElement('a');
+   132→      a.href = url;
+   133→      a.download = `fmcore-backup-${new Date().toISOString().slice(0, 10)}.json`;
+   134→      a.click();
+   135→      URL.revokeObjectURL(url);
+   136→      toast.success('Backup exported');
+   137→    } catch (e: any) {
+   138→      toast.error('Backup failed', { description: e.message });
+   139→    }
+   140→  };
+   141→
+   142→  const importBackup = () => {
+   143→    const input = document.createElement('input');
+   144→    input.type = 'file';
+   145→    input.accept = 'application/json';
+   146→    input.onchange = async (e) => {
+   147→      const file = (e.target as HTMLInputElement).files?.[0];
+   148→      if (!file) return;
+   149→      if (!confirm('Importing will REPLACE all current data. Continue?')) return;
+   150→      try {
+   151→        const text = await file.text();
+   152→        const data = JSON.parse(text);
+   153→        await backupApi.import(data);
+   154→        toast.success('Backup imported successfully');
+   155→        setTimeout(() => window.location.reload(), 800);
+   156→      } catch (e: any) {
+   157→        toast.error('Import failed', { description: e.message });
+   158→      }
+   159→    };
+   160→    input.click();
+   161→  };
+   162→
+   163→  const resetDb = async () => {
+   164→    if (!confirm('This will erase ALL data and re-seed sample data. Continue?')) return;
+   165→    try {
+   166→      const res = await fetch('/api/erp/reset', { method: 'POST' });
+   167→      const data = await res.json();
+   168→      toast.success(`Database reset — ${data.registers} registers, ${data.records} records`);
+   169→      setTimeout(() => window.location.reload(), 800);
+   170→    } catch (e: any) {
+   171→      toast.error('Reset failed', { description: e.message });
+   172→    }
+   173→  };
+   174→
+   175→  // Build TABS array — restrict sensitive tabs to admins only
+   176→  const canEditSettings = hasPermission('settings', 'edit');
+   177→  const TABS = [
+   178→    { id: 'company',     label: 'Company',        icon: <Building2 className="w-4 h-4" /> },
+   179→    { id: 'appearance',  label: 'Appearance',    icon: <Palette className="w-4 h-4" /> },
+   180→    { id: 'numbering',   label: 'Document #',    icon: <Hash className="w-4 h-4" /> },
+   181→    ...(canEditSettings ? [{ id: 'saved-views', label: 'Saved Views', icon: <Bookmark className="w-4 h-4" /> }] : []),
+   182→    ...(canEditSettings ? [{ id: 'backup', label: 'Backup & Reset', icon: <Database className="w-4 h-4" /> }] : []),
+   183→    { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
+   184→    { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
+   185→  ];
+   186→
+   187→  return (
+   188→    <div className="flex flex-col h-full">
+   189→      {/* Header */}
+   190→      <div className="px-4 md:px-6 py-3 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] flex items-center justify-between">
+   191→        <div className="flex items-center gap-3">
+   192→          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--erp-bg-hover)] text-[var(--erp-text-secondary)]">
+   193→            <FAIcon name="fa-cog" />
+   194→          </div>
+   195→          <div>
+   196→            <h1 className="text-[18px] font-semibold text-[var(--erp-text)]" style={{ fontFamily: 'var(--font-display)' }}>Settings</h1>
+   197→            <p className="text-[11px] text-[var(--erp-text-muted)] mt-0.5">Configure your ERP system</p>
+   198→          </div>
+   199→        </div>
+   200→        {canEditSettings ? (
+   201→          <Button onClick={saveAll} disabled={saving} className="h-9 text-[12px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]">
+   202→            <Save className="w-4 h-4 mr-1" /> {saving ? 'Saving...' : 'Save Changes'}
+   203→          </Button>
+   204→        ) : (
+   205→          <span className="text-[10px] text-[var(--erp-text-muted)] px-2 py-1 rounded bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
+   206→            Read-only access
+   207→          </span>
+   208→        )}
+   209→      </div>
+   210→
+   211→      <div className="flex flex-1 overflow-hidden">
+   212→        {/* Sub-tabs */}
+   213→        <nav className="w-[180px] border-r border-[var(--erp-border)] bg-[var(--erp-bg-secondary)] p-2 hidden md:block shrink-0">
+   214→          {TABS.map((t) => (
+   215→            <button
+   216→              key={t.id}
+   217→              onClick={() => setActiveTab(t.id)}
+   218→              className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-[12px] transition-colors ${
+   219→                activeTab === t.id
+   220→                  ? 'bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium'
+   221→                  : 'text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]'
+   222→              }`}
+   223→            >
+   224→              {t.icon}
+   225→              <span>{t.label}</span>
+   226→            </button>
+   227→          ))}
+   228→        </nav>
+   229→
+   230→        {/* Content */}
+   231→        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+   232→          {/* Mobile tabs */}
+   233→          <div className="md:hidden flex gap-1 mb-4 overflow-x-auto no-scrollbar">
+   234→            {TABS.map((t) => (
+   235→              <button
+   236→                key={t.id}
+   237→                onClick={() => setActiveTab(t.id)}
+   238→                className={`px-3 py-1.5 rounded-md text-[11px] whitespace-nowrap ${
+   239→                  activeTab === t.id ? 'bg-[var(--erp-accent)] text-white' : 'bg-[var(--erp-bg-card)] text-[var(--erp-text-secondary)]'
+   240→                }`}
+   241→              >
+   242→                {t.label}
+   243→              </button>
+   244→            ))}
+   245→          </div>
+   246→
+   247→          {activeTab === 'company' && (
+   248→            <div className="space-y-4 max-w-2xl">
+   249→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   250→                <Building2 className="w-4 h-4 text-[var(--erp-accent)]" /> Company Profile
+   251→              </h2>
+   252→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   253→                <Field label="Company Name" value={settings['company.name'] || ''} onChange={(v) => update('company.name', v)} disabled={!canEditSettings} />
+   254→                <Field label="Tax Number (TRN)" value={settings['company.tax_number'] || ''} onChange={(v) => update('company.tax_number', v)} disabled={!canEditSettings} />
+   255→                <Field label="Phone" value={settings['company.phone'] || ''} onChange={(v) => update('company.phone', v)} disabled={!canEditSettings} />
+   256→                <Field label="Email" value={settings['company.email'] || ''} onChange={(v) => update('company.email', v)} disabled={!canEditSettings} />
+   257→                <Field label="Address" value={settings['company.address'] || ''} onChange={(v) => update('company.address', v)} fullWidth disabled={!canEditSettings} />
+   258→                <Field label="Country" value={settings['company.country'] || ''} onChange={(v) => update('company.country', v)} disabled={!canEditSettings} />
+   259→                <Field label="Fiscal Year" value={settings['company.fiscal_year'] || ''} onChange={(v) => update('company.fiscal_year', v)} disabled={!canEditSettings} />
+   260→                <div>
+   261→                  <Label className="text-[11px] mb-1">Currency</Label>
+   262→                  <div className="flex items-center gap-2 flex-wrap">
+   263→                    <Select value={settings['company.currency'] || currency} onValueChange={(v) => { update('company.currency', v); update('currency', v); setCurrency(v); }}>
+   264→                      <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[110px]"><SelectValue /></SelectTrigger>
+   265→                      <SelectContent>
+   266→                        {['AED', 'USD', 'EUR', 'GBP', 'PKR', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'INR', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'Custom'].map((c) => (
+   267→                          <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
+   268→                        ))}
+   269→                      </SelectContent>
+   270→                    </Select>
+   271→                    {(settings['company.currency'] === 'Custom' || currency === 'Custom') && (
+   272→                      <Input
+   273→                        value={settings['company.currency_custom'] || ''}
+   274→                        onChange={(e) => { update('company.currency_custom', e.target.value.toUpperCase()); setCurrency(e.target.value.toUpperCase()); }}
+   275→                        className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[80px] uppercase font-mono"
+   276→                        placeholder="e.g. BHD"
+   277→                        maxLength={5}
+   278→                      />
+   279→                    )}
+   280→                    <span className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+   281→                      <span className="inline-block w-3 h-3 rounded-full border border-[var(--erp-border)]" style={{ background: 'var(--erp-accent)' }} />
+   282→                      Active: <span className="font-mono font-semibold text-[var(--erp-text)]">{settings['company.currency'] === 'Custom' ? (settings['company.currency_custom'] || '—') : (settings['company.currency'] || currency)}</span>
+   283→                    </span>
+   284→                  </div>
+   285→                  <p className="text-[10px] text-[var(--erp-text-muted)] mt-1.5">
+   286→                    Applies to all currency fields across registers, dashboards, forms, and printed documents.
+   287→                    {settings['company.currency'] === 'Custom' && ' Tip: Common Gulf currencies (QAR, KWD, BHD, OMR) are now in the dropdown.'}
+   288→                  </p>
+   289→                </div>
+   290→              </div>
+   291→            </div>
+   292→          )}
+   293→
+   294→          {activeTab === 'appearance' && (
+   295→            <div className="space-y-4 max-w-2xl">
+   296→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   297→                <Palette className="w-4 h-4 text-[var(--erp-accent)]" /> Appearance
+   298→              </h2>
+   299→              <div className="grid grid-cols-2 gap-3">
+   300→                {(['dark', 'light'] as const).map((t) => (
+   301→                  <button
+   302→                    key={t}
+   303→                    onClick={() => { setTheme(t); update('theme', t); }}
+   304→                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+   305→                      theme === t
+   306→                        ? 'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
+   307→                        : 'border-[var(--erp-border)] hover:border-[var(--erp-text-muted)]'
+   308→                    }`}
+   309→                  >
+   310→                    <div className="flex items-center gap-2 mb-2">
+   311→                      <FAIcon name={t === 'dark' ? 'fa-moon' : 'fa-sun'} className="text-[16px]" />
+   312→                      <span className="text-[13px] font-medium capitalize text-[var(--erp-text)]">{t} Mode</span>
+   313→                    </div>
+   314→                    <div className="text-[11px] text-[var(--erp-text-muted)]">
+   315→                      {t === 'dark' ? 'Easy on the eyes, great for low-light environments' : 'Clean and bright, ideal for daytime use'}
+   316→                    </div>
+   317→                  </button>
+   318→                ))}
+   319→              </div>
+   320→              <div>
+   321→                <Label className="text-[11px] mb-1">Date Format</Label>
+   322→                <Select value={settings['date_format'] || 'DD/MM/YYYY'} onValueChange={(v) => update('date_format', v)}>
+   323→                  <SelectTrigger className="h-9 text-[12px] bg-[var(--erp-bg-input)] w-[200px]"><SelectValue /></SelectTrigger>
+   324→                  <SelectContent>
+   325→                    {['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'].map((c) => (
+   326→                      <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
+   327→                    ))}
+   328→                  </SelectContent>
+   329→                </Select>
+   330→              </div>
+   331→              {/* RTL Toggle */}
+   332→              <div className="flex items-center gap-3 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+   333→                <div className="flex-1">
+   334→                  <div className="text-[12px] font-medium text-[var(--erp-text)]">Right-to-Left (RTL) Layout</div>
+   335→                  <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">Switch the entire interface to RTL for Arabic/Hebrew languages</div>
+   336→                </div>
+   337→                <button
+   338→                  onClick={() => { setRtl(!rtl); update('rtl', String(!rtl)); }}
+   339→                  className={cn(
+   340→                    'relative w-11 h-6 rounded-full transition-colors shrink-0',
+   341→                    rtl ? 'bg-[var(--erp-accent)]' : 'bg-[var(--erp-bg-hover)]',
+   342→                  )}
+   343→                  aria-label="Toggle RTL"
+   344→                >
+   345→                  <span className={cn(
+   346→                    'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform',
+   347→                    rtl ? 'translate-x-5' : 'translate-x-0.5',
+   348→                  )} />
+   349→                </button>
+   350→                <span className={cn('text-[11px] font-medium', rtl ? 'text-[var(--erp-accent)]' : 'text-[var(--erp-text-muted)]')}>
+   351→                  {rtl ? 'RTL' : 'LTR'}
+   352→                </span>
+   353→              </div>
+   354→            </div>
+   355→          )}
+   356→
+   357→          {activeTab === 'numbering' && (
+   358→            <div className="space-y-4 max-w-2xl">
+   359→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   360→                <Hash className="w-4 h-4 text-[var(--erp-accent)]" /> Document Numbering
+   361→              </h2>
+   362→              <p className="text-[12px] text-[var(--erp-text-muted)]">
+   363→                Document numbers are auto-generated from sequence counters. The prefix is derived from the column name (e.g. "WO Number" → WO-0001).
+   364→                This is a system-managed feature — no manual configuration needed.
+   365→              </p>
+   366→              <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4">
+   367→                <div className="text-[11px] uppercase text-[var(--erp-text-muted)] mb-2">Sample document numbers</div>
+   368→                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[12px]">
+   369→                  {['WO-0001', 'PM-0001', 'PTW-0001', 'INV-0001', 'AST-0001', 'VND-0001'].map((n) => (
+   370→                    <div key={n} className="font-mono text-[var(--erp-accent)] bg-[var(--erp-bg-input)] px-2 py-1 rounded">{n}</div>
+   371→                  ))}
+   372→                </div>
+   373→              </div>
+   374→            </div>
+   375→          )}
+   376→
+   377→          {activeTab === 'backup' && (
+   378→            <div className="space-y-4 max-w-2xl">
+   379→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   380→                <Database className="w-4 h-4 text-[var(--erp-accent)]" /> Backup & Reset
+   381→              </h2>
+   382→              <div className="space-y-3">
+   383→                <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4">
+   384→                  <div className="flex items-start gap-3">
+   385→                    <Download className="w-5 h-5 text-[var(--erp-accent)] mt-0.5" />
+   386→                    <div className="flex-1">
+   387→                      <div className="text-[13px] font-semibold text-[var(--erp-text)]">Export Backup</div>
+   388→                      <p className="text-[11px] text-[var(--erp-text-muted)] mt-1">
+   389→                        Download a JSON file containing all registers, records, settings, notifications, and audit logs.
+   390→                        Use this to migrate between environments or for safekeeping.
+   391→                      </p>
+   392→                    </div>
+   393→                    <Button onClick={exportBackup} variant="outline" size="sm" className="h-8 text-[12px]">
+   394→                      <Download className="w-3.5 h-3.5 mr-1" /> Export
+   395→                    </Button>
+   396→                  </div>
+   397→                </div>
+   398→
+   399→                <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4">
+   400→                  <div className="flex items-start gap-3">
+   401→                    <Upload className="w-5 h-5 text-[var(--erp-info)] mt-0.5" />
+   402→                    <div className="flex-1">
+   403→                      <div className="text-[13px] font-semibold text-[var(--erp-text)]">Import Backup</div>
+   404→                      <p className="text-[11px] text-[var(--erp-text-muted)] mt-1">
+   405→                        Restore from a previously exported JSON file. This will REPLACE all current data — make sure to export first.
+   406→                      </p>
+   407→                    </div>
+   408→                    <Button onClick={importBackup} variant="outline" size="sm" className="h-8 text-[12px]">
+   409→                      <Upload className="w-3.5 h-3.5 mr-1" /> Import
+   410→                    </Button>
+   411→                  </div>
+   412→                </div>
+   413→
+   414→                <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-danger)] rounded-md p-4">
+   415→                  <div className="flex items-start gap-3">
+   416→                    <RotateCcw className="w-5 h-5 text-[var(--erp-danger)] mt-0.5" />
+   417→                    <div className="flex-1">
+   418→                      <div className="text-[13px] font-semibold text-[var(--erp-danger)]">Reset Database</div>
+   419→                      <p className="text-[11px] text-[var(--erp-text-muted)] mt-1">
+   420→                        Erase everything and re-seed the sample data. This action cannot be undone.
+   421→                      </p>
+   422→                    </div>
+   423→                    <Button onClick={resetDb} variant="outline" size="sm" className="h-8 text-[12px] border-[var(--erp-danger)] text-[var(--erp-danger)] hover:bg-[var(--erp-danger)] hover:text-white">
+   424→                      <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+   425→                    </Button>
+   426→                  </div>
+   427→                </div>
+   428→              </div>
+   429→            </div>
+   430→          )}
+   431→
+   432→          {activeTab === 'saved-views' && (
+   433→            <div className="space-y-4 max-w-3xl">
+   434→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   435→                <Bookmark className="w-4 h-4 text-[var(--erp-accent)]" /> Saved Views Management
+   436→              </h2>
+   437→              <p className="text-[11px] text-[var(--erp-text-muted)] -mt-2">
+   438→                Manage all saved filter views across registers. Delete views you no longer need.
+   439→              </p>
+   440→
+   441→              {/* Search bar */}
+   442→              {savedViews.length > 0 && (
+   443→                <div className="relative">
+   444→                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--erp-text-muted)]" />
+   445→                  <input
+   446→                    value={viewSearch}
+   447→                    onChange={(e) => setViewSearch(e.target.value)}
+   448→                    placeholder="Search saved views..."
+   449→                    className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-md bg-[var(--erp-bg-input)] border border-[var(--erp-border)] focus:outline-none focus:border-[var(--erp-accent)] focus:ring-1 focus:ring-[var(--erp-accent-border)]"
+   450→                  />
+   451→                </div>
+   452→              )}
+   453→
+   454→              {/* Stats */}
+   455→              {savedViews.length > 0 && (
+   456→                <div className="flex items-center gap-4 text-[11px]">
+   457→                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+   458→                    <Bookmark className="w-3 h-3" />
+   459→                    {savedViews.length} total views
+   460→                  </span>
+   461→                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+   462→                    <Globe className="w-3 h-3 text-[var(--erp-accent)]" />
+   463→                    {savedViews.filter((v) => v.isShared).length} shared
+   464→                  </span>
+   465→                  <span className="flex items-center gap-1.5 text-[var(--erp-text-muted)]">
+   466→                    <Lock className="w-3 h-3" />
+   467→                    {savedViews.filter((v) => !v.isShared).length} private
+   468→                  </span>
+   469→                </div>
+   470→              )}
+   471→
+   472→              {/* Views list */}
+   473→              {viewsLoading ? (
+   474→                <div className="space-y-2">
+   475→                  {Array.from({ length: 3 }).map((_, i) => (
+   476→                    <div key={i} className="h-16 bg-[var(--erp-bg-hover)] rounded-md animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+   477→                  ))}
+   478→                </div>
+   479→              ) : savedViews.length === 0 ? (
+   480→                <div className="flex flex-col items-center justify-center py-12 text-center">
+   481→                  <EmptyStateIllustration type="no-views" size={120} className="mb-3" />
+   482→                  <h3 className="text-[14px] font-semibold text-[var(--erp-text)] mb-1">No saved views yet</h3>
+   483→                  <p className="text-[12px] text-[var(--erp-text-muted)] max-w-sm">
+   484→                    Save filter combinations from any register view to quickly access them later.
+   485→                  </p>
+   486→                </div>
+   487→              ) : (
+   488→                <div className="space-y-2">
+   489→                  {savedViews
+   490→                    .filter((v) => !viewSearch.trim() || v.name.toLowerCase().includes(viewSearch.toLowerCase()) || v.registerName.toLowerCase().includes(viewSearch.toLowerCase()))
+   491→                    .map((view) => (
+   492→                      <div
+   493→                        key={view.id}
+   494→                        className="group flex items-center gap-3 p-3 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)] hover:border-[var(--erp-accent-border)] transition-colors"
+   495→                      >
+   496→                        {/* Register icon */}
+   497→                        <div
+   498→                          className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+   499→                          style={{ background: view.registerColor + '20', color: view.registerColor }}
+   500→                        >
+   501→                          <FAIcon name={view.registerIcon} className="text-[12px]" />
+   502→                        </div>
+   503→
+   504→                        {/* View info */}
+   505→                        <div className="flex-1 min-w-0">
+   506→                          <div className="flex items-center gap-2">
+   507→                            <span className="text-[12px] font-medium text-[var(--erp-text)] truncate">{view.name}</span>
+   508→                            {view.isShared ? (
+   509→                              <Globe className="w-3 h-3 text-[var(--erp-accent)] shrink-0" />
+   510→                            ) : (
+   511→                              <Lock className="w-3 h-3 text-[var(--erp-text-muted)] shrink-0" />
+   512→                            )}
+   513→                          </div>
+   514→                          <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5 mt-0.5">
+   515→                            <span>{view.registerName}</span>
+   516→                            <span>·</span>
+   517→                            <span>Updated {formatTimeAgo(view.updatedAt)}</span>
+   518→                          </div>
+   519→                          {/* Filter badges */}
+   520→                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+   521→                            {view.hasSearch && (
+   522→                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+   523→                                <Search className="w-2 h-2" /> Search
+   524→                              </span>
+   525→                            )}
+   526→                            {view.filterCount > 0 && (
+   527→                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+   528→                                <FilterIcon className="w-2 h-2" /> {view.filterCount} filter{view.filterCount === 1 ? '' : 's'}
+   529→                              </span>
+   530→                            )}
+   531→                            {view.hasSort && (
+   532→                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--erp-bg-input)] text-[var(--erp-text-secondary)] flex items-center gap-0.5">
+   533→                                <ArrowUpDown className="w-2 h-2" /> Sorted
+   534→                              </span>
+   535→                            )}
+   536→                          </div>
+   537→                        </div>
+   538→
+   539→                        {/* Edit + Delete buttons */}
+   540→                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+   541→                          <button
+   542→                            onClick={() => handleEditView(view)}
+   543→                            className="p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-accent)] hover:bg-[var(--erp-bg-hover)] transition-all"
+   544→                            title="Rename view"
+   545→                            aria-label={`Edit view ${view.name}`}
+   546→                          >
+   547→                            <Pencil className="w-3.5 h-3.5" />
+   548→                          </button>
+   549→                          <button
+   550→                            onClick={() => handleDeleteView(view.id, view.name)}
+   551→                            className="p-2 rounded-md text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)] hover:bg-[rgba(239,68,68,0.1)] transition-all"
+   552→                            title="Delete view"
+   553→                            aria-label={`Delete view ${view.name}`}
+   554→                          >
+   555→                            <Trash2 className="w-3.5 h-3.5" />
+   556→                          </button>
+   557→                        </div>
+   558→                      </div>
+   559→                    ))}
+   560→                </div>
+   561→              )}
+   562→            </div>
+   563→          )}
+   564→
+   565→          {activeTab === 'project' && (
+   566→            <ProjectStatusPanel />
+   567→          )}
+   568→
+   569→          {activeTab === 'about' && (
+   570→            <div className="space-y-4 max-w-2xl">
+   571→              <h2 className="text-[15px] font-semibold text-[var(--erp-text)] flex items-center gap-2">
+   572→                <Info className="w-4 h-4 text-[var(--erp-accent)]" /> About FMCore ERP
+   573→              </h2>
+   574→              <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4 space-y-3">
+   575→                <div className="grid grid-cols-2 gap-3 text-[12px]">
+   576→                  <div><span className="text-[var(--erp-text-muted)]">App Version:</span> <span className="text-[var(--erp-text)] font-mono">{settings['app_version'] || '1.0.0'}</span></div>
+   577→                  <div><span className="text-[var(--erp-text-muted)]">Schema Version:</span> <span className="text-[var(--erp-text)] font-mono">{settings['schema_version'] || '1'}</span></div>
+   578→                  <div><span className="text-[var(--erp-text-muted)]">Framework:</span> <span className="text-[var(--erp-text)]">Next.js 16 + TypeScript</span></div>
+   579→                  <div><span className="text-[var(--erp-text-muted)]">Database:</span> <span className="text-[var(--erp-text)]">SQLite (Prisma)</span></div>
+   580→                </div>
+   581→                <div className="text-[12px] text-[var(--erp-text-secondary)] pt-3 border-t border-[var(--erp-border)]">
+   582→                  FMCore ERP is a dynamic register & form builder for enterprise facility management.
+   583→                  Built with a SaaS-ready architecture — every record carries tenant/company/branch fields
+   584→                  ready for future multi-tenant migration.
+   585→                </div>
+   586→              </div>
+   587→
+   588→              {/* System Stats Grid */}
+   589→              {systemStats && (
+   590→                <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-4">
+   591→                  <h3 className="text-[12px] font-semibold text-[var(--erp-text)] flex items-center gap-2 mb-3">
+   592→                    <Database className="w-3.5 h-3.5 text-[var(--erp-accent)]" /> System Statistics
+   593→                  </h3>
+   594→                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+   595→                    <StatCard label="Registers" value={systemStats.registers} icon="fa-table-list" color="#64748B" />
+   596→                    <StatCard label="Records" value={systemStats.records} icon="fa-database" color="#06B6D4" />
+   597→                    <StatCard label="Users" value={systemStats.users} icon="fa-users" color="#3B82F6" />
+   598→                    <StatCard label="Active Users" value={systemStats.activeUsers} icon="fa-user-check" color="#10B981" />
+   599→                    <StatCard label="Audit Logs" value={systemStats.auditLogs} icon="fa-list-ul" color="#8B5CF6" />
+   600→                    <StatCard label="Notifications" value={systemStats.notifications} icon="fa-bell" color="#F59E0B" />
+   601→                    <StatCard label="Unread Notifs" value={systemStats.unreadNotifs} icon="fa-bell" color="#EF4444" />
+   602→                    <StatCard label="Saved Views" value={systemStats.savedViews} icon="fa-bookmark" color="#EC4899" />
+   603→                    <StatCard label="Active Sessions" value={systemStats.activeSessions} icon="fa-key" color="#06B6D4" />
+   604→                    <StatCard label="Settings" value={systemStats.settings} icon="fa-cog" color="#94A3B8" />
+   605→                    <StatCard label="Dashboard Prefs" value={systemStats.dashboardPrefs} icon="fa-gauge-high" color="#10B981" />
+   606→                    <StatCard label="Inactive Users" value={systemStats.inactiveUsers} icon="fa-user-slash" color="#EF4444" />
+   607→                  </div>
+   608→                </div>
+   609→              )}
+   610→            </div>
+   611→          )}
+   612→        </div>
+   613→      </div>
+   614→
+   615→      {/* Edit Saved View Dialog */}
+   616→      {editTarget && (
+   617→        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !editSaving && setEditTarget(null)}>
+   618→          <div className="bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-lg max-w-md w-full p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+   619→            <div className="flex items-center gap-2 mb-4">
+   620→              <Pencil className="w-4 h-4 text-[var(--erp-accent)]" />
+   621→              <h3 className="text-[14px] font-semibold text-[var(--erp-text)]">Rename Saved View</h3>
+   622→            </div>
+   623→            <div className="space-y-3">
+   624→              <div>
+   625→                <Label className="text-[11px] mb-1 block">View Name</Label>
+   626→                <Input
+   627→                  value={editName}
+   628→                  onChange={(e) => setEditName(e.target.value)}
+   629→                  className="text-[12px] h-9 bg-[var(--erp-bg-input)]"
+   630→                  placeholder="Enter view name..."
+   631→                  autoFocus
+   632→                />
+   633→              </div>
+   634→              <div className="flex items-center gap-2 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)]">
+   635→                <button
+   636→                  type="button"
+   637→                  onClick={() => setEditShared(!editShared)}
+   638→                  className={cn(
+   639→                    'flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded transition-colors',
+   640→                    editShared
+   641→                      ? 'text-[var(--erp-accent)] bg-[var(--erp-accent-dim)]'
+   642→                      : 'text-[var(--erp-text-muted)] hover:bg-[var(--erp-bg-hover)]',
+   643→                  )}
+   644→                >
+   645→                  {editShared ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+   646→                  {editShared ? 'Shared with all users' : 'Private (only you)'}
+   647→                </button>
+   648→              </div>
+   649→              <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+   650→                <Bookmark className="w-3 h-3" />
+   651→                Register: {editTarget.registerName}
+   652→              </div>
+   653→            </div>
+   654→            <div className="flex items-center justify-end gap-2 mt-4">
+   655→              <Button variant="outline" size="sm" onClick={() => setEditTarget(null)} disabled={editSaving} className="h-8 text-[11px]">
+   656→                <X className="w-3.5 h-3.5 mr-1" /> Cancel
+   657→              </Button>
+   658→              <Button size="sm" onClick={handleSaveEdit} disabled={editSaving || !editName.trim()} className="h-8 text-[11px] bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]">
+   659→                {editSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+   660→                {editSaving ? 'Saving...' : 'Save Changes'}
+   661→              </Button>
+   662→            </div>
+   663→          </div>
+   664→        </div>
+   665→      )}
+   666→    </div>
+   667→  );
+   668→}
+   669→
+   670→function Field({ label, value, onChange, fullWidth, type = 'text', disabled = false }: { label: string; value: string; onChange: (v: string) => void; fullWidth?: boolean; type?: string; disabled?: boolean }) {
+   671→  return (
+   672→    <div className={fullWidth ? 'sm:col-span-2' : ''}>
+   673→      <Label className="text-[11px] mb-1">{label}</Label>
+   674→      <Input
+   675→        type={type}
+   676→        value={value}
+   677→        onChange={(e) => onChange(e.target.value)}
+   678→        disabled={disabled}
+   679→        className={cn('h-9 text-[12px] bg-[var(--erp-bg-input)]', disabled && 'opacity-60 cursor-not-allowed')}
+   680→      />
+   681→    </div>
+   682→  );
+   683→}
+   684→
+   685→function StatCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
+   686→  return (
+   687→    <div className="flex items-center gap-2.5 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] transition-colors">
+   688→      <div
+   689→        className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+   690→        style={{ background: color + '20', color }}
+   691→      >
+   692→        <FAIcon name={icon} className="text-[12px]" />
+   693→      </div>
+   694→      <div className="min-w-0">
+   695→        <div className="text-[16px] font-bold text-[var(--erp-text)] leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
+   696→          {value.toLocaleString()}
+   697→        </div>
+   698→        <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] truncate">{label}</div>
+   699→      </div>
+   700→    </div>
+   701→  );
+   702→}
+   703→

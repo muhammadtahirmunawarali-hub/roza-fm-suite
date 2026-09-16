@@ -1,0 +1,1305 @@
+     1→'use client';
+     2→
+     3→// FMCore ERP — Record Detail Drawer (slide-in panel from right)
+     4→// Replaces the View modal with a richer UX: tabs for Details / History / Activity,
+     5→// inline workflow actions, inline field editing, and a timeline of status transitions.
+     6→import { useEffect, useState, useCallback, useRef } from 'react';
+     7→import { createPortal } from 'react-dom';
+     8→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+     9→import { recordsApi, masterDataApi, uploadsApi } from '@/lib/erp/api';
+    10→import { useErpStore } from '@/lib/erp/store';
+    11→import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/types';
+    12→import { FAIcon } from './icon';
+    13→import { EmptyStateIllustration } from './empty-state-illustration';
+    14→import { ApprovalWorkflow } from './approval-workflow';
+    15→import { printRecord } from './print-record';
+    16→import { WOStageWorkflow } from './wo-stage-workflow';
+    17→import { cn } from '@/lib/utils';
+    18→import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
+    19→import { toast } from 'sonner';
+    20→import { Button } from '@/components/ui/button';
+    21→import { Input } from '@/components/ui/input';
+    22→import { Textarea } from '@/components/ui/textarea';
+    23→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    24→import {
+    25→  X, Printer, Pencil, Workflow as WorkflowIcon, History as HistoryIcon,
+    26→  FileText, Activity, Clock, CheckCircle2, ArrowRight, Loader2,
+    27→  Check, XCircle, AlertCircle, Star, Download, Link2, Upload,
+    28→} from 'lucide-react';
+    29→
+    30→interface HistoryEntry {
+    31→  id: string;
+    32→  action: string;
+    33→  summary: string;
+    34→  userName: string;
+    35→  userAvatar: string;
+    36→  userRole: string | null;
+    37→  statusChange: { from: string; to: string } | null;
+    38→  createdAt: string;
+    39→}
+    40→
+    41→interface Props {
+    42→  open: boolean;
+    43→  register: Register;
+    44→  record: RecordData | null;
+    45→  company: { name: string; address: string; phone: string; email: string; tax_number: string };
+    46→  onClose: () => void;
+    47→  onEdit: () => void;
+    48→  onRefresh: () => void;
+    49→}
+    50→
+    51→type Tab = 'details' | 'history' | 'related' | 'activity';
+    52→
+    53→export function RecordDetailDrawer({ open, register, record, company, onClose, onEdit, onRefresh }: Props) {
+    54→  const { hasPermission, user, currency } = useErpStore();
+    55→  const [tab, setTab] = useState<Tab>('details');
+    56→  const [history, setHistory] = useState<HistoryEntry[]>([]);
+    57→  // Initialize as true since data loads on mount (component is keyed by record id)
+    58→  const [historyLoading, setHistoryLoading] = useState(true);
+    59→  const [related, setRelated] = useState<any[]>([]);
+    60→  const [relatedLoading, setRelatedLoading] = useState(false);
+    61→  const [workflowOpen, setWorkflowOpen] = useState(false);
+    62→  const [editMode, setEditMode] = useState(false);
+    63→  const [editData, setEditData] = useState<Record<string, any>>({});
+    64→  const [errors, setErrors] = useState<Record<string, string>>({});
+    65→  const [saving, setSaving] = useState(false);
+    66→  const [masterData, setMasterData] = useState<Record<string, string[]>>({});
+    67→
+    68→  const canEdit = hasPermission(register.code, 'edit');
+    69→  const canApprove = hasPermission(register.code, 'approve');
+    70→  const hasStatusCol = register.columns.some((c) => c.type === 'status');
+    71→
+    72→  // Load master data for dropdowns
+    73→  useEffect(() => {
+    74→    if (!open) return;
+    75→    let cancelled = false;
+    76→    masterDataApi.list().then((md) => {
+    77→      if (!cancelled) setMasterData(md);
+    78→    }).catch(() => {});
+    79→    return () => { cancelled = true; };
+    80→  }, [open]);
+    81→
+    82→  // Initialize edit data when entering edit mode
+    83→  const enterEditMode = useCallback(() => {
+    84→    if (!record) return;
+    85→    setEditData({ ...record.data });
+    86→    setErrors({});
+    87→    setEditMode(true);
+    88→  }, [record]);
+    89→
+    90→  const cancelEdit = useCallback(() => {
+    91→    setEditMode(false);
+    92→    setEditData({});
+    93→    setErrors({});
+    94→  }, []);
+    95→
+    96→  const setField = (name: string, value: any) => {
+    97→    setEditData((d) => ({ ...d, [name]: value }));
+    98→    setErrors((e) => { const n = { ...e }; delete n[name]; return n; });
+    99→  };
+   100→
+   101→  const saveInlineEdit = async () => {
+   102→    if (!record || !register) return;
+   103→    const { valid, errors: errs } = validateRecord(editData, register.columns);
+   104→    if (!valid) {
+   105→      setErrors(errs);
+   106→      toast.error('Please fix the errors before saving', {
+   107→        description: `${Object.keys(errs).length} field(s) need attention`,
+   108→      });
+   109→      return;
+   110→    }
+   111→    setSaving(true);
+   112→    try {
+   113→      await recordsApi.update(register.id, record.id, editData);
+   114→      toast.success('Record updated successfully');
+   115→      setEditMode(false);
+   116→      onRefresh();
+   117→    } catch (e: any) {
+   118→      toast.error('Failed to save record', { description: e.message });
+   119→    } finally {
+   120→      setSaving(false);
+   121→    }
+   122→  };
+   123→
+   124→  // Load history when drawer opens or record changes
+   125→  useEffect(() => {
+   126→    if (!open || !record || !register) return;
+   127→    let cancelled = false;
+   128→    recordsApi.getHistory(register.id, record.id).then((res) => {
+   129→      if (cancelled) return;
+   130→      setHistory(res.history || []);
+   131→    }).catch((e) => {
+   132→      if (cancelled) return;
+   133→      console.error('Failed to load history', e);
+   134→    }).finally(() => {
+   135→      if (cancelled) return;
+   136→      setHistoryLoading(false);
+   137→    });
+   138→    return () => { cancelled = true; };
+   139→  }, [open, record, register.id]);
+   140→
+   141→  // Load related records when the Related tab is clicked
+   142→  useEffect(() => {
+   143→    if (tab !== 'related' || !record) return;
+   144→    let cancelled = false;
+   145→    setRelatedLoading(true);
+   146→    const relatedPromise = register ? recordsApi.getRelated(register.id, record.id) : Promise.resolve({ related: [] });
+   147→    relatedPromise.then((res) => {
+   148→      if (cancelled) return;
+   149→      setRelated(res.related || []);
+   150→    }).catch((e) => {
+   151→      if (cancelled) return;
+   152→      console.error('Failed to load related records', e);
+   153→    }).finally(() => {
+   154→      if (cancelled) return;
+   155→      setRelatedLoading(false);
+   156→    });
+   157→    return () => { cancelled = true; };
+   158→  }, [tab, record, register.id]);
+   159→
+   160→  // Close on Escape
+   161→  useEffect(() => {
+   162→    if (!open) return;
+   163→    const handler = (e: KeyboardEvent) => {
+   164→      if (e.key === 'Escape' && !workflowOpen) {
+   165→        if (editMode) {
+   166→          cancelEdit();
+   167→        } else {
+   168→          onClose();
+   169→        }
+   170→      }
+   171→    };
+   172→    window.addEventListener('keydown', handler);
+   173→    return () => window.removeEventListener('keydown', handler);
+   174→  }, [open, workflowOpen, onClose, editMode, cancelEdit]);
+   175→
+   176→  // Exit edit mode when drawer closes
+   177→  useEffect(() => {
+   178→    if (!open && editMode) {
+   179→      setEditMode(false);
+   180→      setEditData({});
+   181→      setErrors({});
+   182→    }
+   183→  }, [open, editMode]);
+   184→
+   185→  const statusCol = register ? register.columns.find((c) => c.type === 'status') : null;
+   186→  const currentStatus = statusCol && record ? String(record.data[statusCol.name] || '—') : null;
+   187→
+   188→  const handlePrint = () => {
+   189→    if (!register || !record) return;
+   190→    if (register && record) printRecord(register, record, company, currency);
+   191→  };
+   192→
+   193→  const handleWorkflowClick = () => {
+   194→    setWorkflowOpen(true);
+   195→  };
+   196→
+   197→  const handleWorkflowTransition = () => {
+   198→    setWorkflowOpen(false);
+   199→    onRefresh();
+   200→  };
+   201→
+   202→  // Don't render if no record (drawer closed)
+   203→  if (!record) return null;
+   204→
+   205→  return (
+   206→    <Dialog open={open} onOpenChange={(o) => { if (!o) { setEditMode(false); onClose(); } }}>
+   207→      <DialogContent className="max-w-[600px] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0">
+   208→        {/* Header */}
+   209→        <div className="flex items-center gap-3 px-4 h-[60px] border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0">
+   210→          <div
+   211→            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+   212→            style={{ background: `linear-gradient(135deg, ${register.color}30, ${register.color}10)`, color: register.color }}
+   213→          >
+   214→            <FAIcon name={register.icon} className="text-[14px]" />
+   215→          </div>
+   216→          <div className="flex-1 min-w-0">
+   217→            <div className="text-[14px] font-semibold text-[var(--erp-text)] truncate" style={{ fontFamily: 'var(--font-display)' }}>
+   218→              {register.name} — #{record.sequence}
+   219→            </div>
+   220→            <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1.5">
+   221→              <span>Record ID: {record.id.slice(-8)}</span>
+   222→              {currentStatus && (
+   223→                <>
+   224→                  <span>·</span>
+   225→                  <StatusPill status={currentStatus} />
+   226→                </>
+   227→              )}
+   228→            </div>
+   229→          </div>
+   230→          {editMode && (
+   231→            <div className="flex items-center gap-1 mr-2">
+   232→              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-semibold flex items-center gap-1">
+   233→                <Pencil className="w-2.5 h-2.5" /> EDITING
+   234→              </span>
+   235→            </div>
+   236→          )}
+   237→          <button
+   238→            type="button"
+   239→            onClick={() => { setEditMode(false); onClose(); }}
+   240→            className="p-2.5 rounded-lg bg-[var(--erp-bg-hover)] text-[var(--erp-text)] hover:bg-[var(--erp-danger)] hover:text-white transition-all shrink-0"
+   241→            aria-label="Close"
+   242→          >
+   243→            <X className="w-4 h-4" />
+   244→          </button>
+   245→        </div>
+   246→        {/* Action bar */}
+   247→        <div className="flex items-center gap-1.5 px-4 py-2 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0">
+   248→          {!editMode ? (
+   249→            <>
+   250→              <Button variant="outline" size="sm" onClick={handlePrint} className="h-8 text-[11px]">
+   251→                <Printer className="w-3.5 h-3.5 mr-1" /> Print
+   252→              </Button>
+   253→              {hasStatusCol && (canApprove || canEdit) && (
+   254→                <Button variant="outline" size="sm" onClick={handleWorkflowClick} className="h-8 text-[11px] border-[var(--erp-accent-border)] text-[var(--erp-accent)] hover:bg-[var(--erp-accent-dim)]">
+   255→                  <WorkflowIcon className="w-3.5 h-3.5 mr-1" /> Workflow
+   256→                </Button>
+   257→              )}
+   258→              {canEdit && (
+   259→                <Button size="sm" onClick={enterEditMode} className="h-8 text-[11px] ml-auto bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]">
+   260→                  <Pencil className="w-3.5 h-3.5 mr-1" /> Inline Edit
+   261→                </Button>
+   262→              )}
+   263→            </>
+   264→          ) : (
+   265→            <>
+   266→              <Button variant="outline" size="sm" onClick={cancelEdit} disabled={saving} className="h-8 text-[11px]">
+   267→                <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel
+   268→              </Button>
+   269→              <Button size="sm" onClick={saveInlineEdit} disabled={saving} className="h-8 text-[11px] ml-auto bg-[var(--erp-success)] hover:bg-[var(--erp-success)]/90">
+   270→                {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+   271→                {saving ? 'Saving...' : 'Save Changes'}
+   272→              </Button>
+   273→            </>
+   274→          )}
+   275→        </div>
+   276→
+   277→        {/* Error banner (if validation errors) */}
+   278→        {editMode && Object.keys(errors).length > 0 && (
+   279→          <div className="px-4 py-2 border-b border-[var(--erp-danger)]/30 bg-[rgba(239,68,68,0.05)] flex items-center gap-2 text-[11px] text-[var(--erp-danger)]">
+   280→            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+   281→            <span>{Object.keys(errors).length} field(s) need attention</span>
+   282→          </div>
+   283→        )}
+   284→
+   285→        {/* Tabs (hidden in edit mode to maximize space) */}
+   286→        {!editMode && (
+   287→          <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0">
+   288→            <TabButton active={tab === 'details'} onClick={() => setTab('details')} icon={<FileText className="w-3.5 h-3.5" />} label="Details" />
+   289→            <TabButton active={tab === 'history'} onClick={() => setTab('history')} icon={<HistoryIcon className="w-3.5 h-3.5" />} label="History" count={history.length} />
+   290→            <TabButton active={tab === 'related'} onClick={() => setTab('related')} icon={<Link2 className="w-3.5 h-3.5" />} label="Related" />
+   291→            <TabButton active={tab === 'activity'} onClick={() => setTab('activity')} icon={<Activity className="w-3.5 h-3.5" />} label="Activity" />
+   292→          </div>
+   293→        )}
+   294→
+   295→        {/* Content */}
+   296→        <div className="flex-1 overflow-y-auto bg-[var(--erp-bg)]">
+   297→          {editMode ? (
+   298→            <InlineEditTab
+   299→              register={register}
+   300→              data={editData}
+   301→              errors={errors}
+   302→              masterData={masterData}
+   303→              onChange={setField}
+   304→              currency={currency}
+   305→            />
+   306→          ) : (
+   307→            <>
+   308→              {tab === 'details' && (
+   309→                <DetailsTab register={register} record={record} currency={currency} onRefresh={onRefresh} />
+   310→              )}
+   311→              {tab === 'history' && (
+   312→                <HistoryTab history={history} loading={historyLoading} hasStatusCol={!!hasStatusCol} />
+   313→              )}
+   314→              {tab === 'related' && (
+   315→                <RelatedTab related={related} loading={relatedLoading} />
+   316→              )}
+   317→              {tab === 'activity' && (
+   318→                <ActivityTab record={record} register={register} />
+   319→              )}
+   320→            </>
+   321→          )}
+   322→        </div>
+   323→
+   324→        {/* Footer with CLOSE button */}
+   325→        <div className="px-4 py-2 border-t border-[var(--erp-border)] bg-[var(--erp-bg-card)] shrink-0 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
+   326→          <span className="flex items-center gap-1">
+   327→            <Clock className="w-3 h-3" />
+   328→            Created {formatDate(record.createdAt)}
+   329→          </span>
+   330→          <span>Updated {formatTimeAgo(record.updatedAt)}</span>
+   331→        </div>
+   332→        {/* Big visible CLOSE bar — always works */}
+   333→        <button
+   334→          type="button"
+   335→          onClick={() => { setEditMode(false); onClose(); }}
+   336→          className="w-full py-3 bg-[var(--erp-accent)] text-white text-[12px] font-semibold hover:bg-[var(--erp-accent-hover)] transition-colors shrink-0"
+   337→        >
+   338→          ✕ Close
+   339→        </button>
+   340→
+   341→        {/* Workflow modal */}
+   342→        <ApprovalWorkflow
+   343→          open={workflowOpen}
+   344→          register={register}
+   345→          record={record}
+   346→          onClose={() => setWorkflowOpen(false)}
+   347→          onTransition={handleWorkflowTransition}
+   348→        />
+   349→      </DialogContent>
+   350→    </Dialog>
+   351→  );
+   352→}
+   353→
+   354→// ---------- Inline Edit Tab ----------
+   355→function InlineEditTab({
+   356→  register, data, errors, masterData, onChange, currency = 'AED',
+   357→}: {
+   358→  register: Register;
+   359→  data: Record<string, any>;
+   360→  errors: Record<string, string>;
+   361→  masterData: Record<string, string[]>;
+   362→  onChange: (name: string, value: any) => void;
+   363→  currency?: string;
+   364→}) {
+   365→  const cols = register.columns.filter((c) => c.type !== 'auto_increment');
+   366→
+   367→  // Group columns by type for better layout (same as DetailsTab)
+   368→  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor', 'url', 'color'].includes(c.type));
+   369→  const longFields = cols.filter((c) => c.type === 'long_text');
+   370→  const multiFields = cols.filter((c) => c.type === 'multi_select' || c.type === 'tags');
+   371→  const imageFields = cols.filter((c) => c.type === 'image');
+   372→
+   373→  return (
+   374→    <div className="p-4 space-y-5">
+   375→      <div className="flex items-center gap-2 p-2.5 rounded-md bg-[var(--erp-accent-dim)] border border-[var(--erp-accent-border)] text-[11px] text-[var(--erp-accent)]">
+   376→        <Pencil className="w-3.5 h-3.5 shrink-0" />
+   377→        <span>Edit fields directly. Changes are saved when you click "Save Changes".</span>
+   378→      </div>
+   379→
+   380→      {/* Image gallery (inline-edit) */}
+   381→      {imageFields.length > 0 && (
+   382→        <div>
+   383→          <SectionLabel icon="fa-image" label="Images" count={imageFields.length} />
+   384→          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+   385→            {imageFields.map((col) => (
+   386→              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} currency={currency} />
+   387→            ))}
+   388→          </div>
+   389→        </div>
+   390→      )}
+   391→
+   392→      {/* Main fields grid */}
+   393→      <div>
+   394→        <SectionLabel icon="fa-circle-info" label="Record Fields" count={mainFields.length} />
+   395→        <div className="grid grid-cols-2 gap-2.5">
+   396→          {mainFields.map((col) => (
+   397→            <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} currency={currency} />
+   398→          ))}
+   399→        </div>
+   400→      </div>
+   401→
+   402→      {/* Multi-select fields */}
+   403→      {multiFields.length > 0 && (
+   404→        <div>
+   405→          <SectionLabel icon="fa-list-check" label="Tags & Categories" count={multiFields.length} />
+   406→          <div className="space-y-2.5">
+   407→            {multiFields.map((col) => (
+   408→              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth currency={currency} />
+   409→            ))}
+   410→          </div>
+   411→        </div>
+   412→      )}
+   413→
+   414→      {/* Long text fields */}
+   415→      {longFields.length > 0 && (
+   416→        <div>
+   417→          <SectionLabel icon="fa-align-left" label="Notes & Descriptions" count={longFields.length} />
+   418→          <div className="space-y-2.5">
+   419→            {longFields.map((col) => (
+   420→              <InlineField key={col.name} col={col} value={data[col.name]} error={errors[col.name]} masterData={masterData} onChange={(v) => onChange(col.name, v)} fullWidth currency={currency} />
+   421→            ))}
+   422→          </div>
+   423→        </div>
+   424→      )}
+   425→    </div>
+   426→  );
+   427→}
+   428→
+   429→function InlineField({
+   430→  col, value, error, masterData, onChange, fullWidth, currency = 'AED',
+   431→}: {
+   432→  col: ColumnDef;
+   433→  value: any;
+   434→  error?: string;
+   435→  masterData: Record<string, string[]>;
+   436→  onChange: (v: any) => void;
+   437→  fullWidth?: boolean;
+   438→  currency?: string;
+   439→}) {
+   440→  const label = (
+   441→    <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-1 flex items-center gap-1">
+   442→      <FAIcon name={colIconFor(col.type)} className="text-[8px]" />
+   443→      <span>{displayColumnName(col.name, currency)}</span>
+   444→      {col.required && <span className="text-[var(--erp-danger)]">*</span>}
+   445→    </div>
+   446→  );
+   447→
+   448→  const errorEl = error ? (
+   449→    <p className="text-[10px] text-[var(--erp-danger)] mt-0.5 flex items-center gap-1">
+   450→      <AlertCircle className="w-3 h-3" /> {error}
+   451→    </p>
+   452→  ) : null;
+   453→
+   454→  const wrapperClass = cn(
+   455→    'border border-[var(--erp-border)] rounded-md p-2.5 bg-[var(--erp-bg-card)] focus-within:border-[var(--erp-accent-border)] focus-within:ring-1 focus-within:ring-[var(--erp-accent-border)] transition-all',
+   456→    fullWidth && 'col-span-2',
+   457→    error && 'border-[var(--erp-danger)]/40',
+   458→  );
+   459→
+   460→  switch (col.type) {
+   461→    case 'long_text':
+   462→      return (
+   463→        <div className={wrapperClass}>
+   464→          {label}
+   465→          <Textarea
+   466→            value={value || ''}
+   467→            onChange={(e) => onChange(e.target.value)}
+   468→            rows={3}
+   469→            className="text-[12px] resize-y bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   470→            placeholder={`Enter ${col.name.toLowerCase()}...`}
+   471→          />
+   472→          {errorEl}
+   473→        </div>
+   474→      );
+   475→    case 'dropdown':
+   476→    case 'status':
+   477→    case 'priority':
+   478→      return (
+   479→        <div className={wrapperClass}>
+   480→          {label}
+   481→          <Select value={value || ''} onValueChange={onChange}>
+   482→            <SelectTrigger className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus:ring-0">
+   483→              <SelectValue placeholder={`Select...`} />
+   484→            </SelectTrigger>
+   485→            <SelectContent>
+   486→              {(col.options || []).map((o) => (
+   487→                <SelectItem key={o} value={o} className="text-[12px]">{o}</SelectItem>
+   488→              ))}
+   489→            </SelectContent>
+   490→          </Select>
+   491→          {errorEl}
+   492→        </div>
+   493→      );
+   494→    case 'employee':
+   495→    case 'department':
+   496→    case 'building':
+   497→    case 'asset':
+   498→    case 'equipment':
+   499→    case 'vendor':
+   500→      return (
+   501→        <div className={wrapperClass}>
+   502→          {label}
+   503→          <Select value={value || ''} onValueChange={onChange}>
+   504→            <SelectTrigger className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus:ring-0">
+   505→              <SelectValue placeholder={`Select ${col.type}...`} />
+   506→            </SelectTrigger>
+   507→            <SelectContent>
+   508→              {(masterData[col.type] || []).map((o) => (
+   509→                <SelectItem key={o} value={o} className="text-[12px]">{o}</SelectItem>
+   510→              ))}
+   511→            </SelectContent>
+   512→          </Select>
+   513→          {errorEl}
+   514→        </div>
+   515→      );
+   516→    case 'multi_select':
+   517→      return (
+   518→        <div className={wrapperClass}>
+   519→          {label}
+   520→          <MultiSelectInline
+   521→            options={col.options || masterData[col.type] || []}
+   522→            value={Array.isArray(value) ? value : (value ? [value] : [])}
+   523→            onChange={onChange}
+   524→          />
+   525→          {errorEl}
+   526→        </div>
+   527→      );
+   528→    case 'date':
+   529→      return (
+   530→        <div className={wrapperClass}>
+   531→          {label}
+   532→          <Input
+   533→            type="date"
+   534→            value={value || ''}
+   535→            onChange={(e) => onChange(e.target.value)}
+   536→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   537→          />
+   538→          {errorEl}
+   539→        </div>
+   540→      );
+   541→    case 'datetime':
+   542→      return (
+   543→        <div className={wrapperClass}>
+   544→          {label}
+   545→          <Input
+   546→            type="datetime-local"
+   547→            value={value || ''}
+   548→            onChange={(e) => onChange(e.target.value)}
+   549→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   550→          />
+   551→          {errorEl}
+   552→        </div>
+   553→      );
+   554→    case 'time':
+   555→      return (
+   556→        <div className={wrapperClass}>
+   557→          {label}
+   558→          <Input
+   559→            type="time"
+   560→            value={value || ''}
+   561→            onChange={(e) => onChange(e.target.value)}
+   562→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   563→          />
+   564→          {errorEl}
+   565→        </div>
+   566→      );
+   567→    case 'number':
+   568→    case 'currency':
+   569→    case 'percentage':
+   570→      return (
+   571→        <div className={wrapperClass}>
+   572→          {label}
+   573→          <div className="relative">
+   574→            {col.type === 'currency' && (
+   575→              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--erp-text-muted)] pointer-events-none">{currency}</span>
+   576→            )}
+   577→            <Input
+   578→              type="number"
+   579→              value={value ?? ''}
+   580→              onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+   581→              className={cn(
+   582→                'text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0 font-mono',
+   583→                col.type === 'currency' && 'pl-8',
+   584→                col.type === 'percentage' && 'pr-6',
+   585→              )}
+   586→              step={col.type === 'currency' ? '0.01' : col.type === 'percentage' ? '1' : 'any'}
+   587→              placeholder="0"
+   588→            />
+   589→            {col.type === 'percentage' && (
+   590→              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[var(--erp-text-muted)] pointer-events-none">%</span>
+   591→            )}
+   592→          </div>
+   593→          {errorEl}
+   594→        </div>
+   595→      );
+   596→    case 'rating':
+   597→      return (
+   598→        <div className={wrapperClass}>
+   599→          {label}
+   600→          <div className="flex items-center gap-1 h-8">
+   601→            {[1, 2, 3, 4, 5].map((n) => (
+   602→              <button
+   603→                key={n}
+   604→                type="button"
+   605→                onClick={() => onChange(n)}
+   606→                className={cn(
+   607→                  'text-[18px] transition-colors hover:scale-110',
+   608→                  n <= (Number(value) || 0) ? 'text-[var(--erp-warning)]' : 'text-[var(--erp-text-muted)] hover:text-[var(--erp-warning)]',
+   609→                )}
+   610→                aria-label={`${n} star${n > 1 ? 's' : ''}`}
+   611→              >
+   612→                ★
+   613→              </button>
+   614→            ))}
+   615→            <span className="ml-2 text-[10px] text-[var(--erp-text-muted)] font-mono">{Number(value) || 0}/5</span>
+   616→          </div>
+   617→          {errorEl}
+   618→        </div>
+   619→      );
+   620→    case 'email':
+   621→      return (
+   622→        <div className={wrapperClass}>
+   623→          {label}
+   624→          <Input
+   625→            type="email"
+   626→            value={value || ''}
+   627→            onChange={(e) => onChange(e.target.value)}
+   628→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   629→            placeholder="name@example.com"
+   630→          />
+   631→          {errorEl}
+   632→        </div>
+   633→      );
+   634→    case 'phone':
+   635→      return (
+   636→        <div className={wrapperClass}>
+   637→          {label}
+   638→          <Input
+   639→            type="tel"
+   640→            value={value || ''}
+   641→            onChange={(e) => onChange(e.target.value)}
+   642→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   643→            placeholder="+971-50-XXX-XXXX"
+   644→          />
+   645→          {errorEl}
+   646→        </div>
+   647→      );
+   648→    case 'tags':
+   649→      return (
+   650→        <div className={wrapperClass}>
+   651→          {label}
+   652→          <MultiSelectInline
+   653→            options={col.options || []}
+   654→            value={Array.isArray(value) ? value : (value ? [value] : [])}
+   655→            onChange={onChange}
+   656→          />
+   657→          {errorEl}
+   658→        </div>
+   659→      );
+   660→    case 'url':
+   661→      return (
+   662→        <div className={wrapperClass}>
+   663→          {label}
+   664→          <Input
+   665→            type="url"
+   666→            value={value || ''}
+   667→            onChange={(e) => onChange(e.target.value)}
+   668→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   669→            placeholder="https://example.com"
+   670→          />
+   671→          {errorEl}
+   672→        </div>
+   673→      );
+   674→    case 'color':
+   675→      return (
+   676→        <div className={wrapperClass}>
+   677→          {label}
+   678→          <div className="flex items-center gap-2">
+   679→            <input
+   680→              type="color"
+   681→              value={value || '#000000'}
+   682→              onChange={(e) => onChange(e.target.value)}
+   683→              className="w-9 h-9 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-input)] cursor-pointer p-0.5"
+   684→            />
+   685→            <Input
+   686→              type="text"
+   687→              value={value || ''}
+   688→              onChange={(e) => onChange(e.target.value)}
+   689→              className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0 font-mono flex-1"
+   690→              placeholder="#000000"
+   691→            />
+   692→          </div>
+   693→          {errorEl}
+   694→        </div>
+   695→      );
+   696→    case 'image':
+   697→      return (
+   698→        <div className={wrapperClass}>
+   699→          {label}
+   700→          <DrawerImageField value={value} onChange={onChange} />
+   701→          {errorEl}
+   702→        </div>
+   703→      );
+   704→    default:
+   705→      return (
+   706→        <div className={wrapperClass}>
+   707→          {label}
+   708→          <Input
+   709→            type="text"
+   710→            value={value || ''}
+   711→            onChange={(e) => onChange(e.target.value)}
+   712→            className="text-[12px] h-8 bg-[var(--erp-bg-input)] border-0 p-0 focus-visible:ring-0"
+   713→            placeholder={`Enter ${col.name.toLowerCase()}...`}
+   714→          />
+   715→          {errorEl}
+   716→        </div>
+   717→      );
+   718→  }
+   719→}
+   720→
+   721→function MultiSelectInline({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+   722→  const toggle = (opt: string) => {
+   723→    if (value.includes(opt)) onChange(value.filter((v) => v !== opt));
+   724→    else onChange([...value, opt]);
+   725→  };
+   726→  return (
+   727→    <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+   728→      {options.length === 0 ? (
+   729→        <span className="text-[11px] text-[var(--erp-text-muted)]">No options available</span>
+   730→      ) : (
+   731→        options.map((opt) => {
+   732→          const selected = value.includes(opt);
+   733→          return (
+   734→            <button
+   735→              key={opt}
+   736→              type="button"
+   737→              onClick={() => toggle(opt)}
+   738→              className={cn(
+   739→                'text-[11px] px-2 py-1 rounded-md transition-colors',
+   740→                selected
+   741→                  ? 'bg-[var(--erp-accent)] text-white'
+   742→                  : 'bg-[var(--erp-bg-card)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)]',
+   743→              )}
+   744→            >
+   745→              {selected && '✓ '}
+   746→              {opt}
+   747→            </button>
+   748→          );
+   749→        })
+   750→      )}
+   751→    </div>
+   752→  );
+   753→}
+   754→
+   755→// Image upload field for the drawer's inline edit mode
+   756→function DrawerImageField({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+   757→  const [uploading, setUploading] = useState(false);
+   758→  const fileInputRef = useRef<HTMLInputElement>(null);
+   759→
+   760→  const handleFile = async (file: File) => {
+   761→    if (!file) return;
+   762→    setUploading(true);
+   763→    try {
+   764→      const result = await uploadsApi.upload(file);
+   765→      onChange(result.url);
+   766→      toast.success('Image uploaded');
+   767→    } catch (e: any) {
+   768→      toast.error('Upload failed', { description: e.message });
+   769→    } finally {
+   770→      setUploading(false);
+   771→    }
+   772→  };
+   773→
+   774→  return (
+   775→    <div className="flex items-center gap-2">
+   776→      <input
+   777→        ref={fileInputRef}
+   778→        type="file"
+   779→        accept="image/*"
+   780→        className="hidden"
+   781→        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+   782→      />
+   783→      {value ? (
+   784→        <div className="relative">
+   785→          <img src={String(value)} alt="preview" className="w-16 h-16 object-cover rounded-md border border-[var(--erp-border)]" />
+   786→          <button
+   787→            type="button"
+   788→            onClick={() => onChange('')}
+   789→            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--erp-danger)] text-white flex items-center justify-center hover:scale-110 transition-transform"
+   790→            aria-label="Remove image"
+   791→          >
+   792→            <X className="w-3 h-3" />
+   793→          </button>
+   794→        </div>
+   795→      ) : (
+   796→        <div className="w-16 h-16 rounded-md border border-dashed border-[var(--erp-border)] flex items-center justify-center text-[var(--erp-text-muted)]">
+   797→          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+   798→        </div>
+   799→      )}
+   800→      <Button
+   801→        type="button"
+   802→        variant="outline"
+   803→        size="sm"
+   804→        onClick={() => fileInputRef.current?.click()}
+   805→        disabled={uploading}
+   806→        className="h-8 text-[11px]"
+   807→      >
+   808→        {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...</> : <><Upload className="w-3.5 h-3.5 mr-1" /> {value ? 'Replace' : 'Upload'}</>}
+   809→      </Button>
+   810→    </div>
+   811→  );
+   812→}
+   813→
+   814→// ---------- Details Tab ----------
+   815→function DetailsTab({ register, record, currency = 'AED', onRefresh }: { register: Register; record: RecordData; currency?: string; onRefresh?: () => void }) {
+   816→  const cols = register.columns.filter((c) => c.type !== 'auto_increment');
+   817→
+   818→  // Detect if this register supports the WO Stage workflow
+   819→  const hasWOStage = register.columns.some((c) => c.name === 'WO Stage')
+   820→    || ['workorders', 'pm', 'cm', 'wo_attachments'].includes(register.code);
+   821→  const isMaintenanceRegister = ['workorders', 'pm', 'cm'].includes(register.code);
+   822→
+   823→  // Group columns by type for better layout
+   824→  const mainFields = cols.filter((c) => ['text', 'date', 'datetime', 'time', 'number', 'currency', 'percentage', 'email', 'phone', 'dropdown', 'status', 'priority', 'rating', 'employee', 'department', 'building', 'asset', 'equipment', 'vendor', 'url', 'color'].includes(c.type));
+   825→  const longFields = cols.filter((c) => c.type === 'long_text');
+   826→  const multiFields = cols.filter((c) => c.type === 'multi_select' || c.type === 'tags');
+   827→  const imageFields = cols.filter((c) => c.type === 'image');
+   828→
+   829→  return (
+   830→    <div className="p-4 space-y-5">
+   831→      {/* WO Stage Workflow (only for maintenance registers) */}
+   832→      {hasWOStage && isMaintenanceRegister && (
+   833→        <WOStageWorkflow register={register} record={record} onUpdated={onRefresh} />
+   834→      )}
+   835→
+   836→      {/* Image gallery (before/after photos, product images) */}
+   837→      {imageFields.length > 0 && (
+   838→        <div>
+   839→          <SectionLabel icon="fa-image" label="Images" count={imageFields.length} />
+   840→          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+   841→            {imageFields.map((col) => (
+   842→              <FieldCard key={col.name} col={col} value={record.data[col.name]} currency={currency} />
+   843→            ))}
+   844→          </div>
+   845→        </div>
+   846→      )}
+   847→
+   848→      {/* Main fields grid */}
+   849→      <div>
+   850→        <SectionLabel icon="fa-circle-info" label="Record Fields" count={mainFields.length} />
+   851→        <div className="grid grid-cols-2 gap-2.5">
+   852→          {mainFields.map((col) => (
+   853→            <FieldCard key={col.name} col={col} value={record.data[col.name]} currency={currency} />
+   854→          ))}
+   855→        </div>
+   856→      </div>
+   857→
+   858→      {/* Multi-select fields */}
+   859→      {multiFields.length > 0 && (
+   860→        <div>
+   861→          <SectionLabel icon="fa-list-check" label="Tags & Categories" count={multiFields.length} />
+   862→          <div className="space-y-2.5">
+   863→            {multiFields.map((col) => (
+   864→              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth currency={currency} />
+   865→            ))}
+   866→          </div>
+   867→        </div>
+   868→      )}
+   869→
+   870→      {/* Long text fields */}
+   871→      {longFields.length > 0 && (
+   872→        <div>
+   873→          <SectionLabel icon="fa-align-left" label="Notes & Descriptions" count={longFields.length} />
+   874→          <div className="space-y-2.5">
+   875→            {longFields.map((col) => (
+   876→              <FieldCard key={col.name} col={col} value={record.data[col.name]} fullWidth currency={currency} />
+   877→            ))}
+   878→          </div>
+   879→        </div>
+   880→      )}
+   881→    </div>
+   882→  );
+   883→}
+   884→
+   885→function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef; value: any; fullWidth?: boolean; currency?: string }) {
+   886→  const isEmpty = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+   887→
+   888→  return (
+   889→    <div className={cn('border border-[var(--erp-border)] rounded-md p-2.5 bg-[var(--erp-bg-card)]', fullWidth && 'col-span-2')}>
+   890→      <div className="text-[9px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-1 flex items-center gap-1">
+   891→        <FAIcon name={colIconFor(col.type)} className="text-[8px]" />
+   892→        {displayColumnName(col.name, currency)}
+   893→      </div>
+   894→      {isEmpty ? (
+   895→        <span className="text-[12px] text-[var(--erp-text-muted)] italic">—</span>
+   896→      ) : col.type === 'status' ? (
+   897→        <StatusPill status={String(value)} />
+   898→      ) : col.type === 'priority' ? (
+   899→        <PriorityPill priority={String(value)} />
+   900→      ) : col.type === 'rating' ? (
+   901→        <span className="text-[var(--erp-warning)] text-[13px]">
+   902→          {'★'.repeat(Number(value) || 0)}<span className="text-[var(--erp-text-muted)]">{'☆'.repeat(5 - (Number(value) || 0))}</span>
+   903→        </span>
+   904→      ) : col.type === 'currency' ? (
+   905→        <span className="text-[13px] font-mono font-semibold text-[var(--erp-text)]">{formatCurrencyCompact(Number(value) || 0, currency)}</span>
+   906→      ) : col.type === 'percentage' ? (
+   907→        <div className="flex items-center gap-2">
+   908→          <span className="text-[13px] font-mono text-[var(--erp-text)]">{value}%</span>
+   909→          <span className="flex-1 h-1.5 rounded-full bg-[var(--erp-bg-hover)] overflow-hidden">
+   910→            <span className="block h-full rounded-full" style={{ width: `${Math.min(100, Number(value) || 0)}%`, background: 'var(--erp-accent)' }} />
+   911→          </span>
+   912→        </div>
+   913→      ) : col.type === 'multi_select' ? (
+   914→        <div className="flex flex-wrap gap-1">
+   915→          {(Array.isArray(value) ? value : [value]).map((v, i) => (
+   916→            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium">
+   917→              {String(v)}
+   918→            </span>
+   919→          ))}
+   920→        </div>
+   921→      ) : col.type === 'tags' ? (
+   922→        <div className="flex flex-wrap gap-1">
+   923→          {(Array.isArray(value) ? value : String(value).split(',').map((s) => s.trim()).filter(Boolean)).map((v, i) => (
+   924→            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium border border-[var(--erp-accent-border)]">
+   925→              #{String(v)}
+   926→            </span>
+   927→          ))}
+   928→        </div>
+   929→      ) : col.type === 'image' ? (
+   930→        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="block group">
+   931→          <img src={String(value)} alt={col.name} className="w-full aspect-square object-cover rounded-md border border-[var(--erp-border)] group-hover:border-[var(--erp-accent)] transition-colors" />
+   932→          <div className="text-[9px] text-[var(--erp-text-muted)] mt-1 truncate">{col.name}</div>
+   933→        </a>
+   934→      ) : col.type === 'url' ? (
+   935→        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[var(--erp-accent)] hover:underline break-all">
+   936→          {String(value)}
+   937→        </a>
+   938→      ) : col.type === 'color' ? (
+   939→        <div className="flex items-center gap-2">
+   940→          <span className="w-6 h-6 rounded border border-[var(--erp-border)]" style={{ background: String(value) }} />
+   941→          <span className="font-mono text-[11px] text-[var(--erp-text)]">{String(value)}</span>
+   942→        </div>
+   943→      ) : col.type === 'long_text' ? (
+   944→        <div className="text-[12px] text-[var(--erp-text)] whitespace-pre-wrap leading-relaxed">{String(value)}</div>
+   945→      ) : col.type === 'email' ? (
+   946→        <a href={`mailto:${value}`} className="text-[12px] text-[var(--erp-accent)] hover:underline">{String(value)}</a>
+   947→      ) : col.type === 'phone' ? (
+   948→        <a href={`tel:${value}`} className="text-[12px] text-[var(--erp-accent)] hover:underline">{String(value)}</a>
+   949→      ) : (
+   950→        <span className="text-[12px] text-[var(--erp-text)] font-medium">{String(value)}</span>
+   951→      )}
+   952→    </div>
+   953→  );
+   954→}
+   955→
+   956→// ---------- History Tab ----------
+   957→function HistoryTab({ history, loading, hasStatusCol }: { history: HistoryEntry[]; loading: boolean; hasStatusCol: boolean }) {
+   958→  const exportHistoryCsv = () => {
+   959→    if (history.length === 0) return;
+   960→    const headers = ['Date', 'User', 'Action', 'From Status', 'To Status', 'Summary'];
+   961→    const rows = history.map((entry) => [
+   962→      new Date(entry.createdAt).toLocaleString(),
+   963→      entry.userName,
+   964→      entry.action,
+   965→      entry.statusChange?.from || '',
+   966→      entry.statusChange?.to || '',
+   967→      entry.summary.replace(/"/g, '""'),
+   968→    ].map((v) => `"${v}"`));
+   969→    const csv = [headers.map((h) => `"${h}"`).join(','), ...rows.map((r) => r.join(','))].join('\n');
+   970→    const blob = new Blob([csv], { type: 'text/csv' });
+   971→    const url = URL.createObjectURL(blob);
+   972→    const a = document.createElement('a');
+   973→    a.href = url;
+   974→    a.download = `history_${new Date().toISOString().slice(0, 10)}.csv`;
+   975→    a.click();
+   976→    URL.revokeObjectURL(url);
+   977→    toast.success(`Exported ${history.length} history entries`);
+   978→  };
+   979→
+   980→  if (loading) {
+   981→    return (
+   982→      <div className="flex items-center justify-center py-12">
+   983→        <Loader2 className="w-6 h-6 text-[var(--erp-accent)] animate-spin" />
+   984→      </div>
+   985→    );
+   986→  }
+   987→
+   988→  if (history.length === 0) {
+   989→    return (
+   990→      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   991→        <EmptyStateIllustration type="no-history" size={120} className="mb-3" />
+   992→        <h3 className="text-[13px] font-semibold text-[var(--erp-text)] mb-1">No history yet</h3>
+   993→        <p className="text-[11px] text-[var(--erp-text-muted)] max-w-[260px]">
+   994→          Status transitions and edits for this record will appear here as a timeline.
+   995→        </p>
+   996→      </div>
+   997→    );
+   998→  }
+   999→
+  1000→  return (
+  1001→    <div className="p-4">
+  1002→      <div className="flex items-center justify-between mb-2.5">
+  1003→        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--erp-text-muted)]">
+  1004→          <FAIcon name="fa-clock-rotate-left" className="text-[10px]" />
+  1005→          <span>Status Transitions & Edits</span>
+  1006→          <span className="text-[var(--erp-text-muted)] font-normal">({history.length})</span>
+  1007→        </div>
+  1008→        <button
+  1009→          onClick={exportHistoryCsv}
+  1010→          className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-[var(--erp-bg-input)] border border-[var(--erp-border)] text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)] transition-colors"
+  1011→          title="Export history as CSV"
+  1012→        >
+  1013→          <Download className="w-3 h-3" /> CSV
+  1014→        </button>
+  1015→      </div>
+  1016→      <div className="relative">
+  1017→        {/* Timeline line */}
+  1018→        <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-[var(--erp-border)]" />
+  1019→
+  1020→        <div className="space-y-3">
+  1021→          {history.map((entry, idx) => (
+  1022→            <div key={entry.id} className="relative flex gap-3 pl-0">
+  1023→              {/* Timeline dot */}
+  1024→              <div
+  1025→                className={cn(
+  1026→                  'w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-[var(--erp-bg)]',
+  1027→                  idx === 0 ? 'bg-[var(--erp-accent)]' : 'bg-[var(--erp-bg-elevated)]',
+  1028→                )}
+  1029→              >
+  1030→                <span className="text-[10px] font-bold text-white" style={{ color: idx === 0 ? 'white' : 'var(--erp-text-secondary)' }}>
+  1031→                  {entry.action[0]}
+  1032→                </span>
+  1033→              </div>
+  1034→
+  1035→              {/* Content */}
+  1036→              <div className="flex-1 min-w-0 pb-1">
+  1037→                <div className="flex items-start justify-between gap-2 mb-1">
+  1038→                  <div className="flex-1 min-w-0">
+  1039→                    <div className="text-[12px] font-medium text-[var(--erp-text)]">
+  1040→                      {entry.statusChange ? (
+  1041→                        <span className="flex items-center gap-1.5 flex-wrap">
+  1042→                          <StatusPill status={entry.statusChange.from} small />
+  1043→                          <ArrowRight className="w-3 h-3 text-[var(--erp-text-muted)]" />
+  1044→                          <StatusPill status={entry.statusChange.to} small />
+  1045→                        </span>
+  1046→                      ) : (
+  1047→                        entry.summary
+  1048→                      )}
+  1049→                    </div>
+  1050→                    <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5 flex items-center gap-1.5">
+  1051→                      <span className="flex items-center gap-1">
+  1052→                        <span className="w-4 h-4 rounded-full bg-[var(--erp-bg-hover)] flex items-center justify-center text-[8px] font-semibold text-[var(--erp-text-secondary)]">
+  1053→                          {entry.userAvatar}
+  1054→                        </span>
+  1055→                        {entry.userName}
+  1056→                      </span>
+  1057→                      <span>·</span>
+  1058→                      <span>{formatTimeAgo(entry.createdAt)}</span>
+  1059→                    </div>
+  1060→                  </div>
+  1061→                  {idx === 0 && (
+  1062→                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-semibold whitespace-nowrap">
+  1063→                      LATEST
+  1064→                    </span>
+  1065→                  )}
+  1066→                </div>
+  1067→              </div>
+  1068→            </div>
+  1069→          ))}
+  1070→        </div>
+  1071→      </div>
+  1072→    </div>
+  1073→  );
+  1074→}
+  1075→
+  1076→// ---------- Related Tab ----------
+  1077→function RelatedTab({ related, loading }: { related: any[]; loading: boolean }) {
+  1078→  if (loading) {
+  1079→    return (
+  1080→      <div className="flex items-center justify-center py-12">
+  1081→        <Loader2 className="w-6 h-6 text-[var(--erp-accent)] animate-spin" />
+  1082→      </div>
+  1083→    );
+  1084→  }
+  1085→
+  1086→  if (related.length === 0) {
+  1087→    return (
+  1088→      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+  1089→        <EmptyStateIllustration type="generic" size={120} className="mb-3" />
+  1090→        <h3 className="text-[13px] font-semibold text-[var(--erp-text)] mb-1">No related records</h3>
+  1091→        <p className="text-[11px] text-[var(--erp-text-muted)] max-w-[260px]">
+  1092→          No records in other registers share the same employee, building, asset, or vendor references.
+  1093→        </p>
+  1094→      </div>
+  1095→    );
+  1096→  }
+  1097→
+  1098→  const totalRecords = related.reduce((sum, g) => sum + g.records.length, 0);
+  1099→
+  1100→  return (
+  1101→    <div className="p-4">
+  1102→      <div className="flex items-center justify-between mb-2.5">
+  1103→        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--erp-text-muted)]">
+  1104→          <Link2 className="w-3 h-3" />
+  1105→          <span>Linked Records</span>
+  1106→          <span className="text-[var(--erp-text-muted)] font-normal">({totalRecords} in {related.length} registers)</span>
+  1107→        </div>
+  1108→      </div>
+  1109→      <div className="space-y-3">
+  1110→        {related.map((group) => (
+  1111→          <div key={group.registerId} className="border border-[var(--erp-border)] rounded-md overflow-hidden bg-[var(--erp-bg-card)]">
+  1112→            <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--erp-border)] bg-[var(--erp-bg-secondary)]">
+  1113→              <div
+  1114→                className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+  1115→                style={{ background: group.registerColor + '20', color: group.registerColor }}
+  1116→              >
+  1117→                <FAIcon name={group.registerIcon} className="text-[11px]" />
+  1118→              </div>
+  1119→              <div className="flex-1 min-w-0">
+  1120→                <div className="text-[12px] font-medium text-[var(--erp-text)] truncate">{group.registerName}</div>
+  1121→                <div className="text-[9px] text-[var(--erp-text-muted)]">{group.records.length} matching record{group.records.length === 1 ? '' : 's'}</div>
+  1122→              </div>
+  1123→            </div>
+  1124→            <div className="divide-y divide-[var(--erp-border)]">
+  1125→              {group.records.map((rec: any) => {
+  1126→                const firstField = Object.values(rec.data).find((v: any) => v !== null && v !== undefined && v !== '' && !Array.isArray(v) && typeof v !== 'object');
+  1127→                return (
+  1128→                  <div key={rec.id} className="px-3 py-2 flex items-center gap-2 hover:bg-[var(--erp-bg-hover)] transition-colors">
+  1129→                    <div className="flex-1 min-w-0">
+  1130→                      <div className="text-[11px] font-medium text-[var(--erp-text)] truncate">
+  1131→                        #{rec.sequence} · {String(firstField || 'Record')}
+  1132→                      </div>
+  1133→                      <div className="text-[9px] text-[var(--erp-text-muted)] flex items-center gap-1 mt-0.5">
+  1134→                        <span className="px-1 py-0.5 rounded bg-[var(--erp-accent-dim)] text-[var(--erp-accent)] font-medium">
+  1135→                          Matched: {rec.matchedColumn} = {rec.matchedOn}
+  1136→                        </span>
+  1137→                      </div>
+  1138→                    </div>
+  1139→                    <Clock className="w-3 h-3 text-[var(--erp-text-muted)] shrink-0" />
+  1140→                    <span className="text-[9px] text-[var(--erp-text-muted)] shrink-0">{formatTimeAgo(rec.createdAt)}</span>
+  1141→                  </div>
+  1142→                );
+  1143→              })}
+  1144→            </div>
+  1145→          </div>
+  1146→        ))}
+  1147→      </div>
+  1148→    </div>
+  1149→  );
+  1150→}
+  1151→
+  1152→// ---------- Activity Tab ----------
+  1153→function ActivityTab({ record, register }: { record: RecordData; register: Register }) {
+  1154→  return (
+  1155→    <div className="p-4 space-y-4">
+  1156→      <div>
+  1157→        <SectionLabel icon="fa-circle-info" label="Record Metadata" />
+  1158→        <div className="space-y-2">
+  1159→          <MetaRow label="Record ID" value={record.id} mono />
+  1160→          <MetaRow label="Register" value={register.name} />
+  1161→          <MetaRow label="Register Code" value={register.code} mono />
+  1162→          <MetaRow label="Sequence" value={`#${record.sequence}`} mono />
+  1163→          <MetaRow label="Created At" value={formatDate(record.createdAt)} />
+  1164→          <MetaRow label="Updated At" value={formatDate(record.updatedAt)} />
+  1165→          <MetaRow label="Created By" value={record.createdBy || 'system'} />
+  1166→          <MetaRow label="Updated By" value={record.updatedBy || 'system'} />
+  1167→          <MetaRow label="Deleted" value={record.isDeleted ? 'Yes' : 'No'} />
+  1168→        </div>
+  1169→      </div>
+  1170→
+  1171→      <div>
+  1172→        <SectionLabel icon="fa-database" label="Raw Data (JSON)" />
+  1173→        <pre className="text-[10px] bg-[var(--erp-bg-card)] border border-[var(--erp-border)] rounded-md p-3 overflow-x-auto font-mono text-[var(--erp-text-secondary)] max-h-[300px]">
+  1174→          {JSON.stringify(record.data, null, 2)}
+  1175→        </pre>
+  1176→      </div>
+  1177→    </div>
+  1178→  );
+  1179→}
+  1180→
+  1181→// ---------- Helpers ----------
+  1182→function TabButton({ active, onClick, icon, label, count }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; count?: number }) {
+  1183→  return (
+  1184→    <button
+  1185→      onClick={onClick}
+  1186→      className={cn(
+  1187→        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors',
+  1188→        active
+  1189→          ? 'bg-[var(--erp-accent-dim)] text-[var(--erp-accent)]'
+  1190→          : 'text-[var(--erp-text-secondary)] hover:bg-[var(--erp-bg-hover)] hover:text-[var(--erp-text)]',
+  1191→      )}
+  1192→    >
+  1193→      {icon}
+  1194→      <span>{label}</span>
+  1195→      {count !== undefined && count > 0 && (
+  1196→        <span className={cn(
+  1197→          'px-1.5 rounded-full text-[9px] font-bold',
+  1198→          active ? 'bg-[var(--erp-accent)] text-white' : 'bg-[var(--erp-bg-hover)] text-[var(--erp-text-muted)]',
+  1199→        )}>
+  1200→          {count}
+  1201→        </span>
+  1202→      )}
+  1203→    </button>
+  1204→  );
+  1205→}
+  1206→
+  1207→function SectionLabel({ icon, label, count }: { icon: string; label: string; count?: number }) {
+  1208→  return (
+  1209→    <div className="flex items-center gap-2 mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--erp-text-muted)]">
+  1210→      <FAIcon name={icon} className="text-[10px]" />
+  1211→      <span>{label}</span>
+  1212→      {count !== undefined && (
+  1213→        <span className="text-[var(--erp-text-muted)] font-normal">({count})</span>
+  1214→      )}
+  1215→      <div className="flex-1 h-px bg-[var(--erp-border)]" />
+  1216→    </div>
+  1217→  );
+  1218→}
+  1219→
+  1220→function MetaRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  1221→  return (
+  1222→    <div className="flex items-center justify-between gap-2 py-1 border-b border-[var(--erp-border)] last:border-b-0">
+  1223→      <span className="text-[11px] text-[var(--erp-text-muted)]">{label}</span>
+  1224→      <span className={cn('text-[11px] text-[var(--erp-text)] font-medium', mono && 'font-mono text-[10px]')}>{value}</span>
+  1225→    </div>
+  1226→  );
+  1227→}
+  1228→
+  1229→function StatusPill({ status, small }: { status: string; small?: boolean }) {
+  1230→  const variant = statusVariant(status);
+  1231→  const colors: Record<string, string> = {
+  1232→    success: 'var(--erp-success)',
+  1233→    warning: 'var(--erp-warning)',
+  1234→    danger: 'var(--erp-danger)',
+  1235→    info: 'var(--erp-info)',
+  1236→    accent: 'var(--erp-accent)',
+  1237→    neutral: 'var(--erp-text-muted)',
+  1238→    default: 'var(--erp-text-muted)',
+  1239→  };
+  1240→  const color = colors[variant] || colors.default;
+  1241→  return (
+  1242→    <span
+  1243→      className={cn(
+  1244→        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium whitespace-nowrap',
+  1245→        small ? 'text-[9px]' : 'text-[11px]',
+  1246→      )}
+  1247→      style={{ background: color + '20', color }}
+  1248→    >
+  1249→      <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+  1250→      {status}
+  1251→    </span>
+  1252→  );
+  1253→}
+  1254→
+  1255→function PriorityPill({ priority }: { priority: string }) {
+  1256→  const p = priority.toLowerCase();
+  1257→  let color = 'var(--erp-info)';
+  1258→  if (p === 'critical') color = 'var(--erp-danger)';
+  1259→  else if (p === 'high') color = 'var(--erp-warning)';
+  1260→  else if (p === 'medium') color = 'var(--erp-info)';
+  1261→  else if (p === 'low') color = 'var(--erp-success)';
+  1262→  return (
+  1263→    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: color + '20', color }}>
+  1264→      {priority}
+  1265→    </span>
+  1266→  );
+  1267→}
+  1268→
+  1269→function colIconFor(type: string): string {
+  1270→  switch (type) {
+  1271→    case 'text': return 'fa-font';
+  1272→    case 'long_text': return 'fa-align-left';
+  1273→    case 'number': return 'fa-hashtag';
+  1274→    case 'currency': return 'fa-coins';
+  1275→    case 'percentage': return 'fa-percent';
+  1276→    case 'date': return 'fa-calendar';
+  1277→    case 'datetime': return 'fa-calendar-days';
+  1278→    case 'time': return 'fa-clock';
+  1279→    case 'dropdown': return 'fa-list';
+  1280→    case 'status': return 'fa-flag';
+  1281→    case 'priority': return 'fa-bolt';
+  1282→    case 'multi_select': return 'fa-list-check';
+  1283→    case 'email': return 'fa-envelope';
+  1284→    case 'phone': return 'fa-phone';
+  1285→    case 'rating': return 'fa-star';
+  1286→    case 'employee': return 'fa-user';
+  1287→    case 'department': return 'fa-building-user';
+  1288→    case 'building': return 'fa-city';
+  1289→    case 'asset': return 'fa-cube';
+  1290→    case 'equipment': return 'fa-gears';
+  1291→    case 'vendor': return 'fa-truck';
+  1292→    case 'image': return 'fa-image';
+  1293→    case 'url': return 'fa-link';
+  1294→    case 'color': return 'fa-palette';
+  1295→    case 'tags': return 'fa-tags';
+  1296→    default: return 'fa-circle';
+  1297→  }
+  1298→}
+  1299→
+  1300→function formatCurrencyCompact(n: number, currency = 'AED'): string {
+  1301→  if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
+  1302→  if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(1)}K`;
+  1303→  return `${currency} ${n.toLocaleString()}`;
+  1304→}
+  1305→
