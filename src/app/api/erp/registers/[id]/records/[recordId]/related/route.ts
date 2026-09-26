@@ -3,19 +3,35 @@
 // Finds records in OTHER registers that reference the same entity (employee, building, asset, etc.)
 // For example, if viewing a Work Order assigned to "Ahmed Ali" on "Building A",
 // this returns all records in other registers that also mention "Ahmed Ali" or "Building A".
+//
+// TENANT ISOLATION:
+//   • The current register, the current record, and all "other registers" queries are
+//     scoped by tenant via `tenantWhere(user)`.
+//   • A tenant user only sees related records inside their own tenant's registers.
+//   • Super Admin only sees related records in platform/system registers.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { ColumnDef } from '@/lib/erp/types';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; recordId: string }> }) {
   const { id, recordId } = await params;
+  const user = await getCurrentUser(_req);
+  if (!user) return forbidden('Authentication required');
 
-  const register = await db.register.findUnique({ where: { id } });
+  const register = await db.register.findFirst({
+    where: { id, ...tenantWhere(user) },
+  });
   if (!register || register.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
   }
 
-  const record = await db.record.findUnique({ where: { id: recordId, registerId: id } });
+  // Scope the record lookup by tenant — prevents IDOR.
+  const record = await db.record.findFirst({
+    where: { id: recordId, registerId: id, ...tenantWhere(user) },
+  });
   if (!record || record.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Record not found' }, { status: 404 });
   }
@@ -38,10 +54,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ ok: true, related: [] });
   }
 
-  // Find all other registers
+  // Find all other registers in the same tenant.
   const otherRegisters = await db.register.findMany({
-    where: { id: { not: id }, isDeleted: false },
-    include: { records: { where: { isDeleted: false } } },
+    where: { id: { not: id }, ...tenantWhere(user), isDeleted: false },
+    include: { records: { where: { ...tenantWhere(user), isDeleted: false } } },
   });
 
   const relatedGroups: {

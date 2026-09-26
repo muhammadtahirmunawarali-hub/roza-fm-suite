@@ -2,6 +2,12 @@
 // GET  /api/erp/registers/[id]/records?page=1&pageSize=25&search=&sortField=&sortDir=asc&f_Status=
 // POST /api/erp/registers/[id]/records   { data: {...} }
 // Server-side permission checks: POST requires 'create' permission.
+//
+// TENANT ISOLATION:
+//   • Super Admin (tenantId = null) sees only platform/system records (tenantId IS NULL).
+//   • Tenant users see only their own tenant's records.
+//   • The parent register is also scoped by tenant — a tenant user cannot list records
+//     for a register that belongs to another tenant (prevents IDOR).
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { RecordData, ColumnDef } from '@/lib/erp/types';
@@ -11,7 +17,10 @@ import {
   validateRecordData,
   badRequest,
   notFound,
+  forbidden,
 } from '@/lib/erp/api-helpers';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere, getTenantId } from '@/lib/erp/tenant';
 
 function serialize(r: any): RecordData {
   return {
@@ -29,7 +38,13 @@ function serialize(r: any): RecordData {
 
 export const GET = apiHandler(async (req, { params }) => {
   const { id } = await params;
-  const register = await db.register.findUnique({ where: { id } });
+  const user = await getCurrentUser(req as NextRequest);
+  if (!user) return forbidden('Authentication required');
+
+  // Scope the parent register by tenant — prevents cross-tenant IDOR.
+  const register = await db.register.findFirst({
+    where: { id, ...tenantWhere(user) },
+  });
   if (!register || register.isDeleted) {
     return notFound('Register not found');
   }
@@ -51,8 +66,9 @@ export const GET = apiHandler(async (req, { params }) => {
   const columns = JSON.parse(register.columns) as ColumnDef[];
 
   // Fetch all non-deleted records (SQLite doesn't have great JSON querying — we filter in JS)
+  // Tenant-scoped via tenantWhere(user).
   const allRows = await db.record.findMany({
-    where: { registerId: id, isDeleted: false },
+    where: { ...tenantWhere(user), registerId: id, isDeleted: false },
     orderBy: { sequence: 'asc' },
   });
 
@@ -117,13 +133,19 @@ export const GET = apiHandler(async (req, { params }) => {
 
 export const POST = apiHandler(async (req, { params }) => {
   const { id } = await params;
-  const register = await db.register.findUnique({ where: { id } });
+  const user = await getCurrentUser(req as NextRequest);
+  if (!user) return forbidden('Authentication required');
+
+  // Scope the parent register by tenant.
+  const register = await db.register.findFirst({
+    where: { id, ...tenantWhere(user) },
+  });
   if (!register || register.isDeleted) {
     return notFound('Register not found');
   }
 
-  // Server-side permission check
-  const [user, permError] = await requirePermission(req, register.code, 'create');
+  // Server-side permission check (requirePermission re-fetches the user via getCurrentUser)
+  const [permUser, permError] = await requirePermission(req, register.code, 'create');
   if (permError) return permError;
 
   const body = await req.json();
@@ -136,9 +158,11 @@ export const POST = apiHandler(async (req, { params }) => {
     return badRequest('Validation failed', validationErrors);
   }
 
-  // Auto-assign sequence
+  const tenantId = getTenantId(user);
+
+  // Auto-assign sequence (scoped to tenant — other tenants have independent sequences)
   const lastRecord = await db.record.findFirst({
-    where: { registerId: id },
+    where: { ...tenantWhere(user), registerId: id },
     orderBy: { sequence: 'desc' },
   });
   const sequence = (lastRecord?.sequence || 0) + 1;
@@ -157,22 +181,27 @@ export const POST = apiHandler(async (req, { params }) => {
         registerId: id,
         sequence,
         data: JSON.stringify(data),
-        createdBy: user?.username || 'system',
+        createdBy: user.username,
+        tenantId, // ← tenant-scoped
       },
     });
     await tx.auditLog.create({
       data: {
-        userId: user?.id || null,
+        userId: user.id,
         action: 'Created',
         module: register.name,
         registerId: id,
         recordId: newRecord.id,
         summary: `Created record #${sequence} in "${register.name}"`,
         newValue: JSON.stringify(data),
+        tenantId, // ← tenant-scoped
       },
     });
     return newRecord;
   });
+
+  // Silence the unused permUser variable while keeping the permission check active.
+  void permUser;
 
   return NextResponse.json(serialize(r));
 });

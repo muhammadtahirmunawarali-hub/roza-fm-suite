@@ -18,7 +18,7 @@ datasource db {
 
 model Register {
   id          String   @id @default(cuid())
-  code        String   @unique // url-friendly slug, e.g. "workorders"
+  code        String   // url-friendly slug, e.g. "workorders" (unique per-tenant, see @@unique below)
   name        String
   icon        String   @default("fa-table") // Font Awesome icon name
   category    String   @default("operations") // operations|maintenance|safety|assets|procurement|hr|performance|admin
@@ -33,10 +33,14 @@ model Register {
   isSystem    Boolean  @default(false) // system registers can't be deleted
   isDeleted   Boolean  @default(false)
   order       Int      @default(0)
+  tenantId    String?  // SaaS: null = shared platform/system register (Super Admin), otherwise tenant-scoped
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   records     Record[]
   auditLogs   AuditLog[]
+
+  @@index([tenantId])
+  @@unique([tenantId, code]) // same code allowed across tenants; NULLs are distinct in SQLite so system register (null) is unique
 }
 
 model Record {
@@ -53,9 +57,11 @@ model Record {
   updatedAt    DateTime @updatedAt
   createdBy    String?
   updatedBy    String?
+  tenantId     String?  // SaaS: null = shared platform/system data (Super Admin), otherwise tenant-scoped
 
   @@index([registerId])
   @@index([registerId, isDeleted])
+  @@index([tenantId])
 }
 
 // ============================================================
@@ -113,11 +119,13 @@ model SavedView {
   userId      String?  // owner; null = shared/system
   filters     String   @default("{}") // JSON: { search, filters, sortField, sortDir }
   isShared    Boolean  @default(false)
+  tenantId    String?  // SaaS scoping
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([registerId])
   @@index([userId])
+  @@index([tenantId])
 }
 
 // ============================================================
@@ -150,11 +158,13 @@ model AuditLog {
   newValue     String?  // JSON snapshot
   summary     String   // human-readable
   ip          String?
+  tenantId    String?  // SaaS scoping
   createdAt   DateTime @default(now())
 
   @@index([module])
   @@index([createdAt])
   @@index([userId])
+  @@index([tenantId])
 }
 
 // ============================================================
@@ -226,11 +236,13 @@ model StockMovement {
   // Who and when
   movedBy       String?
   note          String?
+  tenantId      String?  // SaaS scoping
   createdAt     DateTime @default(now())
 
   @@index([woRecordId])
   @@index([movementType])
   @@index([createdAt])
+  @@index([tenantId])
 }
 
 // ============================================================
@@ -262,11 +274,14 @@ model ApiKey {
   name        String
   permissions String   @default("[]")
   rateLimit   Int      @default(100)
+  tenantId    String?  // SaaS: scopes API key to a tenant (null = platform-level)
   lastUsedAt  DateTime?
   expiresAt   DateTime?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model WebhookConfig {

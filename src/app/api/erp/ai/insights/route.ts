@@ -1,9 +1,11 @@
 // Roza FM Suite — AI Predictive Insights API
 // GET /api/erp/ai/insights → returns predictive analytics (overdue predictions, stock-out alerts)
+// TENANT ISOLATION: every record.findMany is scoped via tenantWhere(user).
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { apiHandler, unauthorized } from '@/lib/erp/api-helpers';
 import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
 
 export const GET = apiHandler(async (req: NextRequest) => {
   const user = await getCurrentUser(req);
@@ -13,7 +15,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
 
   // 1. Predict overdue work orders (WOs that are likely to become overdue based on history)
   const woRecords = await db.record.findMany({
-    where: { isDeleted: false, register: { code: 'workorders' } },
+    where: { ...tenantWhere(user), isDeleted: false, register: { code: 'workorders' } },
     orderBy: { sequence: 'asc' },
   });
 
@@ -62,7 +64,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
 
   // 2. Predict stock-out alerts
   const invRecords = await db.record.findMany({
-    where: { isDeleted: false, register: { code: 'inventory' } },
+    where: { ...tenantWhere(user), isDeleted: false, register: { code: 'inventory' } },
   });
 
   invRecords.forEach((item) => {
@@ -89,7 +91,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
 
   // 3. PM due predictions
   const pmRecords = await db.record.findMany({
-    where: { isDeleted: false, register: { code: 'pm' } },
+    where: { ...tenantWhere(user), isDeleted: false, register: { code: 'pm' } },
   });
 
   pmRecords.forEach((pm) => {

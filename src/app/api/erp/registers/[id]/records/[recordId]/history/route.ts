@@ -1,14 +1,30 @@
 // Roza FM Suite — Record history (audit log entries for a specific record)
 // GET /api/erp/registers/[id]/records/[recordId]/history
 // Returns all audit log entries for this record, sorted by date descending.
+//
+// TENANT ISOLATION:
+//   • Audit log entries are scoped by tenant via `tenantWhere(user)` — a tenant user
+//     only sees audit history for records in their own tenant.
+//   • Super Admin only sees platform/system audit history (tenantId IS NULL).
+//
+// BUG FIX: The previous implementation had an unawaited `db.register.findUnique`
+// inside a `.map()` — Promise was created but never awaited, and the result was
+// never used (only the `oldData.Status` / `newData.Status` fields were inspected).
+// Removed the dead call to eliminate the dangling Promise.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; recordId: string }> }) {
   const { id, recordId } = await params;
+  const user = await getCurrentUser(_req);
+  if (!user) return forbidden('Authentication required');
 
   const logs = await db.auditLog.findMany({
     where: {
+      ...tenantWhere(user),
       registerId: id,
       recordId,
     },
@@ -21,11 +37,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const oldData = l.oldValue ? JSON.parse(l.oldValue) : null;
     const newData = l.newValue ? JSON.parse(l.newValue) : null;
 
-    // Detect status change
+    // Detect status change — inspect the old/new payloads directly (no DB call needed).
     let statusChange: { from: string; to: string } | null = null;
     if (oldData && newData) {
-      const register = db.register.findUnique({ where: { id } });
-      // We can't await inside map, so just check for 'Status' field changes
       const oldStatus = oldData.Status || oldData.status;
       const newStatus = newData.Status || newData.status;
       if (oldStatus && newStatus && oldStatus !== newStatus) {

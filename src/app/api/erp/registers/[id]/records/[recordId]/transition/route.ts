@@ -7,10 +7,18 @@
 // the appropriate status transition based on the current status + action.
 // Server-side permission check: reads session cookie, looks up user, verifies
 // the user has 'approve' or 'edit' permission for this register.
+//
+// TENANT ISOLATION:
+//   • Register and record lookups are scoped by tenant via `tenantWhere(user)`
+//     using `findFirst` (Prisma `findUnique` does not accept non-unique fields).
+//   • Audit log entries created here are tenant-scoped.
+//   • Prevents IDOR — a tenant user cannot transition a record in another tenant's register.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { ColumnDef } from '@/lib/erp/types';
 import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
+import { tenantWhere, getTenantId } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 
 // Workflow state machine — maps (currentStatus, action) → newStatus
 const TRANSITIONS: Record<string, Record<string, string>> = {
@@ -36,19 +44,27 @@ const TRANSITIONS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; recordId: string }> }) {
   const { id, recordId } = await params;
-  const register = await db.register.findUnique({ where: { id } });
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
+  // Scope the parent register by tenant.
+  const register = await db.register.findFirst({
+    where: { id, ...tenantWhere(user) },
+  });
   if (!register || register.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Register not found' }, { status: 404 });
   }
 
-  const existing = await db.record.findUnique({ where: { id: recordId, registerId: id } });
+  // Scope the record lookup by tenant — prevents IDOR.
+  const existing = await db.record.findFirst({
+    where: { id: recordId, registerId: id, ...tenantWhere(user) },
+  });
   if (!existing || existing.isDeleted) {
     return NextResponse.json({ ok: false, error: 'Record not found' }, { status: 404 });
   }
 
   // Server-side permission check using shared auth helper
-  const currentUser = await getCurrentUser(req);
-  if (currentUser && !hasPermission(currentUser, register.code, 'approve') && !hasPermission(currentUser, register.code, 'edit')) {
+  if (!hasPermission(user, register.code, 'approve') && !hasPermission(user, register.code, 'edit')) {
     return NextResponse.json({ ok: false, error: "You don't have permission to transition this record" }, { status: 403 });
   }
 
@@ -97,17 +113,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
+  const tenantId = getTenantId(user);
+
   const updated = await db.record.update({
     where: { id: recordId },
     data: {
       data: JSON.stringify(data),
-      updatedBy: currentUser?.username || 'system',
+      updatedBy: user.username,
+      // Preserve tenantId (defensive — should never change on update)
+      tenantId,
     },
   });
 
   await db.auditLog.create({
     data: {
-      userId: currentUser?.id || null,
+      userId: user.id,
       action: action === 'approve' ? 'Approved' : action === 'reject' ? 'Updated' : 'Updated',
       module: register.name,
       registerId: id,
@@ -115,6 +135,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       summary: `Status transition: ${currentStatus} → ${newStatus}${comment ? ` (comment: "${comment.slice(0, 80)}")` : ''}`,
       oldValue: JSON.stringify(oldData),
       newValue: JSON.stringify(data),
+      tenantId, // ← tenant-scoped
     },
   });
 
@@ -151,10 +172,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 // GET — return available transitions for the current status
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; recordId: string }> }) {
   const { id, recordId } = await params;
-  const register = await db.register.findUnique({ where: { id } });
+  const user = await getCurrentUser(_req);
+  if (!user) return forbidden('Authentication required');
+
+  const register = await db.register.findFirst({
+    where: { id, ...tenantWhere(user) },
+  });
   if (!register) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
 
-  const existing = await db.record.findUnique({ where: { id: recordId, registerId: id } });
+  // Scope the record lookup by tenant — prevents IDOR.
+  const existing = await db.record.findFirst({
+    where: { id: recordId, registerId: id, ...tenantWhere(user) },
+  });
   if (!existing) return NextResponse.json({ ok: false, error: 'Record not found' }, { status: 404 });
 
   const columns = JSON.parse(register.columns) as ColumnDef[];

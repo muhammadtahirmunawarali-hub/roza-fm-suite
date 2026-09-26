@@ -1,5 +1,13 @@
 // Roza FM Suite — Server-side seed helper
 // Seeds the database with all the FMCore registers + sample records from sample-data.ts
+//
+// TENANT MODEL
+// ────────────
+// • Platform/system seed (tenantId = null): created by `seedDatabase()` on first boot.
+//   Owned by the Super Admin / platform owner. Used as the demo data when no tenant is logged in.
+// • Per-tenant seed (tenantId = X): created by `seedTenantData(tenantId)` on signup.
+//   Each new SaaS tenant gets their OWN copy of all 46 registers + sample records so
+//   their admin sees a populated sidebar + test data from day one (NOT an empty shell).
 import { db } from '@/lib/db';
 import { REGISTER_SEEDS, MASTER_DATA } from './sample-data';
 import type { ColumnDef } from './types';
@@ -36,8 +44,10 @@ export const DEFAULT_USERS = [
  * This is idempotent — only adds columns that don't exist yet.
  */
 async function migrateRegisterColumns() {
+  // Only migrate PLATFORM/system registers (tenantId = null).
+  // Tenant-scoped registers are managed by seedTenantData() and are not auto-migrated.
   for (const seed of REGISTER_SEEDS) {
-    const reg = await db.register.findFirst({ where: { code: seed.code } });
+    const reg = await db.register.findFirst({ where: { code: seed.code, tenantId: null } });
     if (!reg) continue;
     const existingCols = JSON.parse(reg.columns) as ColumnDef[];
     const existingNames = new Set(existingCols.map((c) => c.name));
@@ -60,11 +70,11 @@ async function migrateRegisterColumns() {
     }).catch(() => {});
   }
 
-  // Also create any NEW registers from the seed that don't exist yet
+  // Also create any NEW platform registers from the seed that don't exist yet (tenantId = null)
   for (const seed of REGISTER_SEEDS) {
-    const exists = await db.register.findFirst({ where: { code: seed.code } });
+    const exists = await db.register.findFirst({ where: { code: seed.code, tenantId: null } });
     if (exists) continue;
-    const order = await db.register.count({ where: { category: seed.category } });
+    const order = await db.register.count({ where: { category: seed.category, tenantId: null } });
     const reg = await db.register.create({
       data: {
         code: seed.code,
@@ -76,6 +86,7 @@ async function migrateRegisterColumns() {
         columns: JSON.stringify(seed.columns),
         isSystem: true,
         order: order + 1,
+        tenantId: null, // platform / system register
       },
     });
     for (let r = 0; r < seed.records.length; r++) {
@@ -85,6 +96,7 @@ async function migrateRegisterColumns() {
           sequence: r + 1,
           data: JSON.stringify(seed.records[r]),
           createdBy: 'system',
+          tenantId: null,
         },
       });
     }
@@ -97,8 +109,9 @@ async function migrateRegisterColumns() {
  * Enables "add more demo data" without wiping the DB.
  */
 async function migrateNewRecords() {
+  // Only migrate records on PLATFORM/system registers (tenantId = null).
   for (const seed of REGISTER_SEEDS) {
-    const reg = await db.register.findFirst({ where: { code: seed.code } });
+    const reg = await db.register.findFirst({ where: { code: seed.code, tenantId: null } });
     if (!reg) continue;
     const existingCount = await db.record.count({ where: { registerId: reg.id, isDeleted: false } });
     const seedCount = seed.records.length;
@@ -113,6 +126,7 @@ async function migrateNewRecords() {
             sequence: r + 1,
             data: JSON.stringify(seed.records[r]),
             createdBy: 'system',
+            tenantId: null,
           },
         });
       } catch (e) {
@@ -160,6 +174,7 @@ export async function seedDatabase(force = false) {
         columns: JSON.stringify(seed.columns),
         isSystem: true,
         order: i + 1,
+        tenantId: null, // platform / system register (Super Admin's demo data)
       },
     });
     totalRegisters++;
@@ -172,6 +187,7 @@ export async function seedDatabase(force = false) {
           sequence: r + 1,
           data: JSON.stringify(data),
           createdBy: 'system',
+          tenantId: null,
         },
       });
       totalRecords++;
@@ -234,6 +250,79 @@ export async function seedDatabase(force = false) {
   });
 
   return { seeded: true, registers: totalRegisters, records: totalRecords, users: userCount };
+}
+
+/**
+ * Seed a freshly-created SaaS tenant with a full copy of the standard register
+ * library + sample records. This is what makes a new tenant admin's sidebar
+ * populated on first login (instead of an empty shell).
+ *
+ * Each tenant gets their OWN copies (tenantId = <tenantId>) so data is fully
+ * isolated — tenant A cannot see tenant B's work orders, assets, etc.
+ *
+ * Idempotent: if the tenant already has registers, this is a no-op.
+ *
+ * @param tenantId  The tenant to seed (must be non-null)
+ * @returns summary of what was created
+ */
+export async function seedTenantData(tenantId: string) {
+  if (!tenantId) throw new Error('seedTenantData requires a non-null tenantId');
+
+  // Idempotency: if tenant already has registers, skip
+  const existing = await db.register.count({ where: { tenantId } });
+  if (existing > 0) {
+    return { seeded: false, reason: 'tenant_already_seeded', count: existing };
+  }
+
+  let totalRegisters = 0;
+  let totalRecords = 0;
+
+  for (let i = 0; i < REGISTER_SEEDS.length; i++) {
+    const seed = REGISTER_SEEDS[i];
+    const register = await db.register.create({
+      data: {
+        code: seed.code,
+        name: seed.name,
+        icon: seed.icon,
+        category: seed.category,
+        color: seed.color,
+        description: seed.description || null,
+        columns: JSON.stringify(seed.columns),
+        isSystem: true, // tenant's copy is still "system" (can't delete the register itself)
+        order: i + 1,
+        tenantId, // ← tenant-scoped
+      },
+    });
+    totalRegisters++;
+
+    for (let r = 0; r < seed.records.length; r++) {
+      const data = seed.records[r];
+      await db.record.create({
+        data: {
+          registerId: register.id,
+          sequence: r + 1,
+          data: JSON.stringify(data),
+          createdBy: 'system',
+          tenantId, // ← tenant-scoped
+        },
+      });
+      totalRecords++;
+    }
+  }
+
+  // Welcome notification for the new tenant
+  await db.notification.create({
+    data: {
+      type: 'system',
+      title: 'Welcome to Roza FM Suite!',
+      message: `Your workspace is ready. ${totalRegisters} registers and ${totalRecords} sample records have been created for you. Explore the sidebar to get started.`,
+      severity: 'success',
+      link: '/',
+      isRead: false,
+    },
+  });
+
+  return { seeded: true, registers: totalRegisters, records: totalRecords };
 }
 
 // Idempotently create default users if they don't exist

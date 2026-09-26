@@ -5,6 +5,9 @@ export interface ApiKeyUser {
   keyId: string;
   keyName: string;
   permissions: string[];
+  // SaaS: null = platform-level key (sees only platform/system data),
+  // "<id>" = tenant-scoped key (sees only that tenant's data)
+  tenantId: string | null;
 }
 
 export async function getApiKeyUser(req: NextRequest): Promise<ApiKeyUser | null> {
@@ -14,7 +17,12 @@ export async function getApiKeyUser(req: NextRequest): Promise<ApiKeyUser | null
   if (!key) return null;
   if (key.expiresAt && key.expiresAt < new Date()) return null;
   await db.apiKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
-  return { keyId: key.id, keyName: key.name, permissions: JSON.parse(key.permissions as string || '[]') };
+  return {
+    keyId: key.id,
+    keyName: key.name,
+    permissions: JSON.parse(key.permissions as string || '[]'),
+    tenantId: key.tenantId ?? null,
+  };
 }
 
 export function hasApiKeyPermission(apiUser: ApiKeyUser | null, permission: string): boolean {

@@ -1,9 +1,13 @@
 // Roza FM Suite — AI Assistant (z-ai-web-dev-sdk)
 // Context-aware AI with CRUD actions: open/create/update/delete records + guided help
+// TENANT ISOLATION: the context-building findMany and every CRUD helper is scoped via
+// tenantWhere(user); created records/audit logs are tagged with getTenantId(user).
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
 import { db } from '@/lib/db';
-import { getCurrentUser } from '@/lib/erp/auth';
+import { getCurrentUser, type AuthUser } from '@/lib/erp/auth';
+import { tenantWhere, getTenantId } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 import { REGISTER_CATEGORIES } from '@/lib/erp/types';
 import type { ColumnDef } from '@/lib/erp/types';
 
@@ -12,17 +16,18 @@ export async function POST(req: NextRequest) {
   const message: string = body.message || '';
   const history: { role: 'user' | 'assistant'; content: string }[] = body.history || [];
 
+  // Get user for audit log + tenant scoping (auth required)
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
   if (!message.trim()) {
     return NextResponse.json({ reply: 'Please ask a question about your ERP data.' });
   }
 
-  // Get user for audit log
-  const user = await getCurrentUser(req);
-
-  // Build context
+  // Build context — scoped to the current tenant
   const registers = await db.register.findMany({
-    where: { isDeleted: false },
-    include: { records: { where: { isDeleted: false } } },
+    where: { ...tenantWhere(user), isDeleted: false },
+    include: { records: { where: { ...tenantWhere(user), isDeleted: false } } },
   });
 
   const ctx = registers.map((r) => {
@@ -126,7 +131,7 @@ RULES:
               executionResult = await executeCreateRecord(
                 regCode,
                 recordData,
-                user?.username || 'ai_assistant',
+                user,
               );
               action = { type: 'create_record', payload: { code: regCode, data: recordData } };
             } catch (e: any) {
@@ -148,7 +153,7 @@ RULES:
                 regCode,
                 seq,
                 updates,
-                user?.username || 'ai_assistant',
+                user,
               );
               action = {
                 type: 'update_record',
@@ -170,7 +175,7 @@ RULES:
               executionResult = await executeDeleteRecord(
                 regCode,
                 seq,
-                user?.username || 'ai_assistant',
+                user,
               );
               action = { type: 'delete_record', payload: { code: regCode, sequence: seq } };
             } catch (e: any) {
@@ -206,13 +211,13 @@ RULES:
 async function executeCreateRecord(
   regCode: string,
   data: Record<string, any>,
-  username: string,
+  user: AuthUser,
 ): Promise<string> {
-  const register = await db.register.findFirst({ where: { code: regCode } });
+  const register = await db.register.findFirst({ where: { code: regCode, ...tenantWhere(user) } });
   if (!register) throw new Error(`Register "${regCode}" not found`);
 
   const lastRecord = await db.record.findFirst({
-    where: { registerId: register.id },
+    where: { registerId: register.id, ...tenantWhere(user) },
     orderBy: { sequence: 'desc' },
   });
   const sequence = (lastRecord?.sequence || 0) + 1;
@@ -225,24 +230,27 @@ async function executeCreateRecord(
     }
   });
 
+  const tenantId = getTenantId(user);
   const r = await db.$transaction(async (tx) => {
     const newRecord = await tx.record.create({
       data: {
         registerId: register.id,
         sequence,
         data: JSON.stringify(data),
-        createdBy: username,
+        createdBy: user.username,
+        tenantId,
       },
     });
     await tx.auditLog.create({
       data: {
-        userId: null,
+        userId: user.id,
         action: 'Created',
         module: register.name,
         registerId: register.id,
         recordId: newRecord.id,
         summary: `AI Assistant created record #${sequence} in "${register.name}"`,
         newValue: JSON.stringify(data),
+        tenantId,
       },
     });
     return newRecord;
@@ -255,30 +263,31 @@ async function executeUpdateRecord(
   regCode: string,
   sequence: number,
   updates: Record<string, any>,
-  username: string,
+  user: AuthUser,
 ): Promise<string> {
-  const register = await db.register.findFirst({ where: { code: regCode } });
+  const register = await db.register.findFirst({ where: { code: regCode, ...tenantWhere(user) } });
   if (!register) throw new Error(`Register "${regCode}" not found`);
 
   const existing = await db.record.findFirst({
-    where: { registerId: register.id, sequence, isDeleted: false },
+    where: { registerId: register.id, sequence, isDeleted: false, ...tenantWhere(user) },
   });
   if (!existing) throw new Error(`Record #${sequence} not found in ${register.name}`);
 
   const oldData = JSON.parse(existing.data);
   const newData = { ...oldData, ...updates };
+  const tenantId = getTenantId(user);
 
   await db.$transaction(async (tx) => {
     await tx.record.update({
       where: { id: existing.id },
       data: {
         data: JSON.stringify(newData),
-        updatedBy: username,
+        updatedBy: user.username,
       },
     });
     await tx.auditLog.create({
       data: {
-        userId: null,
+        userId: user.id,
         action: 'Updated',
         module: register.name,
         registerId: register.id,
@@ -286,6 +295,7 @@ async function executeUpdateRecord(
         summary: `AI Assistant updated record #${sequence} in "${register.name}"`,
         oldValue: existing.data,
         newValue: JSON.stringify(newData),
+        tenantId,
       },
     });
   });
@@ -298,16 +308,17 @@ async function executeUpdateRecord(
 async function executeDeleteRecord(
   regCode: string,
   sequence: number,
-  username: string,
+  user: AuthUser,
 ): Promise<string> {
-  const register = await db.register.findFirst({ where: { code: regCode } });
+  const register = await db.register.findFirst({ where: { code: regCode, ...tenantWhere(user) } });
   if (!register) throw new Error(`Register "${regCode}" not found`);
 
   const existing = await db.record.findFirst({
-    where: { registerId: register.id, sequence, isDeleted: false },
+    where: { registerId: register.id, sequence, isDeleted: false, ...tenantWhere(user) },
   });
   if (!existing) throw new Error(`Record #${sequence} not found in ${register.name}`);
 
+  const tenantId = getTenantId(user);
   await db.$transaction(async (tx) => {
     await tx.record.update({
       where: { id: existing.id },
@@ -315,13 +326,14 @@ async function executeDeleteRecord(
     });
     await tx.auditLog.create({
       data: {
-        userId: null,
+        userId: user.id,
         action: 'Deleted',
         module: register.name,
         registerId: register.id,
         recordId: existing.id,
         summary: `AI Assistant deleted record #${sequence} from "${register.name}"`,
         oldValue: existing.data,
+        tenantId,
       },
     });
   });

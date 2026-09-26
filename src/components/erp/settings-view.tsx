@@ -38,7 +38,8 @@ import { GoLiveGuide } from './go-live-guide';
 import { FlowGuidance } from './flow-guidance';
 
 export function SettingsView() {
-  const { theme, setTheme, currency, setCurrency, rtl, setRtl } = useErpStore();
+  const { theme, setTheme, currency, setCurrency, rtl, setRtl, user } = useErpStore();
+  const isPlatformAdmin = user?.role === 'Super Admin';
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('company');
@@ -208,7 +209,7 @@ export function SettingsView() {
     }
   };
 
-  const TABS = [
+  const ALL_TABS = [
     { id: 'company',     label: 'Company',        icon: <Building2 className="w-4 h-4" /> },
     { id: 'appearance',  label: 'Appearance',    icon: <Palette className="w-4 h-4" /> },
     { id: 'numbering',   label: 'Document #',    icon: <Hash className="w-4 h-4" /> },
@@ -217,12 +218,13 @@ export function SettingsView() {
     { id: 'deploy',       label: 'Deploy Guide',   icon: <Rocket className="w-4 h-4" /> },
     { id: 'maintenance',  label: 'Maintain & Audit', icon: <Wrench className="w-4 h-4" /> },
     { id: 'flow', label: 'Flow Guide (A→B→C→D)', icon: <Workflow className="w-4 h-4" /> },
-    { id: 'saas',        label: 'SaaS Multi-Company', icon: <Building2 className="w-4 h-4" /> },
+    { id: 'saas',        label: 'SaaS Multi-Company', icon: <Building2 className="w-4 h-4" />, superAdminOnly: true },
     { id: 'roles',       label: 'Role Access', icon: <Shield className="w-4 h-4" /> },
     { id: 'golive',      label: 'Go-Live Guide', icon: <Rocket className="w-4 h-4" /> },
-    { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" /> },
+    { id: 'project',     label: 'Project Status', icon: <Rocket className="w-4 h-4" />, superAdminOnly: true },
     { id: 'about',       label: 'About',         icon: <Info className="w-4 h-4" /> },
   ];
+  const TABS = ALL_TABS.filter((t) => !t.superAdminOnly || isPlatformAdmin);
 
   return (
     <div className="flex flex-col h-full">

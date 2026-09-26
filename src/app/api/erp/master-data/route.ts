@@ -1,14 +1,21 @@
 // Roza FM Suite — Master Data (for dropdowns: employees, departments, buildings, etc.)
-import { NextResponse } from 'next/server';
+// TENANT ISOLATION: derives options only from the current tenant's records.
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { MASTER_DATA } from '@/lib/erp/seed';
 import type { ColumnDef } from '@/lib/erp/types';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 
 // Dynamically derive master data from existing records (employees referenced in 'employee' columns, etc.)
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
   const registers = await db.register.findMany({
-    where: { isDeleted: false },
-    include: { records: { where: { isDeleted: false } } },
+    where: { ...tenantWhere(user), isDeleted: false },
+    include: { records: { where: { ...tenantWhere(user), isDeleted: false } } },
   });
 
   const derived: Record<string, Set<string>> = {

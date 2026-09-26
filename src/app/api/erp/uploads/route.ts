@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
 import { writeFile, mkdir, unlink, stat, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -140,9 +141,10 @@ export const DELETE = apiHandler(async (req: NextRequest) => {
       return NextResponse.json({ ok: true, deleted: [], count: 0 });
     }
 
-    // Collect all upload URLs referenced in records
+    // Collect all upload URLs referenced in records — scoped to current tenant so
+    // a tenant only cleans up its own orphaned uploads.
     const allRecords = await db.record.findMany({
-      where: { isDeleted: false },
+      where: { ...tenantWhere(user), isDeleted: false },
       select: { data: true },
     });
 

@@ -1,13 +1,19 @@
 // Roza FM Suite — Dashboard API
 // Computes KPIs + charts dynamically from register data (no hardcoded totals)
-import { NextResponse } from 'next/server';
+// TENANT ISOLATION: every findMany/findMany-nested is scoped via tenantWhere(user).
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { seedDatabase } from '@/lib/erp/seed';
 import { REGISTER_CATEGORIES } from '@/lib/erp/types';
 import type { DashboardData, DashboardKPI, DashboardChart } from '@/lib/erp/types';
-import { apiHandler } from '@/lib/erp/api-helpers';
+import { apiHandler, forbidden } from '@/lib/erp/api-helpers';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere } from '@/lib/erp/tenant';
 
-export const GET = apiHandler(async () => {
+export const GET = apiHandler(async (req: NextRequest) => {
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
   await seedDatabase(false);
 
   // Load currency from settings
@@ -18,8 +24,8 @@ export const GET = apiHandler(async () => {
     : (currencySetting?.value || 'AED');
 
   const registers = await db.register.findMany({
-    where: { isDeleted: false },
-    include: { records: { where: { isDeleted: false } } },
+    where: { ...tenantWhere(user), isDeleted: false },
+    include: { records: { where: { ...tenantWhere(user), isDeleted: false } } },
   });
 
   const findReg = (code: string) => registers.find((r) => r.code === code);
@@ -259,6 +265,7 @@ export const GET = apiHandler(async () => {
 
   // ---- Recent activity ----
   const recentLogs = await db.auditLog.findMany({
+    where: { ...tenantWhere(user) },
     take: 8,
     orderBy: { createdAt: 'desc' },
   });
@@ -315,7 +322,7 @@ export const GET = apiHandler(async () => {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const recentAuditLogs = await db.auditLog.findMany({
-    where: { createdAt: { gte: sevenDaysAgo } },
+    where: { ...tenantWhere(user), createdAt: { gte: sevenDaysAgo } },
     orderBy: { createdAt: 'asc' },
   });
 

@@ -1,13 +1,20 @@
 // Roza FM Suite — SaaS Tenant Management by ID (Super Admin only)
-// DELETE /api/erp/saas/tenants/[id] → delete tenant + all its users
-// PUT /api/erp/saas/tenants/[id] → update tenant (plan, limits, status)
+// DELETE /api/erp/saas/tenants/[id] → purge tenant + all its private data
+// PUT    /api/erp/saas/tenants/[id] → update tenant (plan, limits, status)
+//
+// PERMISSIONS: both endpoints are gated by `user.role === 'Super Admin'`.
+// The Super Admin's tenantId is null, so audit logs they create here are
+// platform-level records (tenantId = null) and survive the tenant purge.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { apiHandler, forbidden, unauthorized, notFound, badRequest } from '@/lib/erp/api-helpers';
+import { apiHandler, forbidden, unauthorized, notFound, badRequest, serverError } from '@/lib/erp/api-helpers';
 import { getCurrentUser } from '@/lib/erp/auth';
+import { purgeTenantData, getTenantId } from '@/lib/erp/tenant';
 
-// DELETE a tenant and ALL its users (data isolation: only tenant's users are deleted)
-// Super Admin's demo data (tenantId=null) is NEVER affected
+// DELETE a tenant and ALL of its private data (registers, records, users,
+// audit logs, saved views, stock movements) via `purgeTenantData`.
+// Platform/system data (tenantId = null) is NEVER touched.
+// Super Admin's own data (tenantId = null) is NEVER affected.
 export const DELETE = apiHandler(async (req: NextRequest, { params }: any) => {
   const { id } = await params;
   const user = await getCurrentUser(req);
@@ -17,29 +24,30 @@ export const DELETE = apiHandler(async (req: NextRequest, { params }: any) => {
   const tenant = await db.tenant.findUnique({ where: { id } });
   if (!tenant) return notFound('Tenant not found');
 
-  // Delete in transaction: tenant's users → tenant
-  // Note: records/registers are shared (not tenant-scoped yet) so they're NOT deleted
-  // In full multi-tenant mode, records with tenantId would also be deleted here
-  await db.$transaction(async (tx) => {
-    // Delete all users belonging to this tenant
-    const deletedUsers = await tx.user.deleteMany({ where: { tenantId: id } });
-    
-    // Delete the tenant
-    await tx.tenant.delete({ where: { id } });
-    
-    // Audit log
-    await tx.auditLog.create({
+  try {
+    const counts = await purgeTenantData(id);
+
+    // Audit log is created AFTER the purge so it survives. The Super Admin's
+    // tenantId is null, so this log is platform-level (not deleted by purge).
+    await db.auditLog.create({
       data: {
         userId: user.id,
         action: 'Deleted',
         module: 'SaaS Management',
-        summary: `Tenant "${tenant.name}" (${tenant.slug}) deleted with ${deletedUsers.count} user(s)`,
+        summary: `Tenant "${tenant.name}" (${tenant.slug}) purged: ${counts.registers} register(s), ${counts.records} record(s), ${counts.users} user(s), ${counts.savedViews} saved view(s), ${counts.auditLogs} audit log(s), ${counts.stockMovements} stock movement(s)`,
         oldValue: JSON.stringify({ tenantId: id, tenantName: tenant.name, slug: tenant.slug }),
+        tenantId: getTenantId(user),
       },
     });
-  });
 
-  return NextResponse.json({ ok: true, message: `Tenant "${tenant.name}" and all its users deleted` });
+    return NextResponse.json({
+      ok: true,
+      message: `Tenant "${tenant.name}" and all its data purged`,
+      counts,
+    });
+  } catch (e: any) {
+    return serverError('Failed to purge tenant', { message: e?.message });
+  }
 });
 
 // UPDATE a tenant (change plan, limits, status)
@@ -78,6 +86,7 @@ export const PUT = apiHandler(async (req: NextRequest, { params }: any) => {
       module: 'SaaS Management',
       summary: `Tenant "${tenant.name}" updated: ${JSON.stringify({ plan, status, maxUsers, maxRecords, maxStorageMb })}`,
       newValue: JSON.stringify(updated),
+      tenantId: getTenantId(user),
     },
   });
 

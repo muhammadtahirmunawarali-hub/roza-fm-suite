@@ -1,18 +1,30 @@
 // Roza FM Suite — Stock Movements API
 // GET  /api/erp/stock-movements          → list all movements (optional ?woRecordId= or ?movementType=)
 // POST /api/erp/stock-movements          → create a new stock movement (issue material to WO, return, adjust)
+//
+// TENANT ISOLATION:
+//   • GET lists only the current tenant's stock movements.
+//   • POST scopes the inventory record lookup by tenant (uses findFirst, not findUnique,
+//     to allow filtering by id + tenantId → prevents IDOR).
+//   • Created StockMovement and AuditLog are tagged with getTenantId(user).
+//   • Notifications are global (no tenantId column) and are left as-is.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere, getTenantId } from '@/lib/erp/tenant';
+import { forbidden } from '@/lib/erp/api-helpers';
 
 export async function GET(req: NextRequest) {
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
   const url = req.nextUrl;
   const woRecordId = url.searchParams.get('woRecordId');
   const movementType = url.searchParams.get('movementType');
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
   const pageSize = Math.min(200, Math.max(5, parseInt(url.searchParams.get('pageSize') || '25')));
 
-  const where: any = {};
+  const where: any = { ...tenantWhere(user) };
   if (woRecordId) where.woRecordId = woRecordId;
   if (movementType) where.movementType = movementType;
 
@@ -47,7 +59,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const currentUser = await getCurrentUser(req);
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
 
   const body = await req.json();
   const { itemDescription, movementType, quantity, woRegisterId, woRecordId, woSequence, invRegisterId, invRecordId, note } = body;
@@ -55,6 +68,8 @@ export async function POST(req: NextRequest) {
   if (!itemDescription || !movementType || quantity === undefined) {
     return NextResponse.json({ ok: false, error: 'itemDescription, movementType, and quantity are required' }, { status: 400 });
   }
+
+  const tenantId = getTenantId(user);
 
   // Create the stock movement record
   const movement = await db.stockMovement.create({
@@ -67,14 +82,20 @@ export async function POST(req: NextRequest) {
       woSequence: woSequence || null,
       invRegisterId: invRegisterId || null,
       invRecordId: invRecordId || null,
-      movedBy: currentUser?.username || 'system',
+      movedBy: user.username,
       note: note || null,
+      tenantId,
     },
   });
 
-  // If linked to an inventory record, update the Qty In Stock
+  // If linked to an inventory record, update the Qty In Stock.
+  // Use findFirst (NOT findUnique) so we can filter by id + tenantId — prevents IDOR
+  // and prevents the latent Prisma error (findUnique only accepts unique fields;
+  // passing registerId as a unique selector is invalid).
   if (invRegisterId && invRecordId) {
-    const invRecord = await db.record.findUnique({ where: { id: invRecordId, registerId: invRegisterId } });
+    const invRecord = await db.record.findFirst({
+      where: { id: invRecordId, registerId: invRegisterId, ...tenantWhere(user) },
+    });
     if (invRecord) {
       const invData = JSON.parse(invRecord.data);
       const currentQty = Number(invData['Qty In Stock']) || 0;
@@ -95,7 +116,7 @@ export async function POST(req: NextRequest) {
       }
       await db.record.update({
         where: { id: invRecordId },
-        data: { data: JSON.stringify(invData), updatedBy: currentUser?.username || 'system' },
+        data: { data: JSON.stringify(invData), updatedBy: user.username },
       });
     }
   }
@@ -113,17 +134,20 @@ export async function POST(req: NextRequest) {
 
   await db.auditLog.create({
     data: {
-      userId: currentUser?.id || null,
+      userId: user.id,
       action: movementType === 'issue_to_wo' ? 'Updated' : 'Created',
       module: 'Stock Movements',
       summary,
       newValue: JSON.stringify({ itemDescription, movementType, quantity, woSequence }),
+      tenantId,
     },
   });
 
-  // Create notification if stock is low after movement
+  // Create notification if stock is low after movement (notifications are global — no tenantId)
   if (movementType === 'issue_to_wo' && invRegisterId && invRecordId) {
-    const invRecord = await db.record.findUnique({ where: { id: invRecordId } });
+    const invRecord = await db.record.findFirst({
+      where: { id: invRecordId, ...tenantWhere(user) },
+    });
     if (invRecord) {
       const invData = JSON.parse(invRecord.data);
       if (invData['Status'] === 'Low Stock' || invData['Status'] === 'Out of Stock') {

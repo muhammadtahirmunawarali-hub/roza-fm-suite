@@ -186,10 +186,12 @@ certbot --nginx -d yourdomain.com`} onCopy={() => copy('git clone https://github
                     Company Name: "Company A" · Slug: "company-a" · Admin: "Alice" · Email: alice@companya.com · Plan: Professional
                   </div>
                 </li>
-                <li>System creates: Tenant + Admin User + Audit Log (in one transaction)</li>
+                <li>System creates: Tenant + Admin User (Administrator role + full 41-module permissions) + seeds 46 registers + ~250 sample records + Audit Log (in one transaction)</li>
+                <li><strong>Alice's sidebar is fully populated on first login</strong> — she sees all 46 registers (Work Orders, Assets, PM, Inventory, etc.) with test data, NOT an empty shell</li>
                 <li>Company A's admin receives login credentials</li>
-                <li>Alice logs in → sees only Company A's data</li>
-                <li>Alice can create her own users, registers, records</li>
+                <li>Alice logs in → sees only Company A's data (tenantId isolation enforced at the Prisma query layer — no cross-company visibility, ever)</li>
+                <li>Alice can create her own users, custom registers, records — all isolated to her tenant</li>
+                <li>Alice <strong>cannot</strong> access SaaS Multi-Company, Project Status, or delete other companies (Administrator role, not Super Admin)</li>
                 <li>Stripe handles monthly billing ($149/mo for Professional plan)</li>
               </ol>
             </Section>

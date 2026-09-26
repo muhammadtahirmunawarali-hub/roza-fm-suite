@@ -1,18 +1,28 @@
 // Roza FM Suite — Registers API
-// GET  /api/erp/registers          → list all registers (grouped by category)
-// POST /api/erp/registers          → create a new register
+// GET  /api/erp/registers          → list all registers for the current tenant (grouped by category)
+// POST /api/erp/registers          → create a new register (tenant-scoped)
+//
+// TENANT ISOLATION:
+//   • Super Admin (tenantId = null) sees only platform/system registers (tenantId IS NULL).
+//   • Tenant users see only their own tenant's registers.
+//   • Custom registers created by a tenant user are tagged with their tenantId.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { Register, ColumnDef, RegisterCategory } from '@/lib/erp/types';
 import { seedDatabase } from '@/lib/erp/seed';
-import { apiHandler, badRequest } from '@/lib/erp/api-helpers';
+import { apiHandler, badRequest, forbidden } from '@/lib/erp/api-helpers';
+import { getCurrentUser } from '@/lib/erp/auth';
+import { tenantWhere, getTenantId } from '@/lib/erp/tenant';
 
-export const GET = apiHandler(async () => {
-  // Ensure DB is seeded at least once
+export const GET = apiHandler(async (req: NextRequest) => {
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
+  // Ensure the platform DB is seeded at least once (only seeds tenantId = null system data)
   await seedDatabase(false);
 
   const rows = await db.register.findMany({
-    where: { isDeleted: false },
+    where: { ...tenantWhere(user), isDeleted: false },
     orderBy: [{ category: 'asc' }, { order: 'asc' }, { name: 'asc' }],
   });
 
@@ -36,6 +46,9 @@ export const GET = apiHandler(async () => {
 });
 
 export const POST = apiHandler(async (req: NextRequest) => {
+  const user = await getCurrentUser(req);
+  if (!user) return forbidden('Authentication required');
+
   const body = await req.json();
   const { name, icon, category, color, description, columns } = body;
 
@@ -44,11 +57,13 @@ export const POST = apiHandler(async (req: NextRequest) => {
     return badRequest('At least one column is required');
   }
 
+  const tenantId = getTenantId(user);
   const code = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
-  const existingCount = await db.register.count({ where: { code: { startsWith: code } } });
+  // Scope the collision check to this tenant only (other tenants can have the same code)
+  const existingCount = await db.register.count({ where: { code: { startsWith: code }, tenantId } });
   const finalCode = existingCount === 0 ? code : `${code}_${existingCount + 1}`;
 
-  const order = await db.register.count({ where: { category } });
+  const order = await db.register.count({ where: { category, tenantId } });
 
   const reg = await db.$transaction(async (tx) => {
     const newReg = await tx.register.create({
@@ -62,6 +77,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
         columns: JSON.stringify(columns),
         isSystem: false,
         order: order + 1,
+        tenantId, // ← tenant-scoped
       },
     });
 
@@ -72,6 +88,8 @@ export const POST = apiHandler(async (req: NextRequest) => {
         registerId: newReg.id,
         summary: `Created register "${name}" with ${columns.length} columns`,
         newValue: JSON.stringify({ name, columns }),
+        userId: user.id,
+        tenantId,
       },
     });
 
