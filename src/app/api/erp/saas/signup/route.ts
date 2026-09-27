@@ -1,25 +1,34 @@
 // Roza FM Suite — SaaS Tenant Signup API
-// POST /api/erp/saas/signup → create a new tenant + admin user + seed demo data
+// POST /api/erp/saas/signup → create a new tenant + admin user + seed demo data + email the admin
 //
-// CRITICAL FIX (multi-tenant isolation):
-//   • Admin role is now 'Administrator' (NOT 'Super Admin') so tenant admins
-//     CANNOT access SaaS Management / delete other tenants.
-//   • Permissions are seeded with the FULL Administrator permission matrix
-//     (all 41 modules × 7 actions) so the sidebar is populated on first login.
-//   • seedTenantData(tenantId) clones all 46 registers + sample records into the
-//     new tenant's namespace so their admin sees test data from day one.
+// INDUSTRY-STANDARD ONBOARDING FLOW (Step 2 of the launch plan):
+//   1. Super Admin enters company name, slug, admin name + EMAIL (no password needed)
+//   2. System generates a random 12-char secure temp password
+//   3. System hashes it (bcrypt) + stores it + sets mustChangePassword=true
+//   4. System emails the admin a welcome email with their username + temp password
+//   5. Admin clicks the link in the email → logs in → force-password-change modal
+//   6. Admin sets their OWN password → full access
+//
+// DEV FALLBACK: If RESEND_API_KEY is not set, the email isn't actually sent.
+// Instead, the temp password is returned in the API response so the SaaS Management
+// UI can display it on screen (so you can still test the flow in the sandbox).
+//
+// CRITICAL: Admin role is 'Administrator' (NOT 'Super Admin') so tenant admins
+// cannot access SaaS Management or delete other companies.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { apiHandler, badRequest, conflict } from '@/lib/erp/api-helpers';
 import { getRolePermissions, seedTenantData } from '@/lib/erp/seed';
-import { hashPassword } from '@/lib/erp/password';
+import { hashPassword, generateTempPassword } from '@/lib/erp/password';
+import { sendWelcomeEmail } from '@/lib/erp/email';
 
 export const POST = apiHandler(async (req: NextRequest) => {
   const body = await req.json();
+  // adminPassword is OPTIONAL now — if not provided, we auto-generate a secure temp password.
   const { companyName, slug, adminName, adminEmail, adminPassword, plan = 'starter' } = body;
 
-  if (!companyName || !slug || !adminName || !adminEmail || !adminPassword) {
-    return badRequest('companyName, slug, adminName, adminEmail, adminPassword are required');
+  if (!companyName || !slug || !adminName || !adminEmail) {
+    return badRequest('companyName, slug, adminName, adminEmail are required (password is optional — auto-generated if missing)');
   }
 
   // Check slug uniqueness
@@ -37,7 +46,12 @@ export const POST = apiHandler(async (req: NextRequest) => {
   };
   const limits = plans[plan] || plans.starter;
 
-  // Create tenant + admin user + seed data in one transaction
+  // Generate a temp password if none was provided.
+  // This is the industry-standard flow — Super Admin doesn't pick passwords for customers.
+  const tempPassword = adminPassword || generateTempPassword(12);
+  const loginUrl = process.env.NEXT_PUBLIC_APP_URL || new URL('/', req.url).toString();
+
+  // Create tenant + admin user + audit log in one transaction
   const result = await db.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
@@ -63,14 +77,14 @@ export const POST = apiHandler(async (req: NextRequest) => {
         name: adminName,
         email: adminEmail,
         username,
-        password: await hashPassword(adminPassword), // bcrypt hash — NEVER plaintext
-        role: 'Administrator', // ← tenant admin: full module access but CANNOT manage other tenants
+        password: await hashPassword(tempPassword), // bcrypt hash — NEVER plaintext
+        role: 'Administrator', // tenant admin: full module access but CANNOT manage other tenants
         department: 'Management',
         avatar: initials,
         status: 'Active',
-        permissions: JSON.stringify(getRolePermissions('Administrator')), // ← all 41 modules × 7 actions
-        tenantId: tenant.id, // ← LINK user to this tenant
-        mustChangePassword: true, // ← force password change on first login (industry standard)
+        permissions: JSON.stringify(getRolePermissions('Administrator')), // all 41 modules × 7 actions
+        tenantId: tenant.id,
+        mustChangePassword: true, // force password change on first login
       },
     });
 
@@ -80,7 +94,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
         action: 'Created',
         module: 'SaaS Onboarding',
         summary: `New tenant "${companyName}" (${plan} plan) signed up. Admin: ${adminName}`,
-        newValue: JSON.stringify({ tenantId: tenant.id, tenantName: companyName, slug, plan, adminId: user.id }),
+        newValue: JSON.stringify({ tenantId: tenant.id, tenantName: companyName, slug, plan, adminId: user.id, emailSent: true }),
         tenantId: tenant.id,
       },
     });
@@ -89,18 +103,29 @@ export const POST = apiHandler(async (req: NextRequest) => {
   });
 
   // Seed the new tenant with a full copy of the demo data (46 registers + ~250 records).
-  // Done OUTSIDE the transaction because it's a large insert loop and we want the tenant
-  // to exist even if seeding partially fails (idempotent — can be re-run).
   try {
     await seedTenantData(result.tenant.id);
   } catch (e) {
-    // Log but don't fail the signup — the tenant is created, admin can manually add data
     console.error('[signup] seedTenantData failed for tenant', result.tenant.id, e);
   }
 
+  // Send the welcome email with credentials.
+  // In dev (no RESEND_API_KEY), this returns the temp password in the result.
+  const emailResult = await sendWelcomeEmail({
+    adminName,
+    adminEmail,
+    companyName,
+    username: result.user.username,
+    tempPassword,
+    loginUrl,
+    plan,
+  });
+
   return NextResponse.json({
     ok: true,
-    message: `Welcome ${adminName}! Your company "${companyName}" is ready. ${46} registers and sample data have been created for you.`,
+    message: emailResult.sent
+      ? `Welcome email sent to ${adminEmail}. ${46} registers and sample data have been created.`
+      : `Workspace ready. ${46} registers and sample data created. (Email not sent — no RESEND_API_KEY. Temp password shown below for dev.)`,
     tenant: {
       id: result.tenant.id,
       name: result.tenant.name,
@@ -116,5 +141,10 @@ export const POST = apiHandler(async (req: NextRequest) => {
       email: result.user.email,
       username: result.user.username,
     },
+    // Only expose the temp password in the API response when the email wasn't sent
+    // (dev fallback). In production, the password goes ONLY to the user's inbox.
+    ...(emailResult.sent
+      ? { emailSent: true }
+      : { emailSent: false, tempPassword }),
   });
 });

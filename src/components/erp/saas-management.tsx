@@ -7,7 +7,7 @@ import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Building2, Users, Database, CreditCard, Plus, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Trash2, Pencil, Save, X, HardDrive } from 'lucide-react';
+import { Building2, Users, Database, CreditCard, Plus, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Trash2, Pencil, Save, X, HardDrive, Mail } from 'lucide-react';
 
 interface Tenant {
   id: string; name: string; slug: string; plan: string; status: string;
@@ -29,8 +29,9 @@ export function SaasManagement() {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSignup, setShowSignup] = useState(false);
-  const [signupForm, setSignupForm] = useState({ companyName: '', slug: '', adminName: '', adminEmail: '', adminPassword: '', plan: 'starter' });
+  const [signupForm, setSignupForm] = useState({ companyName: '', slug: '', adminName: '', adminEmail: '', plan: 'starter' });
   const [signingUp, setSigningUp] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{ tenantName: string; adminName: string; username: string; email: string; tempPassword?: string; emailSent: boolean } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
@@ -88,9 +89,22 @@ export function SaasManagement() {
       });
       const data = await res.json();
       if (data.ok) {
-        toast.success(`Company "${data.tenant.name}" created! Admin: ${data.admin.name}`);
+        // Show the created credentials (temp password only displayed if email wasn't sent — dev fallback)
+        setCreatedCreds({
+          tenantName: data.tenant.name,
+          adminName: data.admin.name,
+          username: data.admin.username,
+          email: data.admin.email,
+          tempPassword: data.tempPassword, // only present when email wasn't sent
+          emailSent: data.emailSent,
+        });
+        toast.success(`Company "${data.tenant.name}" created!`, {
+          description: data.emailSent
+            ? `Welcome email sent to ${data.admin.email}`
+            : 'Email service not configured — temp password shown below',
+        });
         setShowSignup(false);
-        setSignupForm({ companyName: '', slug: '', adminName: '', adminEmail: '', adminPassword: '', plan: 'starter' });
+        setSignupForm({ companyName: '', slug: '', adminName: '', adminEmail: '', plan: 'starter' });
         loadData();
       } else {
         toast.error('Signup failed', { description: data.error });
@@ -187,25 +201,75 @@ export function SaasManagement() {
           </div>
         </div>
 
+        {/* Credentials display (after successful signup) */}
+        {createdCreds && (
+          <div className="p-4 border-b border-[var(--erp-border)] bg-[rgba(16,185,129,0.05)]">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--erp-success)]/15 text-[var(--erp-success)] shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-[var(--erp-text)]">
+                  {createdCreds.tenantName} is ready!
+                </div>
+                <div className="text-[11px] text-[var(--erp-text-muted)] mt-0.5">
+                  {createdCreds.emailSent
+                    ? <>Welcome email sent to <strong>{createdCreds.email}</strong>. The admin can sign in and will be prompted to set their own password.</>
+                    : <>Email service not configured (set <code className="text-[var(--erp-accent)]">RESEND_API_KEY</code> to send real emails). Share these credentials securely:</>
+                  }
+                </div>
+              </div>
+              <button onClick={() => setCreatedCreds(null)} className="text-[var(--erp-text-muted)] hover:text-[var(--erp-text)] p-1 rounded hover:bg-[var(--erp-bg-hover)]">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {!createdCreds.emailSent && createdCreds.tempPassword && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="p-2 rounded-md bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
+                  <div className="text-[9px] text-[var(--erp-text-muted)] uppercase tracking-wide">Username</div>
+                  <div className="text-[11px] font-mono text-[var(--erp-text)] mt-0.5">{createdCreds.username}</div>
+                </div>
+                <div className="p-2 rounded-md bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
+                  <div className="text-[9px] text-[var(--erp-text-muted)] uppercase tracking-wide">Temp password</div>
+                  <div className="text-[11px] font-mono text-[var(--erp-text)] mt-0.5">{createdCreds.tempPassword}</div>
+                </div>
+                <div className="p-2 rounded-md bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
+                  <div className="text-[9px] text-[var(--erp-text-muted)] uppercase tracking-wide">Admin</div>
+                  <div className="text-[11px] text-[var(--erp-text)] mt-0.5 truncate">{createdCreds.adminName}</div>
+                </div>
+              </div>
+            )}
+            {createdCreds.emailSent && (
+              <div className="flex items-center gap-2 text-[11px] text-[var(--erp-text-secondary)] mt-2">
+                <Mail className="w-3.5 h-3.5 text-[var(--erp-success)]" />
+                <span>Email delivered to <strong>{createdCreds.email}</strong></span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Signup Form */}
         {showSignup && (
           <div className="p-4 border-b border-[var(--erp-border)] bg-[var(--erp-bg-input)] space-y-2">
             <div className="text-[12px] font-semibold text-[var(--erp-text)]">Onboard New Company</div>
+            <div className="text-[10px] text-[var(--erp-text-muted)] flex items-center gap-1">
+              <Mail className="w-3 h-3" />
+              <span>A secure temp password will be auto-generated and emailed to the admin.</span>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <input value={signupForm.companyName} onChange={e => setSignupForm({...signupForm, companyName: e.target.value})} placeholder="Company Name" className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px]" />
               <input value={signupForm.slug} onChange={e => setSignupForm({...signupForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-')})} placeholder="slug (e.g. acme-corp)" className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px] font-mono" />
               <input value={signupForm.adminName} onChange={e => setSignupForm({...signupForm, adminName: e.target.value})} placeholder="Admin Name" className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px]" />
               <input value={signupForm.adminEmail} onChange={e => setSignupForm({...signupForm, adminEmail: e.target.value})} placeholder="admin@company.com" className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px]" />
-              <input type="password" value={signupForm.adminPassword} onChange={e => setSignupForm({...signupForm, adminPassword: e.target.value})} placeholder="Password" className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px]" />
-              <select value={signupForm.plan} onChange={e => setSignupForm({...signupForm, plan: e.target.value})} className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px]">
-                <option value="starter">Starter ($49/mo, 10 users)</option>
-                <option value="pro">Professional ($149/mo, 50 users)</option>
-                <option value="enterprise">Enterprise ($499/mo, 500 users)</option>
+              <select value={signupForm.plan} onChange={e => setSignupForm({...signupForm, plan: e.target.value})} className="h-8 px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-card)] text-[11px] col-span-2">
+                <option value="starter">Starter ($49/mo, 10 users, 1GB)</option>
+                <option value="pro">Professional ($149/mo, 50 users, 10GB)</option>
+                <option value="enterprise">Enterprise ($499/mo, 500 users, 100GB)</option>
               </select>
             </div>
-            <button onClick={handleSignup} disabled={signingUp} className="flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] bg-[var(--erp-accent)] text-white font-medium disabled:opacity-50">
+            <button onClick={handleSignup} disabled={signingUp || !signupForm.companyName || !signupForm.slug || !signupForm.adminName || !signupForm.adminEmail} className="flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] bg-[var(--erp-accent)] text-white font-medium disabled:opacity-50">
               {signingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              Create Company
+              Create Company & Send Invite
             </button>
           </div>
         )}
