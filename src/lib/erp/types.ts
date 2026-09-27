@@ -168,6 +168,7 @@ export interface User {
   status: string;
   permissions: any[];
   tenantId?: string | null; // SaaS: null = Super Admin / system user, otherwise links to Tenant
+  mustChangePassword?: boolean; // true = force password change on next page load
   lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;

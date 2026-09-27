@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { getRolePermissions, ROLES } from '@/lib/erp/seed';
 import type { User } from '@/lib/erp/types';
 import { apiHandler, requirePermission, badRequest, isValidEmail } from '@/lib/erp/api-helpers';
+import { hashPassword } from '@/lib/erp/password';
 
 // The 11 valid roles defined in the seed matrix
 const VALID_ROLES = ROLES.map((r) => r.id);
@@ -76,13 +77,15 @@ export const POST = apiHandler(async (req) => {
       name,
       email,
       username: String(username).toLowerCase(),
-      password, // plaintext for demo
+      password: await hashPassword(password), // bcrypt hash — NEVER plaintext
       role: finalRole,
       department: department || null,
       branch: branch || null,
       avatar: initials,
       status: status || 'Active',
       permissions: JSON.stringify(getRolePermissions(finalRole)),
+      tenantId: currentUser?.tenantId ?? null, // ← new user belongs to the same tenant as the admin creating them
+      mustChangePassword: true, // ← force password change on first login (admin-set passwords are temporary)
     },
   });
 

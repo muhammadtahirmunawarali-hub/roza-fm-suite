@@ -14,6 +14,7 @@ export interface AuthUser {
   status: string;
   permissions: { module: string; actions: string[] }[];
   tenantId: string | null; // SaaS: null = Super Admin / system user, otherwise links to Tenant
+  mustChangePassword: boolean; // true = force password change on next page load
 }
 
 /**
@@ -49,6 +50,7 @@ export async function getCurrentUser(req: NextRequest): Promise<AuthUser | null>
     status: session.user.status,
     permissions: JSON.parse(session.user.permissions),
     tenantId: session.user.tenantId,
+    mustChangePassword: session.user.mustChangePassword,
   };
 }
 

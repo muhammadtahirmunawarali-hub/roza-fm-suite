@@ -11,6 +11,7 @@
 import { db } from '@/lib/db';
 import { REGISTER_SEEDS, MASTER_DATA } from './sample-data';
 import type { ColumnDef } from './types';
+import { hashPassword } from './password';
 
 // ---------- Role / Permission matrix ----------
 export const ROLES = [
@@ -337,7 +338,7 @@ async function ensureDefaultUsers(): Promise<number> {
           name: u.name,
           email: u.email,
           username: u.username,
-          password: u.password, // plaintext for demo
+          password: await hashPassword(u.password), // bcrypt hash (was plaintext — security fix)
           role: u.role,
           department: u.department,
           avatar: initials,
@@ -347,6 +348,13 @@ async function ensureDefaultUsers(): Promise<number> {
       });
       count++;
     } else {
+      // Migrate legacy plaintext password → bcrypt hash (one-time, idempotent)
+      if (!existing.password.startsWith('$2')) {
+        await db.user.update({
+          where: { id: existing.id },
+          data: { password: await hashPassword(existing.password) },
+        });
+      }
       count++;
     }
   }

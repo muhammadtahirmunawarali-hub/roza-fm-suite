@@ -268,11 +268,16 @@ export const masterDataApi = {
 // ---------- Auth ----------
 export const authApi = {
   login: (username: string, password: string) =>
-    request<{ ok: boolean; user: User }>(`${BASE}/auth/login`, { method: 'POST', body: JSON.stringify({ username, password }) }),
+    request<{ ok: boolean; user: User; error?: string }>(`${BASE}/auth/login`, { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () =>
     request<ApiResponse>(`${BASE}/auth/logout`, { method: 'POST' }),
   me: () =>
     request<{ ok: boolean; authenticated: boolean; user?: User; reason?: string }>(`${BASE}/auth/me`),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: boolean; message: string; mustChangePassword: boolean; error?: string }>(`${BASE}/auth/change-password`, {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 // ---------- Users ----------

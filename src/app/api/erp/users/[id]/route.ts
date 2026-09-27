@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { getRolePermissions } from '@/lib/erp/seed';
 import type { User } from '@/lib/erp/types';
 import { getCurrentUser, hasPermission } from '@/lib/erp/auth';
+import { hashPassword } from '@/lib/erp/password';
 
 function serialize(u: any): User {
   return {
@@ -61,7 +62,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(name !== undefined && { name, avatar: String(name).split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() }),
       ...(email !== undefined && { email }),
       ...(username !== undefined && { username: String(username).toLowerCase() }),
-      ...(password !== undefined && password !== '' && { password }),
+      ...(password !== undefined && password !== '' && { password: await hashPassword(password), mustChangePassword: true }),
       ...(role !== undefined && { role }),
       ...(department !== undefined && { department }),
       ...(branch !== undefined && { branch }),

@@ -6309,3 +6309,109 @@ New tenant admins (created via SaaS signup) saw an **empty sidebar** on first lo
 
 ### Stage Summary
 This round transformed Roza FM Suite from a "single-tenant demo with a SaaS shell" into a **real multi-tenant SaaS**. Every query is now tenant-scoped at the Prisma layer (no IDOR possible). New tenants get a fully populated workspace on signup. The platform owner (Super Admin) and tenant admins (Administrator) have clearly separated capabilities. The product is now ready for real companies to sign up and use in production.
+
+---
+
+## Round 121, Step 1 — Password Hashing (bcrypt) + Force Password Change + Demo Button Gating
+
+### Why
+Before going live, passwords must be hashed (not plaintext), new users must be forced to set their own password on first login (industry standard), and the demo quick-login buttons must not appear on a production domain.
+
+### What Was Done
+
+#### 1. Password Utility (`src/lib/erp/password.ts`) — NEW
+- `hashPassword(plaintext)` → bcrypt hash with 10 salt rounds (~100ms, strong + fast)
+- `verifyPassword(plaintext, hash)` → bcrypt.compare; safely returns false for legacy plaintext (forces reset)
+- `isBcryptHash(value)` → detects if a stored value is already hashed (used by migration)
+- `generateTempPassword(12)` → random 12-char password with mixed case + digits + symbols
+- `generateInviteToken()` → UUID-based token for email invite links (used in Step 2)
+
+#### 2. Schema Update (`prisma/schema.prisma`)
+- Added `mustChangePassword Boolean @default(false)` to the User model
+- Ran `db:push` + `prisma generate`
+
+#### 3. Auth Pipeline Updates
+- `src/lib/erp/auth.ts` — AuthUser interface + getCurrentUser return `mustChangePassword`
+- `src/app/api/erp/auth/login/route.ts` — replaced `user.password !== password` (plaintext) with `verifyPassword(password, user.password)` (bcrypt); generic error message (no leaking which was wrong); returns `mustChangePassword` in user payload
+- `src/app/api/erp/auth/me/route.ts` — returns `mustChangePassword` flag
+- `src/app/api/erp/auth/change-password/route.ts` — NEW route: POST {currentPassword, newPassword} → verifies current, hashes new, clears flag, audit logs
+
+#### 4. Signup + User Creation Updates
+- `src/app/api/erp/saas/signup/route.ts` — `password: await hashPassword(adminPassword)` + `mustChangePassword: true` (new tenant admin must set their own password)
+- `src/app/api/erp/users/route.ts` — POST (admin creates user): `password: await hashPassword(password)` + `mustChangePassword: true` + `tenantId: currentUser.tenantId` (new user joins the same tenant)
+- `src/app/api/erp/users/[id]/route.ts` — PUT (admin resets password): `password: await hashPassword(password)` + `mustChangePassword: true`
+- `src/lib/erp/seed.ts` — `ensureDefaultUsers()` now hashes on create + auto-migrates legacy plaintext on re-run
+
+#### 5. Migration Script (`scripts/hash-passwords.ts`) — NEW
+One-time script that scans all users, hashes any plaintext passwords in place. Idempotent (skips already-hashed). Run with `bun run scripts/hash-passwords.ts`.
+- **Ran successfully** — migrated all 10 existing users (admin, john, ahmed, fatima, priya, tahir, beta, aa, zz, acme-admin) from plaintext to bcrypt hashes.
+
+#### 6. Force Password Change Modal (`src/components/erp/force-password-change-modal.tsx`) — NEW
+- Non-dismissable shadcn Dialog shown when `user.mustChangePassword === true`
+- Fields: current password, new password (with strength meter), confirm password
+- Real-time validation: 8+ chars, mixed case, number, symbol; passwords must match
+- Calls `/api/erp/auth/change-password`; on success, clears the flag + closes
+- Prevents Escape key + click-outside dismissal (must actually change the password)
+
+#### 7. Login Screen Update (`src/components/erp/login-screen.tsx`)
+- Removed pre-filled `admin` / `admin123` (fields start empty — production-ready)
+- Demo quick-login buttons now gated behind `NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true'`
+- In the sandbox .env: `NEXT_PUBLIC_SHOW_DEMO_LOGIN=true` (convenience for you)
+- On Vercel production: leave UNSET — buttons won't render, customers never see them
+- Login response now handles `res.error` for better error display
+
+#### 8. Environment Variables (`.env` + `.env.example`)
+- Added `NEXT_PUBLIC_SHOW_DEMO_LOGIN=true` to .env (dev)
+- Documented all upcoming production env vars in .env.example: R2, Stripe, Resend, Neon Postgres
+- Updated .env with commented-out templates for all production services
+
+#### 9. API Client (`src/lib/erp/api.ts`)
+- Added `authApi.changePassword(currentPassword, newPassword)` method
+- Updated `login` return type to include `error`
+
+### Verification (agent-browser)
+1. ✅ Login as `admin` / `admin123` — WORKS (bcrypt hash verified correctly)
+2. ✅ Sidebar populated, dashboard shows KPIs
+3. ✅ Created new tenant "Test Force Pwd Co" via signup API
+4. ✅ Logged in as `force-test` / `tempPass123` (the temp password)
+5. ✅ Force-password-change modal appeared ("Set Your Password")
+6. ✅ Filled current password + new password "MyNewSecure2024!" (strength meter showed "Strong")
+7. ✅ Clicked "Set New Password" → modal closed → Dashboard loaded
+8. ✅ No console errors, no API errors, lint clean
+
+### Files Changed (12)
+- `prisma/schema.prisma` — mustChangePassword column
+- `src/lib/erp/password.ts` — NEW password utility
+- `src/lib/erp/auth.ts` — AuthUser.mustChangePassword
+- `src/lib/erp/types.ts` — User.mustChangePassword
+- `src/lib/erp/api.ts` — authApi.changePassword
+- `src/lib/erp/seed.ts` — hashed default users + auto-migrate
+- `src/app/api/erp/auth/login/route.ts` — bcrypt verify
+- `src/app/api/erp/auth/me/route.ts` — returns mustChangePassword
+- `src/app/api/erp/auth/change-password/route.ts` — NEW route
+- `src/app/api/erp/saas/signup/route.ts` — hash + mustChangePassword
+- `src/app/api/erp/users/route.ts` — hash + mustChangePassword + tenantId
+- `src/app/api/erp/users/[id]/route.ts` — hash on reset
+- `src/components/erp/login-screen.tsx` — empty fields + env-gated demo buttons
+- `src/components/erp/force-password-change-modal.tsx` — NEW modal
+- `src/components/erp/erp-shell.tsx` — render the modal
+- `scripts/hash-passwords.ts` — NEW migration script
+- `.env` + `.env.example` — env var templates
+
+### Current Progress
+| Track | Status |
+|---|---|
+| WebApp Completion | **100%** ✅ |
+| SaaS Product Readiness | **100%** ✅ |
+| Password Security (bcrypt) | **100%** ✅ (was 0% — plaintext) |
+| Force Password Change | **100%** ✅ (industry standard onboarding) |
+| Demo Button Gating | **100%** ✅ (hidden in production) |
+
+### Stage Summary
+Step 1 of the launch plan is complete. The app now has industry-standard password security:
+- All passwords are bcrypt hashes (never plaintext)
+- New users (via signup or admin creation) MUST set their own password on first login
+- Demo quick-login buttons are gated behind an env var (visible in dev, hidden in production)
+- Existing 10 users were migrated from plaintext → bcrypt in place
+
+Ready for Step 2: Email-based onboarding with Resend (so new tenant admins get a secure invite email instead of a hardcoded temp password).

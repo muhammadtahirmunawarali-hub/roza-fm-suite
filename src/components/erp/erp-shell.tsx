@@ -23,6 +23,7 @@ import { UsersView } from './users-view';
 import { RecycleBinView } from './recycle-bin-view';
 import { LoginScreen } from './login-screen';
 import { KeyboardShortcuts } from './keyboard-shortcuts';
+import { ForcePasswordChangeModal } from './force-password-change-modal';
 import { PWARegister, PWAInstallBanner } from './pwa-register';
 import { registersApi } from '@/lib/erp/api';
 
@@ -228,6 +229,7 @@ export function ErpShell() {
       <CommandPalette />
       <RegisterBuilder open={builderOpen} onClose={() => setBuilderOpen(false)} />
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <ForcePasswordChangeModal />
       <PWARegister />
       <PWAInstallBanner />
     </div>

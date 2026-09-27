@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { apiHandler, badRequest, conflict } from '@/lib/erp/api-helpers';
 import { getRolePermissions, seedTenantData } from '@/lib/erp/seed';
+import { hashPassword } from '@/lib/erp/password';
 
 export const POST = apiHandler(async (req: NextRequest) => {
   const body = await req.json();
@@ -62,13 +63,14 @@ export const POST = apiHandler(async (req: NextRequest) => {
         name: adminName,
         email: adminEmail,
         username,
-        password: adminPassword,
+        password: await hashPassword(adminPassword), // bcrypt hash — NEVER plaintext
         role: 'Administrator', // ← tenant admin: full module access but CANNOT manage other tenants
         department: 'Management',
         avatar: initials,
         status: 'Active',
         permissions: JSON.stringify(getRolePermissions('Administrator')), // ← all 41 modules × 7 actions
         tenantId: tenant.id, // ← LINK user to this tenant
+        mustChangePassword: true, // ← force password change on first login (industry standard)
       },
     });
 

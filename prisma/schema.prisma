@@ -81,6 +81,7 @@ model User {
   status      String   @default("Active") // Active|Inactive|Suspended
   permissions String   @default("[]") // JSON array of {module, actions[]}
   tenantId    String?  // SaaS: links user to a tenant company (null = Super Admin / system user)
+  mustChangePassword Boolean @default(false) // true = force password change on next login (for email-based onboarding)
   lastLoginAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

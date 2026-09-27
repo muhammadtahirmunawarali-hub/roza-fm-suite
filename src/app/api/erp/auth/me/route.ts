@@ -41,6 +41,7 @@ export const GET = apiHandler(async (req) => {
       status: session.user.status,
       permissions: JSON.parse(session.user.permissions),
       tenantId: session.user.tenantId, // SaaS: null = Super Admin, otherwise tenant ID
+      mustChangePassword: session.user.mustChangePassword, // true = force password change on next page load
       lastLoginAt: session.user.lastLoginAt?.toISOString() || null,
     },
   });

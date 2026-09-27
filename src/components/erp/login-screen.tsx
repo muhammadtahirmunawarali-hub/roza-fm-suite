@@ -1,16 +1,24 @@
 'use client';
 
-// Roza FM Suite — Login Screen
-import { useEffect, useState } from 'react';
+// Roza FM Suite — Login Screen (Production-ready)
+//
+// Demo quick-login buttons are gated behind NEXT_PUBLIC_SHOW_DEMO_LOGIN=true.
+//   • In development (this sandbox): set to "true" for convenience.
+//   • In production (Vercel): leave UNSET or set to "false" — buttons won't render.
+//
+// This way you can still demo the product to prospects in a staging environment,
+// but real customers on your production domain never see quick-login buttons.
+import { useState } from 'react';
 import { authApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Lock, User as UserIcon, Loader2, ShieldCheck, ChevronRight } from 'lucide-react';
+
+const SHOW_DEMO_LOGINS = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true';
 
 const DEMO_ACCOUNTS = [
   { username: 'admin',  password: 'admin123',  role: 'Super Admin',  name: 'System Administrator' },
@@ -21,9 +29,9 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginScreen() {
-  const { setUser, setAuthLoading, theme, setTheme } = useErpStore();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const { setUser, theme, setTheme } = useErpStore();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +47,7 @@ export function LoginScreen() {
         setUser(res.user);
         toast.success(`Welcome back, ${res.user.name}!`);
       } else {
-        setError('Login failed');
+        setError(res.error || 'Invalid username or password');
       }
     } catch (e: any) {
       setError(e.message || 'Invalid username or password');
@@ -52,7 +60,6 @@ export function LoginScreen() {
     setUsername(acc.username);
     setPassword(acc.password);
     setError(null);
-    // Auto-submit after a short delay
     setTimeout(() => {
       setLoading(true);
       authApi.login(acc.username, acc.password).then((res) => {
@@ -60,7 +67,7 @@ export function LoginScreen() {
           setUser(res.user);
           toast.success(`Welcome, ${res.user.name}!`);
         } else {
-          setError('Login failed');
+          setError(res.error || 'Login failed');
           setLoading(false);
         }
       }).catch((err) => {
@@ -108,7 +115,7 @@ export function LoginScreen() {
               { icon: 'fa-gauge-high', label: 'Live KPIs', sub: 'Real-time data' },
               { icon: 'fa-wand-magic-sparkles', label: 'AI Assistant', sub: 'Context-aware' },
               { icon: 'fa-shield-halved', label: 'RBAC', sub: 'Role-based access' },
-              { icon: 'fa-database', label: '30 Registers', sub: 'Pre-loaded data' },
+              { icon: 'fa-database', label: '46 Registers', sub: 'Pre-loaded data' },
             ].map((f) => (
               <div key={f.label} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--erp-bg-card)] border border-[var(--erp-border)]">
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--erp-accent-dim)', color: 'var(--erp-accent)' }}>
@@ -219,32 +226,34 @@ export function LoginScreen() {
             </Button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-5 border-t border-[var(--erp-border)]">
-            <div className="flex items-center gap-2 mb-3 text-[11px] text-[var(--erp-text-muted)]">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Quick login — demo accounts</span>
+          {/* Demo accounts — only shown when NEXT_PUBLIC_SHOW_DEMO_LOGIN=true (dev/staging only) */}
+          {SHOW_DEMO_LOGINS && (
+            <div className="mt-6 pt-5 border-t border-[var(--erp-border)]">
+              <div className="flex items-center gap-2 mb-3 text-[11px] text-[var(--erp-text-muted)]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Quick login — demo accounts (hidden in production)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <button
+                    key={acc.username}
+                    type="button"
+                    onClick={() => quickLogin(acc)}
+                    disabled={loading}
+                    className="flex items-center gap-2 p-2 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] transition-all text-left disabled:opacity-50"
+                  >
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style={{ background: roleColor(acc.role) }}>
+                      {acc.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-medium text-[var(--erp-text)] truncate">{acc.name}</div>
+                      <div className="text-[9px] text-[var(--erp-text-muted)] truncate">{acc.role} · @{acc.username}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.username}
-                  type="button"
-                  onClick={() => quickLogin(acc)}
-                  disabled={loading}
-                  className="flex items-center gap-2 p-2 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] transition-all text-left disabled:opacity-50"
-                >
-                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style={{ background: roleColor(acc.role) }}>
-                    {acc.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-medium text-[var(--erp-text)] truncate">{acc.name}</div>
-                    <div className="text-[9px] text-[var(--erp-text-muted)] truncate">{acc.role} · @{acc.username}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
           <div className="mt-6 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
             <span>Roza FM Suite v1.0.0 · Schema v2</span>
