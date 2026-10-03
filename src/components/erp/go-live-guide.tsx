@@ -54,9 +54,31 @@ export function GoLiveGuide() {
         {tab === 'deploy' && (
           <div className="space-y-4">
             <Section icon={<Cloud className="w-4 h-4" />} title="Deploy to Vercel (Easiest — 5 minutes)">
+              {/* One-click deploy button */}
+              <div className="my-3 p-4 rounded-lg border border-[var(--erp-accent-border)] bg-[var(--erp-accent-dim)]">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="text-[13px] font-semibold text-[var(--erp-text)]">⚡ One-Click Deploy</div>
+                    <div className="text-[10px] text-[var(--erp-text-muted)] mt-0.5">Pre-fills the repo + env var names. You just paste the values.</div>
+                  </div>
+                  <a
+                    href="https://vercel.com/new/clone?repository-url=https://github.com/muhammadtahirmunawarali-hub/roza-fm-suite&env=DATABASE_URL&envDescription=Your%20Neon%20Postgres%20connection%20string%20(starts%20with%20postgresql%3A%2F%2F)&project-name=roza-fm-suite&repository-name=roza-fm-suite"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-black text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
+                    style={{ background: 'linear-gradient(135deg, #000, #333)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 76 65" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M37.5274 0L24.0875 2.02798L0 24.9902L9.32147 29.2579L37.5274 7.22656e-07L65.7334 29.2579L75.0549 24.9902L50.9674 2.02798L37.5274 0Z" /><path d="M9.32147 35.7424L0 40.0101L24.0875 62.9724L37.5274 65.0004L9.32147 35.7424Z" fill="white" fillOpacity="0.6"/><path d="M65.7334 35.7424L75.0549 40.0101L50.9674 62.9724L37.5274 65.0004L65.7334 35.7424Z" fill="white" fillOpacity="0.6"/><path d="M37.5274 16.6201L19.4766 33.2367L37.5274 49.8533L55.5782 33.2367L37.5274 16.6201Z"/></svg>
+                    Deploy to Vercel
+                  </a>
+                </div>
+              </div>
+              <div className="text-[11px] text-[var(--erp-text-muted)] mb-3">
+                <strong>Or do it manually:</strong>
+              </div>
               <ol className="ml-4 list-decimal space-y-1.5">
                 <li><strong>Push code to GitHub</strong> — create a repo and push your project:
-                  <CodeBlock title="Push to GitHub" code={`git init\ngit add .\ngit commit -m "Roza FM Suite production"\ngit remote add origin https://github.com/YOUR_USERNAME/fmcore-erp.git\ngit push -u origin main`} onCopy={() => copy('git init\ngit add .\ngit commit -m "Roza FM Suite"\ngit push origin main', 'Git push')} />
+                  <CodeBlock title="Push to GitHub" code={`git init\ngit add .\ngit commit -m "Roza FM Suite production"\ngit remote add origin https://github.com/YOUR_USERNAME/roza-fm-suite.git\ngit push -u origin main`} onCopy={() => copy('git init\ngit add .\ngit commit -m "Roza FM Suite"\ngit push origin main', 'Git push')} />
                 </li>
                 <li><strong>Go to Vercel</strong> — visit <a href="https://vercel.com/new" target="_blank" rel="noopener noreferrer" className="text-[var(--erp-accent)] hover:underline inline-flex items-center gap-0.5">vercel.com/new <ExternalLink className="w-3 h-3" /></a></li>
                 <li><strong>Import your repo</strong> — click "Import" next to your GitHub repository</li>
