@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 // Roza FM Suite — File Storage (Backblaze B2 + Cloudflare R2 + Local)
-=======
 // Roza FM Suite — File Storage Abstraction (Backblaze B2 + Cloudflare R2 + Local)
 //
 // SUPPORTS:
@@ -26,14 +24,12 @@
 //        B2_BUCKET_NAME=your-bucket-name
 //        B2_PUBLIC_URL=https://f000.backblazeb2.com/file/your-bucket-name
 
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
 import { S3Client, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { writeFile, mkdir, unlink, stat, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
-<<<<<<< HEAD
 const USE_B2 = !!(process.env.B2_ENDPOINT && process.env.B2_APPLICATION_KEY_ID && process.env.B2_APPLICATION_KEY && process.env.B2_BUCKET_NAME);
 const USE_R2 = !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET_NAME);
 const USE_S3 = USE_B2 || USE_R2;
@@ -48,7 +44,6 @@ export const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 export interface UploadResult { ok: boolean; url: string; key: string; filename: string; originalName: string; size: number; mimeType: string; provider: 'b2' | 'r2' | 'local'; error?: string; }
 export interface StorageFile { key: string; url: string; filename: string; size: number; createdAt: string; modifiedAt: string; }
 export interface StorageUsage { bytes: number; fileCount: number; mb: number; }
-=======
 // ────────────────────────────────────────────────────────────────
 // Config — detect which S3-compatible provider is configured
 // ────────────────────────────────────────────────────────────────
@@ -119,17 +114,14 @@ export interface StorageUsage {
 // ────────────────────────────────────────────────────────────────
 // S3 Client (lazy init — works for both B2 and R2)
 // ────────────────────────────────────────────────────────────────
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
 
 let _s3: S3Client | null = null;
 function getS3Client(): S3Client {
   if (!_s3) {
     if (USE_B2) {
-<<<<<<< HEAD
       _s3 = new S3Client({ region: 'us-east-1', endpoint: process.env.B2_ENDPOINT, credentials: { accessKeyId: process.env.B2_APPLICATION_KEY_ID!, secretAccessKey: process.env.B2_APPLICATION_KEY! } });
     } else {
       _s3 = new S3Client({ region: 'auto', endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID!, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY! } });
-=======
       _s3 = new S3Client({
         region: 'us-east-1', // B2 ignores this but the SDK requires a value
         endpoint: process.env.B2_ENDPOINT,
@@ -148,14 +140,11 @@ function getS3Client(): S3Client {
           secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
         },
       });
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
     }
   }
   return _s3;
 }
-<<<<<<< HEAD
 function getBucketName(): string { return USE_B2 ? process.env.B2_BUCKET_NAME! : process.env.R2_BUCKET_NAME!; }
-=======
 
 function getBucketName(): string {
   return USE_B2 ? process.env.B2_BUCKET_NAME! : process.env.R2_BUCKET_NAME!;
@@ -164,7 +153,6 @@ function getBucketName(): string {
 // ────────────────────────────────────────────────────────────────
 // Key helpers (tenant-prefixed for isolation)
 // ────────────────────────────────────────────────────────────────
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
 
 function buildKey(tenantId: string | null, originalName: string, mimeType: string): { key: string; filename: string } {
   const prefix = tenantId || 'platform';
@@ -172,7 +160,6 @@ function buildKey(tenantId: string | null, originalName: string, mimeType: strin
   const ext = path.extname(originalName) || (mimeType === 'image/jpeg' ? '.jpg' : mimeType.split('/')[1] ? `.${mimeType.split('/')[1]}` : '');
   const safeExt = ext.replace(/[^a-zA-Z0-9.]/g, '').slice(0, 8);
   const filename = `${date}_${randomUUID().slice(0, 8)}${safeExt}`;
-<<<<<<< HEAD
   return { key: `${prefix}/${filename}`, filename };
 }
 function keyToUrl(key: string): string {
@@ -208,7 +195,6 @@ export async function uploadFile(opts: { buffer: Buffer; originalName: string; m
 export async function deleteFile(key: string): Promise<boolean> {
   if (USE_S3) { try { await getS3Client().send(new DeleteObjectCommand({ Bucket: getBucketName(), Key: key })); return true; } catch { return false; } }
   try { const filePath = path.join(LOCAL_UPLOAD_DIR, path.dirname(key), path.basename(key)); if (!filePath.startsWith(LOCAL_UPLOAD_DIR)) return false; await unlink(filePath); return true; } catch { return false; }
-=======
   const key = `${prefix}/${filename}`;
   return { key, filename };
 }
@@ -297,12 +283,10 @@ export async function deleteFile(key: string): Promise<boolean> {
   } catch {
     return false;
   }
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
 }
 
 export async function deleteMany(keys: string[]): Promise<number> {
   if (keys.length === 0) return 0;
-<<<<<<< HEAD
   if (USE_S3) { try { await getS3Client().send(new DeleteObjectsCommand({ Bucket: getBucketName(), Delete: { Objects: keys.map((k) => ({ Key: k })) } })); return keys.length; } catch { return 0; } }
   let n = 0; for (const k of keys) { if (await deleteFile(k)) n++; } return n;
 }
@@ -348,7 +332,6 @@ export async function cleanupOrphanedFiles(referencedUrls: Set<string>, tenantId
 }
 
 export function getStorageInfo() { return { provider: PROVIDER, bucket: USE_B2 ? process.env.B2_BUCKET_NAME : USE_R2 ? process.env.R2_BUCKET_NAME : null, publicUrl: S3_PUBLIC_URL || null, configured: USE_S3 }; }
-=======
   if (USE_S3) {
     try {
       const client = getS3Client();
@@ -475,4 +458,3 @@ export function getStorageInfo() {
     configured: USE_S3,
   };
 }
->>>>>>> f9c750d096ec7a4400b571c7e0acdc11f8c07ee4
