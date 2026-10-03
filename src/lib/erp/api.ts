@@ -6,13 +6,40 @@ import type {
 
 const BASE = '/api/erp';
 
+// Prevents multiple simultaneous 401s from each triggering a reload
+let _sessionExpiredHandled = false;
+
+/**
+ * Handle a 401 (session expired) by silently clearing the user + reloading.
+ * Instead of throwing an error to the console (which looks like a crash to the user),
+ * we clear the persisted Zustand user + reload → the ErpShell shows the login screen.
+ */
+function handleSessionExpired() {
+  if (_sessionExpiredHandled) return;
+  _sessionExpiredHandled = true;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('fmcore-erp-state');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.state?.user) {
+          parsed.state.user = null;
+          localStorage.setItem('fmcore-erp-state', JSON.stringify(parsed));
+        }
+      }
+    } catch {}
+    window.location.reload();
+  }
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    credentials: 'include', // CRITICAL: always send the session cookie (fixes 401 on preview domain)
+    credentials: 'include', // CRITICAL: always send the session cookie
     headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
     ...options,
   });
   if (!res.ok) {
+    // Parse the error body once
     let msg = `HTTP ${res.status}`;
     let detail: any = undefined;
     try {
@@ -20,6 +47,14 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       msg = j.error || j.message || msg;
       detail = j.details;
     } catch {}
+
+    // Session expired: 401 OR 403 with "Authentication required" message
+    // (some routes return 403 for "no user" — treat it the same as 401)
+    if (res.status === 401 || (res.status === 403 && msg.includes('Authentication required'))) {
+      handleSessionExpired();
+      return new Promise<T>(() => {}); // never resolves — page is about to reload
+    }
+
     const err: any = new Error(msg);
     err.status = res.status;
     err.details = detail;
