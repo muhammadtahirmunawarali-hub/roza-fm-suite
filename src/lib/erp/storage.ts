@@ -144,7 +144,6 @@ function getS3Client(): S3Client {
   }
   return _s3;
 }
-function getBucketName(): string { return USE_B2 ? process.env.B2_BUCKET_NAME! : process.env.R2_BUCKET_NAME!; }
 
 function getBucketName(): string {
   return USE_B2 ? process.env.B2_BUCKET_NAME! : process.env.R2_BUCKET_NAME!;
