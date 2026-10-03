@@ -1,13 +1,13 @@
 'use client';
 
-// Roza FM Suite — Login Screen (Production-ready)
+// Roza FM Suite — Login Screen (Production)
 //
-// Demo quick-login buttons are gated behind NEXT_PUBLIC_SHOW_DEMO_LOGIN=true.
-//   • In development (this sandbox): set to "true" for convenience.
-//   • In production (Vercel): leave UNSET or set to "false" — buttons won't render.
+// NO demo quick-login buttons — production-ready.
+// Customers sign in with their own credentials (received via email onboarding).
+// The "Sign up" link directs prospective customers to contact the platform owner.
 //
-// This way you can still demo the product to prospects in a staging environment,
-// but real customers on your production domain never see quick-login buttons.
+// The platform owner (Super Admin) can still login with admin/admin123
+// by typing it manually — but the credentials are NOT shown on the page.
 import { useState } from 'react';
 import { authApi } from '@/lib/erp/api';
 import { useErpStore } from '@/lib/erp/store';
@@ -16,17 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Lock, User as UserIcon, Loader2, ShieldCheck, ChevronRight } from 'lucide-react';
-
-const SHOW_DEMO_LOGINS = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true';
-
-const DEMO_ACCOUNTS = [
-  { username: 'admin',  password: 'admin123',  role: 'Super Admin',  name: 'System Administrator' },
-  { username: 'john',   password: 'john123',   role: 'Manager',      name: 'John Smith' },
-  { username: 'ahmed',  password: 'ahmed123',  role: 'Technician',   name: 'Ahmed Ali' },
-  { username: 'fatima', password: 'fatima123', role: 'HR',           name: 'Fatima Al-Rashid' },
-  { username: 'priya',  password: 'priya123',  role: 'Accountant',   name: 'Priya Sharma' },
-];
+import { Eye, EyeOff, Lock, User as UserIcon, Loader2, ChevronRight, Mail, Shield } from 'lucide-react';
+import { LegalPagesDialog } from './legal-pages';
 
 export function LoginScreen() {
   const { setUser, theme, setTheme } = useErpStore();
@@ -35,6 +26,7 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [legalOpen, setLegalOpen] = useState<null | 'terms' | 'privacy'>(null);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -54,27 +46,6 @@ export function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickLogin = (acc: typeof DEMO_ACCOUNTS[0]) => {
-    setUsername(acc.username);
-    setPassword(acc.password);
-    setError(null);
-    setTimeout(() => {
-      setLoading(true);
-      authApi.login(acc.username, acc.password).then((res) => {
-        if (res.ok && res.user) {
-          setUser(res.user);
-          toast.success(`Welcome, ${res.user.name}!`);
-        } else {
-          setError(res.error || 'Login failed');
-          setLoading(false);
-        }
-      }).catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-    }, 100);
   };
 
   return (
@@ -226,37 +197,29 @@ export function LoginScreen() {
             </Button>
           </form>
 
-          {/* Demo accounts — only shown when NEXT_PUBLIC_SHOW_DEMO_LOGIN=true (dev/staging only) */}
-          {SHOW_DEMO_LOGINS && (
-            <div className="mt-6 pt-5 border-t border-[var(--erp-border)]">
-              <div className="flex items-center gap-2 mb-3 text-[11px] text-[var(--erp-text-muted)]">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Quick login — demo accounts (hidden in production)</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.username}
-                    type="button"
-                    onClick={() => quickLogin(acc)}
-                    disabled={loading}
-                    className="flex items-center gap-2 p-2 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-input)] hover:border-[var(--erp-accent-border)] hover:bg-[var(--erp-accent-dim)] transition-all text-left disabled:opacity-50"
-                  >
-                    <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-semibold text-white shrink-0" style={{ background: roleColor(acc.role) }}>
-                      {acc.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-medium text-[var(--erp-text)] truncate">{acc.name}</div>
-                      <div className="text-[9px] text-[var(--erp-text-muted)] truncate">{acc.role} · @{acc.username}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+          {/* Sign up / Contact section for new customers */}
+          <div className="mt-5 pt-4 border-t border-[var(--erp-border)]">
+            <div className="text-center space-y-2">
+              <p className="text-[11px] text-[var(--erp-text-muted)]">
+                Don&apos;t have an account?
+              </p>
+              <a
+                href="mailto:hello@roza-fm-suite.com?subject=Roza FM Suite — New Company Onboarding&body=Hi, I'd like to set up a Roza FM Suite workspace for my company. Please share the onboarding details."
+                className="inline-flex items-center gap-1.5 text-[12px] text-[var(--erp-accent)] hover:underline font-medium"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Contact us to get started
+              </a>
+              <p className="text-[10px] text-[var(--erp-text-muted)] pt-1">
+                New companies receive a welcome email with login credentials + 46 pre-loaded registers.
+              </p>
             </div>
-          )}
+          </div>
 
-          <div className="mt-6 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
-            <span>Roza FM Suite v1.0.0 · Schema v2</span>
+          <div className="mt-5 flex items-center justify-between text-[10px] text-[var(--erp-text-muted)]">
+            <span className="flex items-center gap-1">
+              <Shield className="w-3 h-3" /> Roza FM Suite v1.0
+            </span>
             <button
               type="button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -265,19 +228,22 @@ export function LoginScreen() {
               {theme === 'dark' ? '☀ Light mode' : '☾ Dark mode'}
             </button>
           </div>
+
+          {/* Legal links */}
+          <div className="mt-3 pt-3 border-t border-[var(--erp-border)] text-center">
+            <p className="text-[10px] text-[var(--erp-text-muted)] leading-relaxed">
+              By signing in, you agree to our{' '}
+              <button type="button" onClick={() => setLegalOpen('terms')} className="text-[var(--erp-accent)] hover:underline font-medium">Terms of Service</button>
+              {' '}and{' '}
+              <button type="button" onClick={() => setLegalOpen('privacy')} className="text-[var(--erp-accent)] hover:underline font-medium">Privacy Policy</button>
+              .
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Legal pages dialog */}
+      <LegalPagesDialog open={legalOpen !== null} onClose={() => setLegalOpen(null)} initial={legalOpen || 'terms'} />
     </div>
   );
-}
-
-function roleColor(role: string): string {
-  switch (role) {
-    case 'Super Admin': return '#DC2626';
-    case 'Manager': return '#2563EB';
-    case 'Technician': return '#EA580C';
-    case 'HR': return '#DB2777';
-    case 'Accountant': return '#059669';
-    default: return '#64748B';
-  }
 }
