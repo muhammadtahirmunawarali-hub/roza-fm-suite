@@ -39,8 +39,12 @@ export function Sidebar() {
       try {
         const data = await registersApi.list();
         if (!cancelled) setRegisters(data);
-      } catch (e) {
-        console.error('Failed to load registers', e);
+      } catch (e: any) {
+        // Silent for auth errors (the request() function already handles 401/403 reload)
+        if (e?.status !== 401 && !(e?.status === 403 && e?.message?.includes('Authentication required'))) {
+          // Non-auth error — log it for debugging
+          if (process.env.NODE_ENV === 'development') console.warn('Failed to load registers', e?.message);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

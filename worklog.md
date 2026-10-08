@@ -6509,6 +6509,7 @@ Step 2 of the launch plan is complete. The SaaS onboarding now follows the indus
 In the sandbox (no RESEND_API_KEY), the temp password is displayed on screen for convenience. In production (with RESEND_API_KEY set on Vercel), the password goes ONLY to the user's inbox — never exposed in any API response.
 
 Ready for Step 3 (Cloudflare R2 storage) or whichever step you want next.
+<<<<<<< HEAD
 
 ---
 Task ID: F-7
@@ -6535,3 +6536,5 @@ Stage Summary:
   - `src/lib/erp/sample-data.ts` — added 4 document registers (~100 lines), 2 checklist column definitions (PM + WO), checklist demo data on 3 PM records + 2 WO records. Net +~130 lines (file grew from 1003 to ~1199).
 - No existing registers modified (only additions + checklist column/data appended to PM and WO as instructed).
 - Lint clean, types clean, runtime verified.
+=======
+>>>>>>> bf28e8598b2270c75d84cc75bba00f72325ef780

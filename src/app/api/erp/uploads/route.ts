@@ -1,25 +1,21 @@
-// Roza FM Suite — Uploads API
-// POST   /api/erp/uploads          → upload an image/file, returns { url, filename, size, mimeType }
-// GET    /api/erp/uploads          → list all uploaded files (Super Admin / Manager only)
-// DELETE /api/erp/uploads?filename → remove an uploaded file
-// DELETE /api/erp/uploads?cleanup=orphans → remove uploads not referenced in any record
+// Roza FM Suite — Uploads API (Backblaze B2 + Cloudflare R2 + Local fallback)
+// POST   /api/erp/uploads          → upload an image/file, returns { url, key, filename, size, mimeType, provider }
+// GET    /api/erp/uploads          → list all uploaded files for the current tenant
+// DELETE /api/erp/uploads?key=     → remove a single file by storage key
+// DELETE /api/erp/uploads?cleanup=orphans → remove unreferenced uploads
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/erp/auth';
 import { tenantWhere } from '@/lib/erp/tenant';
-import { writeFile, mkdir, unlink, stat, readdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
-import { randomUUID } from 'crypto';
-import { apiHandler, badRequest, forbidden, notFound, serverError, unauthorized } from '@/lib/erp/api-helpers';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_MIME = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-  'application/pdf',
-  'image/heic', 'image/heif',
-];
+import {
+  uploadFile,
+  deleteFile,
+  listFiles,
+  cleanupOrphanedFiles,
+  getStorageInfo,
+  getStorageUsage,
+} from '@/lib/erp/storage';
+import { apiHandler, badRequest, forbidden, notFound, unauthorized } from '@/lib/erp/api-helpers';
 
 // POST — upload a file
 export const POST = apiHandler(async (req: NextRequest) => {
@@ -32,94 +28,72 @@ export const POST = apiHandler(async (req: NextRequest) => {
     return badRequest('No file provided');
   }
 
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json(
-      { ok: false, error: `File too large (max ${Math.round(MAX_SIZE / 1024 / 1024)} MB)` },
-      { status: 413 },
-    );
+  // Storage quota check
+  if (user.tenantId) {
+    const tenant = await db.tenant.findUnique({ where: { id: user.tenantId } });
+    if (tenant) {
+      const usage = await getStorageUsage(user.tenantId);
+      const maxBytes = (tenant.maxStorageMb || 1024) * 1024 * 1024;
+      if (usage.bytes + file.size > maxBytes) {
+        return NextResponse.json({
+          ok: false,
+          error: `Storage limit exceeded. Using ${Math.round(usage.bytes / 1024 / 1024 * 100) / 100} MB of ${tenant.maxStorageMb} MB.`,
+        }, { status: 413 });
+      }
+    }
   }
-
-  if (!ALLOWED_MIME.includes(file.type)) {
-    return NextResponse.json(
-      { ok: false, error: `File type "${file.type}" not allowed. Allowed: ${ALLOWED_MIME.join(', ')}` },
-      { status: 415 },
-    );
-  }
-
-  // Ensure upload directory exists
-  if (!existsSync(UPLOAD_DIR)) {
-    await mkdir(UPLOAD_DIR, { recursive: true });
-  }
-
-  // Generate a safe, unique filename preserving the original extension
-  const ext = path.extname(file.name) || (file.type === 'image/jpeg' ? '.jpg' : file.type.split('/')[1] ? `.${file.type.split('/')[1]}` : '');
-  const safeExt = ext.replace(/[^a-zA-Z0-9.]/g, '').slice(0, 8);
-  const filename = `${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${randomUUID().slice(0, 8)}${safeExt}`;
-  const filePath = path.join(UPLOAD_DIR, filename);
 
   const bytes = await file.arrayBuffer();
-  await writeFile(filePath, Buffer.from(bytes));
+  const result = await uploadFile({
+    buffer: Buffer.from(bytes),
+    originalName: file.name,
+    mimeType: file.type,
+    size: file.size,
+    tenantId: user.tenantId,
+  });
 
-  const url = `/uploads/${filename}`;
+  if (!result.ok) {
+    if (result.error?.includes('too large')) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 413 });
+    }
+    if (result.error?.includes('not allowed')) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 415 });
+    }
+    return NextResponse.json({ ok: false, error: result.error || 'Upload failed' }, { status: 500 });
+  }
+
   return NextResponse.json({
     ok: true,
-    url,
-    filename,
-    originalName: file.name,
-    size: file.size,
-    mimeType: file.type,
+    url: result.url,
+    key: result.key,
+    filename: result.filename,
+    originalName: result.originalName,
+    size: result.size,
+    mimeType: result.mimeType,
+    provider: result.provider,
   });
 });
 
-// GET — list all uploaded files with their reference status
+// GET — list all uploaded files for the current tenant
 export const GET = apiHandler(async (req: NextRequest) => {
   const user = await getCurrentUser(req);
   if (!user) return unauthorized();
-  if (user.role !== 'Super Admin' && user.role !== 'Manager') {
+  if (user.role !== 'Super Admin' && user.role !== 'Manager' && user.role !== 'Administrator') {
     return forbidden('Insufficient permissions');
   }
 
-  if (!existsSync(UPLOAD_DIR)) {
-    return NextResponse.json({ ok: true, files: [], totalSize: 0 });
-  }
+  const files = await listFiles(user.tenantId);
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  const info = getStorageInfo();
 
-  const entries = await readdir(UPLOAD_DIR);
-  const files = await Promise.all(
-    entries.map(async (name) => {
-      try {
-        const filePath = path.join(UPLOAD_DIR, name);
-        const s = await stat(filePath);
-        return {
-          filename: name,
-          url: `/uploads/${name}`,
-          size: s.size,
-          createdAt: s.birthtime.toISOString(),
-          modifiedAt: s.mtime.toISOString(),
-        };
-      } catch {
-        return null;
-      }
-    }),
-  );
-
-  const validFiles = files.filter(Boolean) as {
-    filename: string;
-    url: string;
-    size: number;
-    createdAt: string;
-    modifiedAt: string;
-  }[];
-
-  // Sort by creation date, newest first
-  validFiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
   return NextResponse.json({
     ok: true,
-    files: validFiles,
-    count: validFiles.length,
+    files,
+    count: files.length,
     totalSize,
     totalSizeMB: Math.round((totalSize / 1024 / 1024) * 100) / 100,
+    provider: info.provider,
+    configured: info.configured,
   });
 });
 
@@ -127,82 +101,53 @@ export const GET = apiHandler(async (req: NextRequest) => {
 export const DELETE = apiHandler(async (req: NextRequest) => {
   const user = await getCurrentUser(req);
   if (!user) return unauthorized();
-  if (user.role !== 'Super Admin' && user.role !== 'Manager') {
+  if (user.role !== 'Super Admin' && user.role !== 'Manager' && user.role !== 'Administrator') {
     return forbidden('Insufficient permissions');
   }
 
   const { searchParams } = new URL(req.url);
-  const filename = searchParams.get('filename');
+  const key = searchParams.get('key') || searchParams.get('filename');
   const cleanup = searchParams.get('cleanup');
 
-  // --- Cleanup mode: remove orphaned uploads (not referenced in any record) ---
+  // Cleanup mode
   if (cleanup === 'orphans') {
-    if (!existsSync(UPLOAD_DIR)) {
-      return NextResponse.json({ ok: true, deleted: [], count: 0 });
-    }
-
-    // Collect all upload URLs referenced in records — scoped to current tenant so
-    // a tenant only cleans up its own orphaned uploads.
     const allRecords = await db.record.findMany({
       where: { ...tenantWhere(user), isDeleted: false },
       select: { data: true },
     });
-
     const referencedUrls = new Set<string>();
     allRecords.forEach((r) => {
       try {
         const data = JSON.parse(r.data);
         Object.values(data).forEach((v) => {
-          if (typeof v === 'string' && v.startsWith('/uploads/')) {
-            referencedUrls.add(v.replace('/uploads/', ''));
+          if (typeof v === 'string' && (v.startsWith('/uploads/') || v.startsWith('http'))) {
+            referencedUrls.add(v);
+            const parts = v.split('/');
+            if (parts.length >= 2) referencedUrls.add(parts[parts.length - 1]);
+          }
+          if (Array.isArray(v)) {
+            v.forEach((item) => {
+              if (typeof item === 'string' && (item.startsWith('/uploads/') || item.startsWith('http'))) {
+                referencedUrls.add(item);
+                const parts = item.split('/');
+                if (parts.length >= 2) referencedUrls.add(parts[parts.length - 1]);
+              }
+            });
           }
         });
       } catch {}
     });
-
-    const entries = await readdir(UPLOAD_DIR);
-    const deleted: string[] = [];
-    let freedBytes = 0;
-
-    for (const name of entries) {
-      if (referencedUrls.has(name)) continue; // Still in use — skip
-      try {
-        const filePath = path.join(UPLOAD_DIR, name);
-        const s = await stat(filePath);
-        await unlink(filePath);
-        deleted.push(name);
-        freedBytes += s.size;
-      } catch {}
-    }
-
-    return NextResponse.json({
-      ok: true,
-      deleted,
-      count: deleted.length,
-      freedBytes,
-      freedMB: Math.round((freedBytes / 1024 / 1024) * 100) / 100,
-      totalScanned: entries.length,
-      referenced: referencedUrls.size,
-    });
+    const { deleted, freedBytes } = await cleanupOrphanedFiles(referencedUrls, user.tenantId);
+    return NextResponse.json({ ok: true, deleted, count: deleted.length, freedBytes, freedMB: Math.round((freedBytes / 1024 / 1024) * 100) / 100, referenced: referencedUrls.size });
   }
 
-  // --- Single-file delete mode ---
-  if (!filename) {
-    return badRequest('Filename parameter required (or use ?cleanup=orphans)');
+  // Single-file delete
+  if (!key) return badRequest('Key parameter required (or use ?cleanup=orphans)');
+  const prefix = user.tenantId || 'platform';
+  if (!key.startsWith(`${prefix}/`) && key !== prefix) {
+    return forbidden('You can only delete files from your own tenant');
   }
-
-  // Prevent path traversal
-  const safeName = path.basename(filename);
-  const filePath = path.join(UPLOAD_DIR, safeName);
-  if (!filePath.startsWith(UPLOAD_DIR)) {
-    return badRequest('Invalid file path');
-  }
-
-  try {
-    await stat(filePath);
-    await unlink(filePath);
-    return NextResponse.json({ ok: true, message: `Deleted ${safeName}` });
-  } catch {
-    return notFound('File not found');
-  }
+  const ok = await deleteFile(key);
+  if (!ok) return notFound('File not found');
+  return NextResponse.json({ ok: true, message: `Deleted ${key}` });
 });
