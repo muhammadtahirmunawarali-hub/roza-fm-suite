@@ -6509,3 +6509,29 @@ Step 2 of the launch plan is complete. The SaaS onboarding now follows the indus
 In the sandbox (no RESEND_API_KEY), the temp password is displayed on screen for convenience. In production (with RESEND_API_KEY set on Vercel), the password goes ONLY to the user's inbox — never exposed in any API response.
 
 Ready for Step 3 (Cloudflare R2 storage) or whichever step you want next.
+
+---
+Task ID: F-7
+Agent: general-purpose (seed data)
+Task: Add document registers + checklist columns to PM and WO
+
+Work Log:
+- Read worklog.md (last 50 lines) + full sample-data.ts (1003 lines) + types.ts to understand the REGISTER_SEEDS structure, the `C()` column helper, and the `checklist` ColumnType + `checklistItems` field on ColumnDef (already defined in types.ts from a prior task).
+- Added a `PM Checklist` column (type: 'checklist', 8 items with required/category tags) to the end of the `pm` register's columns array — used a full inline object literal since the `C()` helper doesn't accept `checklistItems`.
+- Added the same 8-item PM Checklist demo data (mix of Completed / N/A / Pending with notes) to all 3 existing PM records (Chiller CH-01, Generator GEN-02, AHU-03) — reformatted those records from single-line to multi-line for readability since the checklist array is substantial.
+- Added a `WO Checklist` column (type: 'checklist', 8 items with required/category tags) to the end of the `workorders` register's columns array.
+- Added WO Checklist demo data (mix of Completed / N/A / Pending) to the first 2 WO records (AHU-01 bearing replacement, Elevator-03 door fault). Remaining 6 WO records left untouched per task spec ("first 2 only").
+- Added 4 new registers to REGISTER_SEEDS under a new `DOCUMENTS & CONTRACTS` section, all `category: 'documents'`, color `#F97316`:
+    1. execution_plans (Project Execution Plans) — 8 cols, 2 demo records (Tower A mixed-use, North Campus warehouse fit-out).
+    2. implementation_plans (Implementation Plans) — 10 cols incl. Scope dropdown + Progress percentage, 2 demo records (MEP rough-in, HVAC commissioning).
+    3. contracts_docs (Contracts) — 10 cols incl. Type dropdown + Value currency, 2 demo records (HVAC maintenance, security subcontract).
+    4. insurances (Insurances) — 10 cols incl. Insurance Type dropdown + Coverage Amount currency, 2 demo records (Property, Workers Comp). NOTE: per task spec, the `insurances` register has two columns both named "Policy Number" — one auto_increment (register sequence) and one text (provider-issued policy number). Added an inline comment flagging this duplicate-name design choice.
+- Ran `bun run lint` → 0 errors, 0 warnings (eslint . exited clean).
+- Ran `bunx tsc --noEmit` filtered to sample-data → no type errors in the file.
+- Ran a runtime sanity check via `bun -e` that imports REGISTER_SEEDS: confirmed 38 total registers, 4 documents-category registers each with 2 records, PM checklist column present with 8 items + all 3 PM records populated, WO checklist column present with 8 items + 2/8 WO records populated.
+
+Stage Summary:
+- Files changed (1):
+  - `src/lib/erp/sample-data.ts` — added 4 document registers (~100 lines), 2 checklist column definitions (PM + WO), checklist demo data on 3 PM records + 2 WO records. Net +~130 lines (file grew from 1003 to ~1199).
+- No existing registers modified (only additions + checklist column/data appended to PM and WO as instructed).
+- Lint clean, types clean, runtime verified.

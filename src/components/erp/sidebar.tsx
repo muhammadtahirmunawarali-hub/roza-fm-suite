@@ -24,6 +24,7 @@ export function Sidebar() {
     procurement: t('procurement_inventory', language),
     hr: t('human_resources', language),
     performance: t('performance_quality', language),
+    documents: 'Documents & Contracts',
     admin: t('settings', language),
   };
   const [registers, setRegisters] = useState<Register[]>([]);

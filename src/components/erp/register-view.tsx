@@ -6,6 +6,7 @@ import { recordsApi, registersApi } from '@/lib/erp/api';
 import type { Register, RecordData, ColumnDef } from '@/lib/erp/types';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { ChecklistSummary } from './checklist-field';
 import { cn } from '@/lib/utils';
 import {
   formatDocNumber, statusVariant, priorityVariant,
@@ -1015,6 +1016,9 @@ function CellContent({ value, col, sequence, registerCode, expanded, currency = 
         <img src={src} alt="thumbnail" className="w-10 h-10 object-cover rounded-md border border-[var(--erp-border)] hover:border-[var(--erp-accent)] transition-colors" />
       </a>
     );
+  }
+  if (col.type === 'checklist') {
+    return <ChecklistSummary value={value} />;
   }
   if (col.type === 'url') {
     const url = String(value);

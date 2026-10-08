@@ -1,0 +1,698 @@
+     1→'use client';
+     2→
+     3→// Roza FM Suite — Checklist Builder
+     4→// A specialized builder for creating checklist templates with scope-based
+     5→// presets (Marine, Soft Services, Landscape, MEP, Civil, Security, Fire
+     6→// Protection) plus fully custom scopes. Used alongside the Checklist
+     7→// Templates register (RegisterView handles CRUD on the templates themselves;
+     8→// this builder handles the *items* inside each template).
+     9→import { useEffect, useMemo, useState } from 'react';
+    10→import { FAIcon } from './icon';
+    11→import { Button } from '@/components/ui/button';
+    12→import { Input } from '@/components/ui/input';
+    13→import { Textarea } from '@/components/ui/textarea';
+    14→import { Checkbox } from '@/components/ui/checkbox';
+    15→import {
+    16→  Dialog,
+    17→  DialogContent,
+    18→  DialogHeader,
+    19→  DialogTitle,
+    20→  DialogFooter,
+    21→} from '@/components/ui/dialog';
+    22→import { toast } from 'sonner';
+    23→import { cn } from '@/lib/utils';
+    24→import {
+    25→  Plus,
+    26→  Trash2,
+    27→  ArrowUp,
+    28→  ArrowDown,
+    29→  Save,
+    30→  Download,
+    31→  Copy,
+    32→  AlertCircle,
+    33→  Info,
+    34→  AlertTriangle,
+    35→  X,
+    36→  Loader2,
+    37→} from 'lucide-react';
+    38→
+    39→// ------------------------------------------------------------
+    40→// Types
+    41→// ------------------------------------------------------------
+    42→export type ChecklistCategory = 'info' | 'warning' | 'critical';
+    43→
+    44→export interface ChecklistItem {
+    45→  text: string;
+    46→  category: ChecklistCategory;
+    47→  required: boolean;
+    48→  notes: string;
+    49→}
+    50→
+    51→export interface ScopeTemplate {
+    52→  icon: string;
+    53→  color: string;
+    54→  label: string;
+    55→  items: ChecklistItem[];
+    56→}
+    57→
+    58→// ------------------------------------------------------------
+    59→// Pre-defined scope templates (hardcoded — these are the
+    60→// "official" FMCore checklist presets; users can load & edit
+    61→// any of them, or build a fully custom scope from scratch).
+    62→// ------------------------------------------------------------
+    63→export const SCOPE_TEMPLATES: Record<string, ScopeTemplate> = {
+    64→  marine: {
+    65→    icon: 'fa-anchor',
+    66→    color: '#0891B2',
+    67→    label: 'Marine',
+    68→    items: [
+    69→      { text: 'Verify port facility access permits', category: 'critical', required: true, notes: 'Check with port authority' },
+    70→      { text: 'Inspect life jackets and buoyancy aids', category: 'critical', required: true, notes: 'Minimum 2 per crew' },
+    71→      { text: 'Confirm weather conditions acceptable', category: 'warning', required: true, notes: 'Wind < 25 knots' },
+    72→      { text: 'Check communication equipment (VHF radio)', category: 'info', required: true, notes: 'Test channel 16' },
+    73→      { text: 'Verify mooring lines and fenders', category: 'info', required: false, notes: '' },
+    74→      { text: 'Inspect hull for damage before departure', category: 'warning', required: true, notes: 'Photo documentation' },
+    75→      { text: 'Confirm emergency procedures briefed to crew', category: 'critical', required: true, notes: 'Sign-off required' },
+    76→    ],
+    77→  },
+    78→  soft_services: {
+    79→    icon: 'fa-broom',
+    80→    color: '#10B981',
+    81→    label: 'Soft Services',
+    82→    items: [
+    83→      { text: 'Verify cleaning supplies stocked', category: 'info', required: true, notes: '' },
+    84→      { text: 'Inspect high-touch surfaces sanitized', category: 'warning', required: true, notes: 'Door handles, switches, rails' },
+    85→      { text: 'Check restrooms for supplies (soap, paper)', category: 'info', required: true, notes: '' },
+    86→      { text: 'Verify waste segregation followed', category: 'info', required: false, notes: '' },
+    87→      { text: 'Inspect floor cleanliness (no stains)', category: 'info', required: true, notes: '' },
+    88→      { text: 'Check glass surfaces streak-free', category: 'info', required: false, notes: '' },
+    89→      { text: 'Verify pest control bait stations intact', category: 'warning', required: true, notes: 'Monthly check' },
+    90→    ],
+    91→  },
+    92→  landscape: {
+    93→    icon: 'fa-tree',
+    94→    color: '#16A34A',
+    95→    label: 'Landscape',
+    96→    items: [
+    97→      { text: 'Inspect irrigation system operation', category: 'warning', required: true, notes: 'Check all zones' },
+    98→      { text: 'Verify plant health (no wilting/disease)', category: 'info', required: true, notes: '' },
+    99→      { text: 'Check mulch levels adequate', category: 'info', required: false, notes: 'Min 5cm depth' },
+   100→      { text: 'Inspect lawn mowing quality', category: 'info', required: true, notes: '' },
+   101→      { text: 'Verify weed control applied', category: 'warning', required: false, notes: 'Quarterly' },
+   102→      { text: 'Check tree stakes and ties secure', category: 'info', required: true, notes: 'After storms' },
+   103→      { text: 'Confirm fertilizer schedule followed', category: 'info', required: false, notes: '' },
+   104→    ],
+   105→  },
+   106→  mep: {
+   107→    icon: 'fa-bolt',
+   108→    color: '#F59E0B',
+   109→    label: 'MEP (Mechanical/Electrical/Plumbing)',
+   110→    items: [
+   111→      { text: 'Inspect HVAC plant operation (chillers, AHUs)', category: 'critical', required: true, notes: 'Log temperatures' },
+   112→      { text: 'Verify electrical panel temperatures normal', category: 'warning', required: true, notes: 'Thermal scan' },
+   113→      { text: 'Check plumbing for leaks', category: 'warning', required: true, notes: 'All fixtures' },
+   114→      { text: 'Inspect fire pump operation', category: 'critical', required: true, notes: 'Weekly test' },
+   115→      { text: 'Verify BMS alarms and alerts active', category: 'warning', required: true, notes: '' },
+   116→      { text: 'Check generator fuel level and battery', category: 'warning', required: true, notes: 'Min 75% fuel' },
+   117→      { text: 'Inspect water tank levels and chlorination', category: 'info', required: false, notes: 'Monthly' },
+   118→    ],
+   119→  },
+   120→  civil: {
+   121→    icon: 'fa-building',
+   122→    color: '#64748B',
+   123→    label: 'Civil',
+   124→    items: [
+   125→      { text: 'Inspect structure for cracks (≥ 3mm)', category: 'warning', required: true, notes: 'Photo document' },
+   126→      { text: 'Check settlement indicators', category: 'warning', required: true, notes: '' },
+   127→      { text: 'Verify waterproofing integrity', category: 'critical', required: true, notes: 'Roofs, basements' },
+   128→      { text: 'Inspect expansion joints', category: 'info', required: false, notes: '' },
+   129→      { text: 'Check concrete spalling', category: 'warning', required: true, notes: '' },
+   130→      { text: 'Verify drainage channels clear', category: 'info', required: true, notes: '' },
+   131→    ],
+   132→  },
+   133→  security: {
+   134→    icon: 'fa-shield-halved',
+   135→    color: '#DC2626',
+   136→    label: 'Security',
+   137→    items: [
+   138→      { text: 'Verify perimeter fencing intact', category: 'critical', required: true, notes: '' },
+   139→      { text: 'Test CCTV cameras operational', category: 'critical', required: true, notes: 'All angles covered' },
+   140→      { text: 'Check access control system (cards/biometric)', category: 'warning', required: true, notes: '' },
+   141→      { text: 'Verify security personnel on post', category: 'critical', required: true, notes: '' },
+   142→      { text: 'Inspect lighting (perimeter and parking)', category: 'warning', required: true, notes: '' },
+   143→      { text: 'Test alarm systems', category: 'critical', required: true, notes: 'Monthly test' },
+   144→      { text: 'Verify visitor log maintained', category: 'info', required: false, notes: '' },
+   145→    ],
+   146→  },
+   147→  fire_protection: {
+   148→    icon: 'fa-fire-extinguisher',
+   149→    color: '#EF4444',
+   150→    label: 'Fire Protection',
+   151→    items: [
+   152→      { text: 'Verify fire extinguishers in date and charged', category: 'critical', required: true, notes: 'Monthly' },
+   153→      { text: 'Test fire alarm panels', category: 'critical', required: true, notes: '' },
+   154→      { text: 'Inspect sprinkler heads unobstructed', category: 'warning', required: true, notes: '' },
+   155→      { text: 'Verify fire hose reels accessible', category: 'warning', required: true, notes: '' },
+   156→      { text: 'Check emergency exit signs illuminated', category: 'critical', required: true, notes: '' },
+   157→      { text: 'Test smoke detectors', category: 'critical', required: true, notes: 'Quarterly' },
+   158→      { text: 'Verify fire doors close and latch', category: 'warning', required: true, notes: '' },
+   159→    ],
+   160→  },
+   161→};
+   162→
+   163→// ------------------------------------------------------------
+   164→// Category visual config
+   165→// ------------------------------------------------------------
+   166→const CATEGORY_META: Record<ChecklistCategory, {
+   167→  label: string;
+   168→  icon: typeof Info;
+   169→  color: string;
+   170→  bg: string;
+   171→}> = {
+   172→  info: { label: 'Info', icon: Info, color: 'var(--erp-info)', bg: 'rgba(8,145,178,0.12)' },
+   173→  warning: { label: 'Warning', icon: AlertTriangle, color: 'var(--erp-warning)', bg: 'rgba(217,119,6,0.12)' },
+   174→  critical: { label: 'Critical', icon: AlertCircle, color: 'var(--erp-danger)', bg: 'rgba(220,38,38,0.12)' },
+   175→};
+   176→
+   177→const LS_KEY = (id: string) => `fmcore:checklist:${id}`;
+   178→
+   179→// ------------------------------------------------------------
+   180→// Component
+   181→// ------------------------------------------------------------
+   182→export interface ChecklistBuilderProps {
+   183→  /** Optional. If provided, the builder attempts to load that template's
+   184→   *  items from localStorage cache (until SEED-1 ships the real API). */
+   185→  templateId?: string;
+   186→}
+   187→
+   188→export function ChecklistBuilder({ templateId }: ChecklistBuilderProps) {
+   189→  const [selectedScope, setSelectedScope] = useState<string>('');
+   190→  const [items, setItems] = useState<ChecklistItem[]>([]);
+   191→  const [templateName, setTemplateName] = useState('');
+   192→  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+   193→  const [customScope, setCustomScope] = useState('');
+   194→  const [loading, setLoading] = useState(false);
+   195→
+   196→  // ---- Load existing template items if templateId is provided ----
+   197→  useEffect(() => {
+   198→    if (!templateId) return;
+   199→    setLoading(true);
+   200→    try {
+   201→      const cached = typeof window !== 'undefined'
+   202→        ? window.localStorage.getItem(LS_KEY(templateId))
+   203→        : null;
+   204→      if (cached) {
+   205→        const parsed = JSON.parse(cached) as {
+   206→          scope?: string;
+   207→          customScope?: string;
+   208→          templateName?: string;
+   209→          items?: ChecklistItem[];
+   210→        };
+   211→        if (Array.isArray(parsed.items)) {
+   212→          setItems(parsed.items);
+   213→          setTemplateName(parsed.templateName || '');
+   214→          setCustomScope(parsed.customScope || '');
+   215→          setSelectedScope(parsed.scope || '');
+   216→          toast.success(`Loaded "${parsed.templateName || templateId}" (${parsed.items.length} items)`);
+   217→        }
+   218→      } else {
+   219→        // No cached copy — start fresh, but pre-fill template name
+   220→        setTemplateName(`Checklist ${templateId}`);
+   221→      }
+   222→    } catch (e: any) {
+   223→      toast.error('Failed to load template from cache', { description: e?.message });
+   224→    } finally {
+   225→      setLoading(false);
+   226→    }
+   227→  }, [templateId]);
+   228→
+   229→  // ---- Derived values ----
+   230→  const activeScopeLabel = selectedScope
+   231→    ? SCOPE_TEMPLATES[selectedScope]?.label
+   232→    : customScope || '—';
+   233→
+   234→  const activeScopeColor = selectedScope
+   235→    ? SCOPE_TEMPLATES[selectedScope]?.color
+   236→    : 'var(--erp-text-muted)';
+   237→
+   238→  const activeScopeIcon = selectedScope
+   239→    ? SCOPE_TEMPLATES[selectedScope]?.icon
+   240→    : 'fa-clipboard-list';
+   241→
+   242→  const stats = useMemo(() => {
+   243→    const total = items.length;
+   244→    const required = items.filter((i) => i.required).length;
+   245→    const critical = items.filter((i) => i.category === 'critical').length;
+   246→    const warning = items.filter((i) => i.category === 'warning').length;
+   247→    const info = items.filter((i) => i.category === 'info').length;
+   248→    const empty = items.filter((i) => !i.text.trim()).length;
+   249→    return { total, required, critical, warning, info, empty };
+   250→  }, [items]);
+   251→
+   252→  // ---- Mutations ----
+   253→  const loadScope = (scope: string) => {
+   254→    const tmpl = SCOPE_TEMPLATES[scope];
+   255→    if (!tmpl) return;
+   256→    setSelectedScope(scope);
+   257→    setCustomScope(''); // Clear custom scope when a preset is picked
+   258→    setItems(tmpl.items.map((i) => ({ ...i })));
+   259→    if (!templateName) {
+   260→      setTemplateName(`${tmpl.label} Checklist`);
+   261→    }
+   262→  };
+   263→
+   264→  const startEmpty = () => {
+   265→    setSelectedScope('');
+   266→    setItems([{ text: '', category: 'info' as ChecklistCategory, required: false, notes: '' }]);
+   267→    if (customScope && !templateName) {
+   268→      setTemplateName(`${customScope} Checklist`);
+   269→    }
+   270→  };
+   271→
+   272→  const addItem = () =>
+   273→    setItems((arr) => [
+   274→      ...arr,
+   275→      { text: '', category: 'info', required: false, notes: '' },
+   276→    ]);
+   277→
+   278→  const duplicateItem = (idx: number) =>
+   279→    setItems((arr) => {
+   280→      const next = [...arr];
+   281→      next.splice(idx + 1, 0, { ...next[idx] });
+   282→      return next;
+   283→    });
+   284→
+   285→  const removeItem = (idx: number) =>
+   286→    setItems((arr) => arr.filter((_, i) => i !== idx));
+   287→
+   288→  const moveItem = (idx: number, dir: -1 | 1) =>
+   289→    setItems((arr) => {
+   290→      const target = idx + dir;
+   291→      if (target < 0 || target >= arr.length) return arr;
+   292→      const next = [...arr];
+   293→      [next[idx], next[target]] = [next[target], next[idx]];
+   294→      return next;
+   295→    });
+   296→
+   297→  const updateItem = (idx: number, patch: Partial<ChecklistItem>) =>
+   298→    setItems((arr) => arr.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+   299→
+   300→  // ---- Export ----
+   301→  const exportJson = () => {
+   302→    if (items.length === 0) {
+   303→      toast.error('Nothing to export — add at least one item');
+   304→      return;
+   305→    }
+   306→    const scope = selectedScope || customScope || 'custom';
+   307→    const data = {
+   308→      templateId: templateId || null,
+   309→      scope,
+   310→      scopeLabel: SCOPE_TEMPLATES[selectedScope]?.label || customScope || null,
+   311→      templateName: templateName || `${scope} checklist`,
+   312→      totalItems: items.length,
+   313→      items,
+   314→      exportedAt: new Date().toISOString(),
+   315→    };
+   316→    const blob = new Blob([JSON.stringify(data, null, 2)], {
+   317→      type: 'application/json',
+   318→    });
+   319→    const url = URL.createObjectURL(blob);
+   320→    const a = document.createElement('a');
+   321→    a.href = url;
+   322→    a.download = `checklist_${(templateName || scope || 'template')
+   323→      .replace(/\s+/g, '_')
+   324→      .toLowerCase()}.json`;
+   325→    a.click();
+   326→    URL.revokeObjectURL(url);
+   327→    toast.success(`Exported ${items.length} checklist items`);
+   328→  };
+   329→
+   330→  // ---- Save as Template ----
+   331→  const handleSave = () => {
+   332→    if (!templateName.trim()) {
+   333→      toast.error('Please enter a template name');
+   334→      return;
+   335→    }
+   336→    if (items.length === 0) {
+   337→      toast.error('Add at least one item before saving');
+   338→      return;
+   339→    }
+   340→    // Persist to localStorage as a stand-in until SEED-1 ships the API.
+   341→    if (templateId) {
+   342→      try {
+   343→        window.localStorage.setItem(
+   344→          LS_KEY(templateId),
+   345→          JSON.stringify({
+   346→            scope: selectedScope,
+   347→            customScope,
+   348→            templateName,
+   349→            items,
+   350→            updatedAt: new Date().toISOString(),
+   351→          }),
+   352→        );
+   353→      } catch (e: any) {
+   354→        toast.error('Could not persist to cache', { description: e?.message });
+   355→      }
+   356→    }
+   357→    toast.success(`Template "${templateName}" saved`, {
+   358→      description: `${items.length} items · Scope: ${activeScopeLabel}`,
+   359→    });
+   360→    setSaveDialogOpen(false);
+   361→  };
+   362→
+   363→  const hasItems = items.length > 0;
+   364→
+   365→  // ------------------------------------------------------------
+   366→  return (
+   367→    <div className="flex flex-col h-full">
+   368→      {/* Header */}
+   369→      <div className="px-4 py-3 border-b border-[var(--erp-border)] bg-[var(--erp-bg-card)]">
+   370→        <div className="flex items-center justify-between gap-3">
+   371→          <div className="min-w-0">
+   372→            <h2 className="text-[15px] font-semibold flex items-center gap-2">
+   373→              <FAIcon name="fa-list-check" className="text-[var(--erp-accent)]" />
+   374→              Checklist Builder
+   375→              {templateId && (
+   376→                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--erp-bg-hover)] text-[var(--erp-text-muted)]">
+   377→                  {templateId}
+   378→                </span>
+   379→              )}
+   380→            </h2>
+   381→            <p className="text-[11px] text-[var(--erp-text-muted)] mt-0.5">
+   382→              Pre-built templates for Marine, Soft Services, Landscape, MEP, Civil, Security, and Fire Protection scopes — plus custom scopes.
+   383→            </p>
+   384→          </div>
+   385→          {hasItems && (
+   386→            <div className="hidden sm:flex items-center gap-3 text-[10px] text-[var(--erp-text-muted)] shrink-0">
+   387→              <span><strong className="text-[var(--erp-text)]">{stats.total}</strong> items</span>
+   388→              <span><strong className="text-[var(--erp-text)]">{stats.required}</strong> required</span>
+   389→              <span style={{ color: 'var(--erp-danger)' }}><strong>{stats.critical}</strong> critical</span>
+   390→              {stats.empty > 0 && (
+   391→                <span className="text-[var(--erp-warning)]">{stats.empty} empty</span>
+   392→              )}
+   393→            </div>
+   394→          )}
+   395→        </div>
+   396→      </div>
+   397→
+   398→      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+   399→        {loading ? (
+   400→          <div className="flex items-center justify-center py-12 text-[var(--erp-text-muted)] text-[12px]">
+   401→            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading template…
+   402→          </div>
+   403→        ) : (
+   404→          <>
+   405→            {/* Active scope banner */}
+   406→            {hasItems && (selectedScope || customScope) && (
+   407→              <div
+   408→                className="flex items-center gap-3 p-3 rounded-md border"
+   409→                style={{
+   410→                  borderColor: activeScopeColor + '55',
+   411→                  background: activeScopeColor + '12',
+   412→                }}
+   413→              >
+   414→                <span
+   415→                  className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
+   416→                  style={{ background: activeScopeColor + '22', color: activeScopeColor }}
+   417→                >
+   418→                  <FAIcon name={activeScopeIcon} />
+   419→                </span>
+   420→                <div className="flex-1 min-w-0">
+   421→                  <div className="text-[12px] font-medium text-[var(--erp-text)]">
+   422→                    {activeScopeLabel}
+   423→                  </div>
+   424→                  <div className="text-[10px] text-[var(--erp-text-muted)]">
+   425→                    {items.length} items · {stats.required} required · {stats.critical} critical
+   426→                  </div>
+   427→                </div>
+   428→                <button
+   429→                  onClick={() => { setSelectedScope(''); setItems([]); }}
+   430→                  className="p-1 rounded text-[var(--erp-text-muted)] hover:text-[var(--erp-text)] hover:bg-[var(--erp-bg-hover)]"
+   431→                  aria-label="Clear scope"
+   432→                  title="Clear"
+   433→                >
+   434→                  <X className="w-3.5 h-3.5" />
+   435→                </button>
+   436→              </div>
+   437→            )}
+   438→
+   439→            {/* Scope selector grid */}
+   440→            <div>
+   441→              <div className="text-[11px] uppercase tracking-wide text-[var(--erp-text-muted)] mb-2">
+   442→                Select a Scope Template
+   443→              </div>
+   444→              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+   445→                {Object.entries(SCOPE_TEMPLATES).map(([key, tmpl]) => (
+   446→                  <button
+   447→                    key={key}
+   448→                    onClick={() => loadScope(key)}
+   449→                    className={cn(
+   450→                      'flex items-center gap-2 p-2.5 rounded-md border text-[11px] font-medium transition-colors text-left',
+   451→                      selectedScope === key
+   452→                        ? 'border-[var(--erp-accent)] bg-[var(--erp-accent-dim)] text-[var(--erp-accent)]'
+   453→                        : 'border-[var(--erp-border)] bg-[var(--erp-bg-card)] hover:bg-[var(--erp-bg-hover)] text-[var(--erp-text-secondary)]',
+   454→                    )}
+   455→                  >
+   456→                    <span
+   457→                      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+   458→                      style={{ background: tmpl.color + '20', color: tmpl.color }}
+   459→                    >
+   460→                      <FAIcon name={tmpl.icon} />
+   461→                    </span>
+   462→                    <div className="min-w-0">
+   463→                      <div className="truncate">{tmpl.label}</div>
+   464→                      <div className="text-[9px] text-[var(--erp-text-muted)]">
+   465→                        {tmpl.items.length} items
+   466→                      </div>
+   467→                    </div>
+   468→                  </button>
+   469→                ))}
+   470→              </div>
+   471→            </div>
+   472→
+   473→            {/* Custom scope input */}
+   474→            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+   475→              <div className="relative flex-1 max-w-md">
+   476→                <Input
+   477→                  placeholder="Or enter custom scope (e.g. Data Center, Aviation, Healthcare)"
+   478→                  value={customScope}
+   479→                  onChange={(e) => setCustomScope(e.target.value)}
+   480→                  className="h-8 text-[12px] bg-[var(--erp-bg-input)] pr-7"
+   481→                />
+   482→                {customScope && (
+   483→                  <button
+   484→                    onClick={() => setCustomScope('')}
+   485→                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--erp-text-muted)] hover:text-[var(--erp-text)]"
+   486→                    aria-label="Clear custom scope"
+   487→                  >
+   488→                    <X className="w-3.5 h-3.5" />
+   489→                  </button>
+   490→                )}
+   491→              </div>
+   492→              <Button
+   493→                variant="outline"
+   494→                size="sm"
+   495→                onClick={startEmpty}
+   496→                className="h-8 text-[11px]"
+   497→              >
+   498→                <Plus className="w-3.5 h-3.5 mr-1" /> Start Empty
+   499→              </Button>
+   500→            </div>
+   501→
+   502→            {/* Items list */}
+   503→            {hasItems && (
+   504→              <div className="space-y-2">
+   505→                <div className="flex flex-wrap items-center justify-between gap-2">
+   506→                  <div className="text-[11px] uppercase tracking-wide text-[var(--erp-text-muted)]">
+   507→                    Checklist Items ({items.length})
+   508→                  </div>
+   509→                  <div className="flex flex-wrap items-center gap-1">
+   510→                    <Button
+   511→                      variant="outline"
+   512→                      size="sm"
+   513→                      onClick={addItem}
+   514→                      className="h-7 text-[11px]"
+   515→                    >
+   516→                      <Plus className="w-3.5 h-3.5 mr-1" /> Add
+   517→                    </Button>
+   518→                    <Button
+   519→                      variant="outline"
+   520→                      size="sm"
+   521→                      onClick={exportJson}
+   522→                      disabled={items.length === 0}
+   523→                      className="h-7 text-[11px]"
+   524→                    >
+   525→                      <Download className="w-3.5 h-3.5 mr-1" /> Export
+   526→                    </Button>
+   527→                    <Button
+   528→                      variant="outline"
+   529→                      size="sm"
+   530→                      onClick={() => setSaveDialogOpen(true)}
+   531→                      disabled={items.length === 0}
+   532→                      className="h-7 text-[11px]"
+   533→                    >
+   534→                      <Save className="w-3.5 h-3.5 mr-1" /> Save as Template
+   535→                    </Button>
+   536→                  </div>
+   537→                </div>
+   538→
+   539→                {items.map((item, idx) => {
+   540→                  const catMeta = CATEGORY_META[item.category];
+   541→                  const CatIcon = catMeta.icon;
+   542→                  return (
+   543→                    <div
+   544→                      key={idx}
+   545→                      className="flex items-start gap-2 p-2.5 rounded-md border border-[var(--erp-border)] bg-[var(--erp-bg-card)]"
+   546→                    >
+   547→                      {/* Item # */}
+   548→                      <span className="text-[10px] font-mono text-[var(--erp-text-muted)] pt-1.5 w-6 text-right shrink-0">
+   549→                        {idx + 1}.
+   550→                      </span>
+   551→
+   552→                      {/* Required checkbox */}
+   553→                      <div className="pt-1.5">
+   554→                        <Checkbox
+   555→                          checked={item.required}
+   556→                          onCheckedChange={(v) => updateItem(idx, { required: v === true })}
+   557→                          aria-label="Required"
+   558→                        />
+   559→                      </div>
+   560→
+   561→                      {/* Category badge */}
+   562→                      <span
+   563→                        className="mt-0.5 w-6 h-6 rounded flex items-center justify-center shrink-0"
+   564→                        style={{ background: catMeta.bg, color: catMeta.color }}
+   565→                        title={catMeta.label}
+   566→                      >
+   567→                        <CatIcon className="w-3 h-3" />
+   568→                      </span>
+   569→
+   570→                      {/* Text + notes */}
+   571→                      <div className="flex-1 min-w-0 space-y-1">
+   572→                        <Input
+   573→                          value={item.text}
+   574→                          onChange={(e) => updateItem(idx, { text: e.target.value })}
+   575→                          placeholder="Checklist item description…"
+   576→                          className="h-8 text-[12px] bg-[var(--erp-bg-input)]"
+   577→                        />
+   578→                        <Textarea
+   579→                          value={item.notes}
+   580→                          onChange={(e) => updateItem(idx, { notes: e.target.value })}
+   581→                          placeholder="Notes (optional)…"
+   582→                          rows={1}
+   583→                          className="min-h-[28px] text-[10px] py-1 bg-[var(--erp-bg-input)] resize-none"
+   584→                        />
+   585→                      </div>
+   586→
+   587→                      {/* Category selector */}
+   588→                      <select
+   589→                        value={item.category}
+   590→                        onChange={(e) =>
+   591→                          updateItem(idx, { category: e.target.value as ChecklistCategory })
+   592→                        }
+   593→                        className="h-8 text-[10px] px-2 rounded border border-[var(--erp-border)] bg-[var(--erp-bg-input)] shrink-0 focus:outline-none focus:border-[var(--erp-accent)]"
+   594→                        aria-label="Category"
+   595→                      >
+   596→                        <option value="info">ℹ Info</option>
+   597→                        <option value="warning">⚠ Warning</option>
+   598→                        <option value="critical">🚨 Critical</option>
+   599→                      </select>
+   600→
+   601→                      {/* Move + duplicate + delete */}
+   602→                      <div className="flex flex-col gap-0.5 pt-1 shrink-0">
+   603→                        <button
+   604→                          onClick={() => moveItem(idx, -1)}
+   605→                          disabled={idx === 0}
+   606→                          className="text-[var(--erp-text-muted)] hover:text-[var(--erp-text)] disabled:opacity-30"
+   607→                          aria-label="Move up"
+   608→                        >
+   609→                          <ArrowUp className="w-3 h-3" />
+   610→                        </button>
+   611→                        <button
+   612→                          onClick={() => moveItem(idx, 1)}
+   613→                          disabled={idx === items.length - 1}
+   614→                          className="text-[var(--erp-text-muted)] hover:text-[var(--erp-text)] disabled:opacity-30"
+   615→                          aria-label="Move down"
+   616→                        >
+   617→                          <ArrowDown className="w-3 h-3" />
+   618→                        </button>
+   619→                        <button
+   620→                          onClick={() => duplicateItem(idx)}
+   621→                          className="text-[var(--erp-text-muted)] hover:text-[var(--erp-text)]"
+   622→                          aria-label="Duplicate"
+   623→                          title="Duplicate item"
+   624→                        >
+   625→                          <Copy className="w-3 h-3" />
+   626→                        </button>
+   627→                        <button
+   628→                          onClick={() => removeItem(idx)}
+   629→                          className="text-[var(--erp-text-muted)] hover:text-[var(--erp-danger)]"
+   630→                          aria-label="Remove"
+   631→                        >
+   632→                          <Trash2 className="w-3 h-3" />
+   633→                        </button>
+   634→                      </div>
+   635→                    </div>
+   636→                  );
+   637→                })}
+   638→              </div>
+   639→            )}
+   640→
+   641→            {/* Empty state when no items */}
+   642→            {!hasItems && (
+   643→              <div className="text-center py-10 text-[var(--erp-text-muted)] text-[12px]">
+   644→                <FAIcon
+   645→                  name="fa-clipboard-list"
+   646→                  className="text-[28px] mb-2 opacity-50"
+   647→                />
+   648→                <div>Select a scope template above, or click “Start Empty” to build a custom checklist from scratch.</div>
+   649→              </div>
+   650→            )}
+   651→          </>
+   652→        )}
+   653→      </div>
+   654→
+   655→      {/* Save as Template dialog */}
+   656→      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+   657→        <DialogContent>
+   658→          <DialogHeader>
+   659→            <DialogTitle>Save Checklist Template</DialogTitle>
+   660→          </DialogHeader>
+   661→          <div className="space-y-2">
+   662→            <Input
+   663→              placeholder="Template name (e.g. MEP Daily Plant Room Inspection)"
+   664→              value={templateName}
+   665→              onChange={(e) => setTemplateName(e.target.value)}
+   666→              className="h-9 text-[12px] bg-[var(--erp-bg-input)]"
+   667→              autoFocus
+   668→            />
+   669→            <p className="text-[11px] text-[var(--erp-text-muted)]">
+   670→              Scope: {activeScopeLabel} · {items.length} items ·{' '}
+   671→              {stats.required} required · {stats.critical} critical
+   672→            </p>
+   673→            {stats.empty > 0 && (
+   674→              <p className="text-[11px] text-[var(--erp-warning)]">
+   675→                ⚠ {stats.empty} item(s) have empty descriptions — they will be
+   676→                saved as-is.
+   677→              </p>
+   678→            )}
+   679→          </div>
+   680→          <DialogFooter>
+   681→            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+   682→              Cancel
+   683→            </Button>
+   684→            <Button
+   685→              onClick={handleSave}
+   686→              className="bg-[var(--erp-accent)] hover:bg-[var(--erp-accent-hover)]"
+   687→            >
+   688→              <Save className="w-3.5 h-3.5 mr-1" /> Save
+   689→            </Button>
+   690→          </DialogFooter>
+   691→        </DialogContent>
+   692→      </Dialog>
+   693→    </div>
+   694→  );
+   695→}
+   696→
+   697→export default ChecklistBuilder;
+   698→

@@ -353,6 +353,7 @@ export const COLUMN_TYPE_META: Record<ColumnDef['type'], { label: string; icon: 
   url:            { label: 'URL / Link',  icon: 'fa-link',   needsOptions: false },
   color:          { label: 'Color',       icon: 'fa-palette', needsOptions: false },
   tags:           { label: 'Tags',        icon: 'fa-tags',   needsOptions: true },
+  checklist:      { label: 'Checklist',   icon: 'fa-list-check', needsOptions: false },
 };
 
 // ---------- Uploads (image attachments) ----------

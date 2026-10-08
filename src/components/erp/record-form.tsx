@@ -7,6 +7,7 @@ import type { Register, RecordData, ColumnDef, ColumnType } from '@/lib/erp/type
 import { validateRecord, defaultValue, displayColumnName } from '@/lib/erp/utils';
 import { useErpStore } from '@/lib/erp/store';
 import { FAIcon } from './icon';
+import { ChecklistField } from './checklist-field';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -486,6 +487,18 @@ function FieldRenderer({
             options={col.options || []}
             value={Array.isArray(value) ? value : (value ? [value] : [])}
             onChange={onChange}
+          />
+          {errorEl}
+        </div>
+      );
+    case 'checklist':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <ChecklistField
+            value={value}
+            onChange={onChange}
+            templateItems={col.checklistItems}
           />
           {errorEl}
         </div>

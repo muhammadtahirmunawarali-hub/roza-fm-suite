@@ -13,6 +13,8 @@ import { EmptyStateIllustration } from './empty-state-illustration';
 import { ApprovalWorkflow } from './approval-workflow';
 import { printRecord } from './print-record';
 import { WOStageWorkflow } from './wo-stage-workflow';
+import { ImageLightbox } from './image-lightbox';
+import { ChecklistField } from './checklist-field';
 import { cn } from '@/lib/utils';
 import { formatCell, formatDate, formatTimeAgo, statusVariant, validateRecord, defaultValue, displayColumnName, colIconFor } from '@/lib/erp/utils';
 import { toast } from 'sonner';
@@ -714,6 +716,18 @@ function InlineField({
           {errorEl}
         </div>
       );
+    case 'checklist':
+      return (
+        <div className={wrapperClass}>
+          {label}
+          <ChecklistField
+            value={value}
+            onChange={onChange}
+            templateItems={col.checklistItems}
+          />
+          {errorEl}
+        </div>
+      );
     case 'url':
       return (
         <div className={wrapperClass}>
@@ -1050,6 +1064,50 @@ function FieldCard({ col, value, fullWidth, currency = 'AED' }: { col: ColumnDef
             </span>
           ))}
         </div>
+      ) : col.type === 'checklist' ? (
+        // Checklist: show items with statuses + notes (read-only in view mode)
+        (() => {
+          let items: any[] = [];
+          if (Array.isArray(value)) items = value;
+          else if (typeof value === 'string' && value.startsWith('[')) { try { items = JSON.parse(value); } catch {} }
+          if (items.length === 0) return <span className="text-[12px] text-[var(--erp-text-muted)] italic">—</span>;
+          const completed = items.filter((i: any) => i.status === 'Completed').length;
+          const na = items.filter((i: any) => i.status === 'N/A').length;
+          const pending = items.filter((i: any) => i.status === 'Pending').length;
+          const pct = Math.round((completed / items.length) * 100);
+          return (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="font-medium text-[var(--erp-text)]">{completed}/{items.length} done</span>
+                <div className="flex-1 h-1 rounded-full bg-[var(--erp-bg-input)] overflow-hidden">
+                  <div className="h-full rounded-full bg-[var(--erp-accent)]" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-[var(--erp-accent)] font-bold">{pct}%</span>
+              </div>
+              <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                {items.map((item: any, i: number) => (
+                  <div key={i} className="flex items-start gap-2 p-1.5 rounded text-[10px]">
+                    <span className="font-mono text-[var(--erp-text-muted)] shrink-0">{i + 1}.</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={item.status === 'Completed' ? 'text-[var(--erp-success)]' : item.status === 'N/A' ? 'text-[var(--erp-text-muted)] line-through' : 'text-[var(--erp-warning)]'}>
+                          {item.status === 'Completed' ? '✓' : item.status === 'N/A' ? '✗' : '⏳'}
+                        </span>
+                        <span className={cn('text-[var(--erp-text)]', item.status === 'N/A' && 'line-through opacity-60')}>{item.text}</span>
+                        <span className={cn('text-[8px] px-1 py-0.5 rounded font-bold shrink-0',
+                          item.status === 'Completed' ? 'bg-[var(--erp-success)]/15 text-[var(--erp-success)]' :
+                          item.status === 'N/A' ? 'bg-[var(--erp-text-muted)]/15 text-[var(--erp-text-muted)]' :
+                          'bg-[var(--erp-warning)]/15 text-[var(--erp-warning)]'
+                        )}>{item.status}</span>
+                      </div>
+                      {item.notes && <div className="ml-4 mt-0.5 text-[9px] text-[var(--erp-text-muted)] italic">"{item.notes}"</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()
       ) : col.type === 'image' ? (
         // Multi-image gallery: supports both single URL (string) and array of URLs
         (() => {

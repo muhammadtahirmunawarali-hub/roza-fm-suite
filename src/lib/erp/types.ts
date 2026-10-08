@@ -28,7 +28,8 @@ export type ColumnType =
   | 'image'
   | 'url'
   | 'color'
-  | 'tags';
+  | 'tags'
+  | 'checklist'; // interactive checklist: items with Completed/NA/Pending + notes
 
 export interface ColumnDef {
   name: string;
@@ -37,6 +38,17 @@ export interface ColumnDef {
   options?: string[]; // for dropdown/status/priority/multi_select
   required?: boolean;
   default?: string | number | boolean | string[];
+  checklistItems?: { text: string; required?: boolean; category?: 'info'|'warning'|'critical' }[]; // for checklist column type — the template items
+}
+
+// Checklist item status — stored per-item in the record's JSON data
+export type ChecklistItemStatus = 'Completed' | 'N/A' | 'Pending';
+export interface ChecklistItem {
+  text: string;
+  status: ChecklistItemStatus;
+  notes?: string;
+  required?: boolean;
+  category?: 'info' | 'warning' | 'critical';
 }
 
 // ---------- Registers ----------
@@ -48,6 +60,7 @@ export type RegisterCategory =
   | 'procurement'
   | 'hr'
   | 'performance'
+  | 'documents'
   | 'admin';
 
 export interface RegisterCategoryMeta {
@@ -66,7 +79,8 @@ export const REGISTER_CATEGORIES: Record<RegisterCategory, RegisterCategoryMeta>
   procurement: { id: 'procurement', name: 'Procurement & Inventory', icon: 'fa-boxes-stacked',      order: 5, color: '#10B981' },
   hr:          { id: 'hr',          name: 'Human Resources',       icon: 'fa-users',                 order: 6, color: '#EC4899' },
   performance: { id: 'performance', name: 'Performance & Quality', icon: 'fa-chart-line',           order: 7, color: '#06B6D4' },
-  admin:       { id: 'admin',       name: 'Administration',         icon: 'fa-screwdriver-wrench',    order: 8, color: '#64748B' },
+  documents:   { id: 'documents',   name: 'Documents & Contracts',  icon: 'fa-file-lines',            order: 8, color: '#F97316' },
+  admin:       { id: 'admin',       name: 'Administration',         icon: 'fa-screwdriver-wrench',    order: 9, color: '#64748B' },
 };
 
 export interface Register {
